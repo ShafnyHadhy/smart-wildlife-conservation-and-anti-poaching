@@ -266,128 +266,31 @@ To ensure maximum cross-platform compatibility, zero binary dependency build iss
 - `latitude NUMERIC(10, 7)`
 - `longitude NUMERIC(10, 7)`
 
-Spherical distances are calculated using the standard **Haversine formula** implemented directly in PostgreSQL SQL functions and mirrored in Node.js utility services. Geofencing for high-risk zones is implemented via polygon coordinate ray-casting or circular buffer radii (center lat/lng + radius_km), which fits Sri Lankan wildlife buffer zones (e.g., 5km park boundary perimeter) cleanly.
+Spherical distances are calculated using the standard **Haversine formula** implemented directly in Node.js utility services. Geofencing for high-risk zones is implemented via polygon coordinate arrays stored as `JSONB` (`[{"latitude": 6.35, "longitude": 80.45}, ...]`) and evaluated via clean ray-casting point-in-polygon algorithms in the backend service layer, matching Sri Lankan wildlife buffer zones (e.g., 5km park perimeter) cleanly.
 
-### 7.2 Core Relational Schema
+### 7.2 Phase 2 Implemented Relational Schema (16 Tables)
 
-```sql
--- 1. Rangers / Operational Personnel
-CREATE TABLE rangers (
-    id VARCHAR(36) PRIMARY KEY,
-    call_sign VARCHAR(50) NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    phone_number VARCHAR(20),
-    status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, OFF_DUTY, DISPATCHED
-    current_latitude NUMERIC(10, 7),
-    current_longitude NUMERIC(10, 7),
-    location_updated_at TIMESTAMP WITH TIME ZONE
-);
+The system data layer is fully normalized into 16 tables using UUID primary keys (`gen_random_uuid()`):
 
--- 2. Patrol Routes & Active Sessions (UC01)
-CREATE TABLE patrols (
-    id VARCHAR(36) PRIMARY KEY,
-    ranger_id VARCHAR(36) NOT NULL REFERENCES rangers(id),
-    patrol_code VARCHAR(50) NOT NULL UNIQUE,
-    status VARCHAR(20) NOT NULL, -- PLANNED, ACTIVE, COMPLETED, SUSPENDED
-    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_time TIMESTAMP WITH TIME ZONE,
-    target_area_geojson JSONB, -- Coordinates of assigned sector
-    coverage_score NUMERIC(5, 2) DEFAULT 0.00,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+1. **`parks`**: Protected national parks and conservation areas (Yala, Wilpattu, Udawalawe).
+2. **`users`**: Unified internal conservation staff table with `role` check constraint (`PARK_MANAGER`, `RANGER`, `COMMUNITY_LIAISON_OFFICER`).
+3. **`community_members`**: External rural citizen reporters living in park buffer zones.
+4. **`patrol_routes`**: Pre-approved designated patrol corridors within parks.
+5. **`patrols`**: Operational field missions led by rangers (`PLANNED`, `ACTIVE`, `COMPLETED`, `CANCELLED`).
+6. **`waypoints`**: Chronological breadcrumb GPS coordinates recorded on patrol.
+7. **`wildlife_animals`**: Tracked individual animals (Asian Elephants, Leopards).
+8. **`tracking_collars`**: Physical GPS telemetry collars ($1 \leftrightarrow 0..1$ with animal).
+9. **`location_records`**: Time-series GPS telemetry fixes emitted by animal collars.
+10. **`risk_zones`**: High-risk geofence areas with JSONB boundary coordinate arrays.
+11. **`wildlife_risk_alerts`**: Automated risk alerts triggered by animal zone intrusion.
+12. **`alert_responses`**: Field responses deployed by rangers or CLOs for an alert.
+13. **`incidents`**: Field poaching/wildlife incident reports logged by rangers (UC02).
+14. **`supporting_evidence`**: Photographic or file evidence attached to incidents.
+15. **`conflict_reports`**: Human-wildlife conflict reports logged by villagers/CLOs (UC04).
+16. **`sync_operations`**: Server-side audit log for mobile offline sync operations.
 
-CREATE TABLE patrol_locations (
-    id BIGSERIAL PRIMARY KEY,
-    patrol_id VARCHAR(36) NOT NULL REFERENCES patrols(id) ON DELETE CASCADE,
-    latitude NUMERIC(10, 7) NOT NULL,
-    longitude NUMERIC(10, 7) NOT NULL,
-    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    is_simulated BOOLEAN DEFAULT TRUE
-);
-CREATE INDEX idx_patrol_locations_patrol_time ON patrol_locations(patrol_id, recorded_at);
+*For complete schema DDL, foreign keys, CHECK constraints, and B-Tree indexes, refer to [database-design.md](file:///d:/Academics/Y3S2/CSSE/Project/docs/database-design.md) and [001_initial_schema.sql](file:///d:/Academics/Y3S2/CSSE/Project/apps/backend/db/migrations/001_initial_schema.sql).*
 
--- 3. Incident Reports (UC02)
-CREATE TABLE incidents (
-    id VARCHAR(36) PRIMARY KEY,
-    client_mutation_id VARCHAR(64) UNIQUE NOT NULL,
-    ranger_id VARCHAR(36) REFERENCES rangers(id),
-    incident_type VARCHAR(50) NOT NULL, -- POACHING_TRAP, ILLEGAL_LOGGING, ENCOUNTER, CARCASS, OTHER
-    severity VARCHAR(20) NOT NULL DEFAULT 'MEDIUM', -- LOW, MEDIUM, HIGH, CRITICAL
-    latitude NUMERIC(10, 7) NOT NULL,
-    longitude NUMERIC(10, 7) NOT NULL,
-    location_description TEXT,
-    description TEXT NOT NULL,
-    photo_url TEXT,
-    status VARCHAR(20) DEFAULT 'SUBMITTED', -- SUBMITTED, INVESTIGATING, RESOLVED
-    is_offline_submission BOOLEAN DEFAULT FALSE,
-    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    synced_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- 4. High-Risk Zones & Tracked Wildlife (UC03)
-CREATE TABLE high_risk_zones (
-    id VARCHAR(36) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    zone_type VARCHAR(50) NOT NULL, -- VILLAGE_BORDER, CROP_FIELD, RAILWAY_CROSSING
-    center_latitude NUMERIC(10, 7) NOT NULL,
-    center_longitude NUMERIC(10, 7) NOT NULL,
-    radius_km NUMERIC(6, 3) NOT NULL,
-    boundary_polygon JSONB, -- Optional coordinate array [[lat, lng], ...]
-    alert_severity VARCHAR(20) DEFAULT 'HIGH'
-);
-
-CREATE TABLE tracked_animals (
-    id VARCHAR(36) PRIMARY KEY,
-    collar_id VARCHAR(50) NOT NULL UNIQUE,
-    species VARCHAR(50) NOT NULL, -- ELEPHANT, LEOPARD, SLOTH_BEAR
-    animal_name VARCHAR(100) NOT NULL,
-    gender VARCHAR(10),
-    collar_battery_pct INT DEFAULT 100,
-    status VARCHAR(20) DEFAULT 'MONITORED',
-    last_latitude NUMERIC(10, 7),
-    last_longitude NUMERIC(10, 7),
-    last_ping_at TIMESTAMP WITH TIME ZONE
-);
-
-CREATE TABLE animal_telemetry_logs (
-    id BIGSERIAL PRIMARY KEY,
-    collar_id VARCHAR(50) NOT NULL REFERENCES tracked_animals(collar_id),
-    latitude NUMERIC(10, 7) NOT NULL,
-    longitude NUMERIC(10, 7) NOT NULL,
-    recorded_at TIMESTAMP WITH TIME ZONE NOT NULL
-);
-
-CREATE TABLE wildlife_risk_alerts (
-    id VARCHAR(36) PRIMARY KEY,
-    animal_id VARCHAR(36) NOT NULL REFERENCES tracked_animals(id),
-    zone_id VARCHAR(36) NOT NULL REFERENCES high_risk_zones(id),
-    severity VARCHAR(20) NOT NULL, -- MEDIUM, HIGH, EMERGENCY
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- PENDING, DISPATCHED, RESOLVED, FALSE_ALARM
-    triggered_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    assigned_responder_id VARCHAR(36) REFERENCES rangers(id),
-    response_notes TEXT,
-    resolved_at TIMESTAMP WITH TIME ZONE,
-    client_mutation_id VARCHAR(64) UNIQUE
-);
-
--- 5. Human-Wildlife Conflict Reports (UC04)
-CREATE TABLE conflict_reports (
-    id VARCHAR(36) PRIMARY KEY,
-    client_mutation_id VARCHAR(64) UNIQUE NOT NULL,
-    reporter_name VARCHAR(100) NOT NULL,
-    reporter_contact VARCHAR(50) NOT NULL,
-    conflict_type VARCHAR(50) NOT NULL, -- CROP_DAMAGE, PROPERTY_DAMAGE, VILLAGE_INTRUSION, INJURY
-    animal_species VARCHAR(50) DEFAULT 'ELEPHANT',
-    latitude NUMERIC(10, 7) NOT NULL,
-    longitude NUMERIC(10, 7) NOT NULL,
-    description TEXT NOT NULL,
-    potential_duplicate_of VARCHAR(36) REFERENCES conflict_reports(id),
-    status VARCHAR(20) DEFAULT 'REPORTED', -- REPORTED, ACKNOWLEDGED, RANGER_DISPATCHED, CLOSED
-    is_offline_submission BOOLEAN DEFAULT FALSE,
-    reported_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-```
 
 ---
 
