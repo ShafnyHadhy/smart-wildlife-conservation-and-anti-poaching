@@ -1,0 +1,29 @@
+{
+  "name": "smart-wildlife-monitoring-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smart Wildlife Conservation and Anti-Poaching Monitoring System for Sri Lankan Wildlife Sanctuaries",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=apps/backend run dev",
+    "dev:web": "npm --workspace=apps/web run dev",
+    "dev:mobile": "npm --workspace=apps/mobile run start",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "keywords": [
+    "wildlife-conservation",
+    "anti-poaching",
+    "patrol-monitoring",
+    "sri-lanka",
+    "offline-first",
+    "react-native",
+    "neon-postgres"
+  ],
+  "author": "Wildlife Conservation Software Engineering Team",
+  "license": "UNLICENSED"
+}
