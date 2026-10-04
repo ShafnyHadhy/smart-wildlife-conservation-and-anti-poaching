@@ -13,7 +13,10 @@
     "dev:mobile": "npm --workspace=apps/mobile run start",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "db:migrate": "npm --workspace=apps/backend run db:migrate",
+    "db:seed": "npm --workspace=apps/backend run db:seed",
+    "db:reset": "npm --workspace=apps/backend run db:reset"
   },
   "keywords": [
     "wildlife-conservation",
