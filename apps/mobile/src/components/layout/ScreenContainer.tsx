@@ -24,7 +24,7 @@ export function ScreenContainer({
 }: ScreenContainerProps) {
   return (
     <SafeAreaView style={[styles.container, style]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0b1120" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
       {scrollable ? (
         <ScrollView
           style={styles.scrollView}
@@ -43,7 +43,7 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F5F5DC',
   },
   scrollView: {
     flex: 1,

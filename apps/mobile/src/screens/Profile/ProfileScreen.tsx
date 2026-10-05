@@ -127,7 +127,7 @@ export function ProfileScreen({
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F5F5DC',
   },
   profileHeader: {
     flexDirection: 'row',
@@ -138,10 +138,15 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#0284c7',
+    backgroundColor: '#3E8E41',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
+    shadowColor: '#3E8E41',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   avatarTextLarge: {
     color: '#ffffff',
@@ -154,19 +159,20 @@ const styles = StyleSheet.create({
   fullName: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#f8fafc',
+    color: '#1C2A1E',
   },
   badgeCode: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#A76D40',
     marginTop: 2,
+    fontWeight: '600',
   },
   roleBadgeContainer: {
     marginTop: 6,
   },
   detailList: {
     borderTopWidth: 1,
-    borderTopColor: '#1e293b',
+    borderTopColor: '#D1B370',
     paddingTop: 12,
     gap: 8,
   },
@@ -177,17 +183,18 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#6B7280',
+    fontWeight: '500',
   },
   detailValue: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#f1f5f9',
+    fontWeight: '700',
+    color: '#1C2A1E',
   },
   sectionHeading: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#cbd5e1',
+    color: '#A76D40',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 14,
@@ -199,19 +206,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: '#E5E0D0',
   },
   statusRowLabel: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#4B5563',
+    fontWeight: '500',
   },
   statusRowValue: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#38bdf8',
+    fontWeight: '700',
+    color: '#3E8E41',
   },
   syncFullButton: {
-    backgroundColor: '#0284c7',
+    backgroundColor: '#3E8E41',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
@@ -237,11 +245,11 @@ const styles = StyleSheet.create({
   emergencyTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#f87171',
+    color: '#DC2626',
   },
   emergencyDesc: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#6B7280',
     marginTop: 2,
   },
 });

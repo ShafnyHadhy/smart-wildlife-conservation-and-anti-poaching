@@ -88,7 +88,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
     {
       header: 'Patrol Code',
       accessor: (p) => (
-        <span className="font-semibold text-white">
+        <span className="font-bold text-[#1C2A1E]">
           {(p as any).patrolCode || p.id.slice(0, 8)}
         </span>
       ),
@@ -96,7 +96,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
     {
       header: 'Ranger Unit',
       accessor: (p) => (
-        <span className="text-slate-300">
+        <span className="text-stone-700">
           {(p as any).rangerName || p.rangerId?.slice(0, 8) || 'Assigned'}
         </span>
       ),
@@ -104,7 +104,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
     {
       header: 'Route Corridor',
       accessor: (p) => (
-        <span className="text-slate-400">
+        <span className="text-stone-600">
           {(p as any).routeName || 'Coastal Perimeter'}
         </span>
       ),
@@ -120,10 +120,10 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
       header: 'Target Animal',
       accessor: (a) => (
         <div>
-          <span className="font-bold text-white">
+          <span className="font-bold text-[#1C2A1E]">
             {a.animalName || 'Elephant Walagamba'}
           </span>
-          <span className="block text-[11px] text-slate-400">
+          <span className="block text-[11px] text-stone-500">
             {a.animalSpecies || 'Elephas maximus'}
           </span>
         </div>
@@ -136,7 +136,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
     {
       header: 'Buffer Zone',
       accessor: (a) => (
-        <span className="text-slate-300">
+        <span className="text-stone-700 font-medium">
           {a.zoneName || 'Kittulkote Village Settlement Zone'}
         </span>
       ),
@@ -151,7 +151,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
     {
       header: 'Incident',
       accessor: (inc) => (
-        <span className="font-semibold text-white">
+        <span className="font-bold text-[#1C2A1E]">
           {inc.incidentType.replace(/_/g, ' ')}
         </span>
       ),
@@ -159,7 +159,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
     {
       header: 'Reported By',
       accessor: (inc) => (
-        <span className="text-slate-300">
+        <span className="text-stone-700">
           {inc.rangerName || inc.rangerId?.slice(0, 8) || 'Field Ranger'}
         </span>
       ),
@@ -174,10 +174,10 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
     <div className="space-y-6">
       {/* Page Title & Subtitle */}
       <div>
-        <h2 className="text-2xl font-extrabold text-white tracking-tight">
+        <h2 className="text-2xl font-extrabold text-[#1C2A1E] tracking-tight">
           Conservation Command Overview
         </h2>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm text-[#A76D40] font-medium mt-1">
           Live monitoring of ranger patrols, wildlife telemetry alerts, and community conflict reports.
         </p>
       </div>
@@ -189,7 +189,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
           value={stats.activePatrols}
           subtitle="Rangers currently tracking on-grid"
           variant="info"
-          icon={<Compass className="w-5 h-5 text-sky-400" />}
+          icon={<Compass className="w-5 h-5 text-[#3E8E41]" />}
           onClick={() => onNavigate('patrols')}
         />
         <StatCard
@@ -197,7 +197,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
           value={stats.activeAlerts}
           subtitle="Active collar geofence intrusions"
           variant={stats.activeAlerts > 0 ? 'danger' : 'default'}
-          icon={<Radio className="w-5 h-5 text-rose-400" />}
+          icon={<Radio className="w-5 h-5 text-rose-600" />}
           onClick={() => onNavigate('alerts')}
         />
         <StatCard
@@ -205,7 +205,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
           value={stats.pendingIncidents}
           subtitle="Reported wire snares & poaching"
           variant="warning"
-          icon={<AlertTriangle className="w-5 h-5 text-amber-400" />}
+          icon={<AlertTriangle className="w-5 h-5 text-[#A76D40]" />}
           onClick={() => onNavigate('incidents')}
         />
         <StatCard
@@ -213,7 +213,7 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
           value={stats.openConflicts}
           subtitle="Village & agricultural reports"
           variant="default"
-          icon={<Users2 className="w-5 h-5 text-emerald-400" />}
+          icon={<Users2 className="w-5 h-5 text-[#3E8E41]" />}
           onClick={() => onNavigate('conflicts')}
         />
       </div>
@@ -221,15 +221,15 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
       {/* Operational Grids */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Active Patrols Section */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-white border border-[#D1B370]/60 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white">Active Patrol Units (UC01)</h3>
-              <p className="text-xs text-slate-400">Ranger field sweeps in Yala sectors</p>
+              <h3 className="text-base font-bold text-[#1C2A1E]">Active Patrol Units (UC01)</h3>
+              <p className="text-xs text-stone-500">Ranger field sweeps in Yala sectors</p>
             </div>
             <button
               onClick={() => onNavigate('patrols')}
-              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+              className="text-xs font-bold text-[#3E8E41] hover:text-[#2E6B31] flex items-center gap-1"
             >
               <span>View All</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -245,15 +245,15 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
         </div>
 
         {/* Recent Alerts Section */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-white border border-[#D1B370]/60 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white">Geofence Risk Alerts (UC03)</h3>
-              <p className="text-xs text-slate-400">High-risk animal intrusions into buffer zones</p>
+              <h3 className="text-base font-bold text-[#1C2A1E]">Geofence Risk Alerts (UC03)</h3>
+              <p className="text-xs text-stone-500">High-risk animal intrusions into buffer zones</p>
             </div>
             <button
               onClick={() => onNavigate('alerts')}
-              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+              className="text-xs font-bold text-[#3E8E41] hover:text-[#2E6B31] flex items-center gap-1"
             >
               <span>View All</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -269,15 +269,15 @@ export function DashboardHome({ onNavigate, refreshTrigger = 0 }: DashboardHomeP
         </div>
 
         {/* Recent Incidents Section */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4 lg:col-span-2">
+        <div className="bg-white border border-[#D1B370]/60 rounded-2xl p-5 shadow-xs space-y-4 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-white">Recent Field Incidents (UC02)</h3>
-              <p className="text-xs text-slate-400">Wire snares, poaching sign, and carcass detections</p>
+              <h3 className="text-base font-bold text-[#1C2A1E]">Recent Field Incidents (UC02)</h3>
+              <p className="text-xs text-stone-500">Wire snares, poaching sign, and carcass detections</p>
             </div>
             <button
               onClick={() => onNavigate('incidents')}
-              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+              className="text-xs font-bold text-[#3E8E41] hover:text-[#2E6B31] flex items-center gap-1"
             >
               <span>View All</span>
               <ExternalLink className="w-3.5 h-3.5" />

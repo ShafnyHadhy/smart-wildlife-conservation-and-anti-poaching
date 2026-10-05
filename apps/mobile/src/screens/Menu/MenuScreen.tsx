@@ -162,12 +162,12 @@ export function MenuScreen({
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F5F5DC',
   },
   sectionHeading: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#cbd5e1',
+    color: '#A76D40',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 12,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: '#E5E0D0',
   },
   lastItem: {
     borderBottomWidth: 0,
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 20,
-    color: '#38bdf8',
+    color: '#3E8E41',
     width: 32,
     textAlign: 'center',
     marginRight: 10,
@@ -196,29 +196,30 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#f8fafc',
+    fontWeight: '700',
+    color: '#1C2A1E',
     flex: 1,
   },
   menuSubLabel: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#6B7280',
     marginTop: 2,
+    fontWeight: '500',
   },
   chevron: {
     fontSize: 20,
-    color: '#64748b',
+    color: '#A76D40',
     marginLeft: 8,
   },
   badgeAction: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#38bdf8',
-    backgroundColor: '#0c2238',
+    color: '#3E8E41',
+    backgroundColor: '#FAF7EE',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#0284c7',
+    borderColor: '#3E8E41',
   },
 });

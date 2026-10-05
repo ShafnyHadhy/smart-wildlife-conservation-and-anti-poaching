@@ -38,7 +38,7 @@ export function PatrolsPage() {
     {
       header: 'Patrol Code',
       accessor: (p) => (
-        <span className="font-bold text-white">
+        <span className="font-bold text-[#1C2A1E]">
           {(p as any).patrolCode || p.id.slice(0, 8)}
         </span>
       ),
@@ -46,7 +46,7 @@ export function PatrolsPage() {
     {
       header: 'Assigned Ranger',
       accessor: (p) => (
-        <span className="text-slate-300">
+        <span className="text-stone-700">
           {(p as any).rangerName || p.rangerId?.slice(0, 8) || 'Assigned Ranger'}
         </span>
       ),
@@ -54,7 +54,7 @@ export function PatrolsPage() {
     {
       header: 'Route Corridor',
       accessor: (p) => (
-        <span className="text-slate-400">
+        <span className="text-stone-600">
           {(p as any).routeName || 'Coastal Patrol'}
         </span>
       ),
@@ -62,7 +62,7 @@ export function PatrolsPage() {
     {
       header: 'Start Time',
       accessor: (p) => (
-        <span className="text-slate-400 text-xs">
+        <span className="text-stone-500 text-xs">
           {(p as any).startTime ? new Date((p as any).startTime).toLocaleTimeString() : 'Scheduled'}
         </span>
       ),
@@ -79,14 +79,14 @@ export function PatrolsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-extrabold text-white tracking-tight">
+            <h2 className="text-2xl font-extrabold text-[#1C2A1E] tracking-tight">
               Patrol Monitoring Command
             </h2>
-            <span className="px-2 py-0.5 text-xs font-bold bg-sky-950 text-sky-400 border border-sky-800 rounded">
+            <span className="px-2 py-0.5 text-xs font-bold bg-[#3E8E41]/15 text-[#2E6B31] border border-[#3E8E41]/40 rounded">
               UC01 SHELL
             </span>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[#A76D40] font-medium mt-1">
             Tracking active ranger patrols, pre-approved corridors, and waypoint coverage.
           </p>
         </div>
@@ -97,10 +97,10 @@ export function PatrolsPage() {
             <button
               key={st}
               onClick={() => setFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-150 ${
                 filter === st
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-[#3E8E41] text-white shadow-xs'
+                  : 'bg-white text-stone-700 hover:bg-[#F5F5DC] border border-[#D1B370]/60'
               }`}
             >
               {st}
@@ -110,12 +110,12 @@ export function PatrolsPage() {
       </div>
 
       {/* Feature Architecture Note */}
-      <div className="p-4 bg-sky-950/40 border border-sky-800/60 rounded-xl flex items-start gap-3">
-        <Info className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
-        <div className="text-xs text-sky-200/90 leading-relaxed">
-          <strong className="text-sky-300">Team Member 1 Feature Workspace:</strong> Full patrol coverage calculation,
+      <div className="p-4 bg-[#FAF7EE] border border-[#D1B370]/70 rounded-xl flex items-start gap-3 shadow-xs">
+        <Info className="w-5 h-5 text-[#3E8E41] shrink-0 mt-0.5" />
+        <div className="text-xs text-stone-700 leading-relaxed font-medium">
+          <strong className="text-[#1C2A1E]">Team Member 1 Feature Workspace:</strong> Full patrol coverage calculation,
           under-patrolled boundary detection, and the interactive map component belong in{' '}
-          <code className="bg-sky-950 px-1.5 py-0.5 rounded border border-sky-800 font-mono text-sky-300">
+          <code className="bg-[#F5F5DC] px-1.5 py-0.5 rounded border border-[#D1B370]/60 font-mono text-[#A76D40]">
             apps/web/src/features/uc01-patrol/
           </code>
           .
@@ -136,19 +136,19 @@ export function PatrolsPage() {
 
           {/* Available Route Corridors Overview */}
           {routes.length > 0 && (
-            <div className="p-5 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Compass className="w-4 h-4 text-sky-400" />
+            <div className="p-5 bg-white border border-[#D1B370]/60 rounded-2xl space-y-3 shadow-xs">
+              <h3 className="text-sm font-bold text-[#1C2A1E] flex items-center gap-2">
+                <Compass className="w-4 h-4 text-[#3E8E41]" />
                 <span>Pre-Approved Designated Corridors ({routes.length})</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {routes.map((r) => (
                   <div
                     key={r.id}
-                    className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl"
+                    className="p-3 bg-[#FAF7EE] border border-[#D1B370]/50 rounded-xl"
                   >
-                    <p className="text-xs font-bold text-slate-200">{r.name}</p>
-                    <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
+                    <p className="text-xs font-bold text-[#1C2A1E]">{r.name}</p>
+                    <p className="text-[11px] text-stone-600 mt-1 line-clamp-2">
                       {r.description || 'Designated conservation corridor in Yala.'}
                     </p>
                   </div>

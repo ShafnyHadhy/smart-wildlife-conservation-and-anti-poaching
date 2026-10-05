@@ -39,28 +39,33 @@ export function AppCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#131d31',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#D1B370',
     marginBottom: 12,
+    shadowColor: '#A76D40',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   elevated: {
-    backgroundColor: '#162238',
-    borderColor: '#24324a',
-    shadowColor: '#000',
+    backgroundColor: '#FAF7EE',
+    borderColor: '#D1B370',
+    shadowColor: '#A76D40',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderColor: '#334155',
+    borderColor: '#D1B370',
   },
   highlight: {
-    backgroundColor: '#0c2238',
-    borderColor: '#0284c7',
+    backgroundColor: '#FAF7EE',
+    borderColor: '#3E8E41',
   },
 });

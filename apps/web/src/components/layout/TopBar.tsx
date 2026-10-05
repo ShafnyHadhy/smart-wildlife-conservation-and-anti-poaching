@@ -7,21 +7,21 @@ interface TopBarProps {
 
 export function TopBar({ onRefresh, isRefreshing = false }: TopBarProps) {
   return (
-    <header className="h-16 px-6 border-b border-slate-800/80 bg-slate-950/70 backdrop-blur flex items-center justify-between shrink-0">
+    <header className="h-16 px-6 border-b border-[#D1B370]/60 bg-[#FAF7EE] flex items-center justify-between shrink-0 shadow-sm">
       {/* Active Park Indicator */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300">
-          <MapPin className="w-3.5 h-3.5 text-sky-400" />
-          <span className="font-semibold text-white">Yala National Park</span>
-          <span className="text-slate-400">• Sector 1</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#F5F5DC] border border-[#D1B370]/60 text-xs text-stone-800">
+          <MapPin className="w-3.5 h-3.5 text-[#3E8E41]" />
+          <span className="font-bold text-stone-900">Yala National Park</span>
+          <span className="text-[#A76D40] font-medium">• Sector 1</span>
         </div>
       </div>
 
       {/* System Status and Actions */}
       <div className="flex items-center gap-4">
         {/* Backend & DB Pulse */}
-        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-xs font-semibold">
-          <Activity className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-[#3E8E41]/15 border border-[#3E8E41]/30 text-[#2E6B31] text-xs font-bold">
+          <Activity className="w-3.5 h-3.5 animate-pulse text-[#3E8E41]" />
           <span>Neon PostgreSQL Online</span>
         </div>
 
@@ -30,9 +30,9 @@ export function TopBar({ onRefresh, isRefreshing = false }: TopBarProps) {
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-800 transition-colors duration-150 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-[#F5F5DC] text-stone-700 text-xs font-bold border border-[#D1B370]/60 transition-colors duration-150 disabled:opacity-50 shadow-xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-[#A76D40] ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
         )}

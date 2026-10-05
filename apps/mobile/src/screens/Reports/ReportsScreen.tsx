@@ -66,7 +66,7 @@ export function ReportsScreen({
           }
         >
           <View style={styles.reportRow}>
-            <View style={[styles.iconBadge, { backgroundColor: '#7f1d1d' }]}>
+            <View style={[styles.iconBadge, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', borderWidth: 1 }]}>
               <Text style={styles.reportIcon}>🚨</Text>
             </View>
             <View style={styles.reportTextColumn}>
@@ -94,7 +94,7 @@ export function ReportsScreen({
           }
         >
           <View style={styles.reportRow}>
-            <View style={[styles.iconBadge, { backgroundColor: '#78350f' }]}>
+            <View style={[styles.iconBadge, { backgroundColor: '#FFFBEB', borderColor: '#D1B370', borderWidth: 1 }]}>
               <Text style={styles.reportIcon}>🌾</Text>
             </View>
             <View style={styles.reportTextColumn}>
@@ -165,7 +165,7 @@ export function ReportsScreen({
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F5F5DC',
   },
   queueCard: {
     marginBottom: 16,
@@ -182,15 +182,15 @@ const styles = StyleSheet.create({
   queueTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#38bdf8',
+    color: '#A76D40',
   },
   queueSubtitle: {
     fontSize: 12,
-    color: '#cbd5e1',
+    color: '#4B5563',
     marginTop: 2,
   },
   queueSyncBtn: {
-    backgroundColor: '#0284c7',
+    backgroundColor: '#3E8E41',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 6,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#cbd5e1',
+    color: '#A76D40',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 12,
@@ -236,17 +236,17 @@ const styles = StyleSheet.create({
   reportCategory: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#A76D40',
     letterSpacing: 0.5,
   },
   reportTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: '#1C2A1E',
   },
   reportDesc: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#6B7280',
     marginTop: 4,
     lineHeight: 16,
   },
@@ -264,16 +264,16 @@ const styles = StyleSheet.create({
   simpleRowTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: '#1C2A1E',
   },
   simpleRowDesc: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#6B7280',
     marginTop: 2,
   },
   chevron: {
     fontSize: 22,
-    color: '#64748b',
+    color: '#A76D40',
     marginLeft: 8,
   },
 });

@@ -20,7 +20,7 @@ export function DashboardLayout({
   isRefreshing = false,
 }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 font-sans antialiased overflow-hidden">
+    <div className="flex h-screen bg-[#F5F5DC] text-stone-800 font-sans antialiased overflow-hidden">
       {/* Fixed Desktop Sidebar */}
       <Sidebar
         activePage={activePage}
@@ -33,7 +33,7 @@ export function DashboardLayout({
         <TopBar onRefresh={onRefresh} isRefreshing={isRefreshing} />
 
         {/* Scrollable Content Container */}
-        <main className="flex-1 overflow-y-auto p-6 bg-slate-900/30">
+        <main className="flex-1 overflow-y-auto p-6 bg-[#F5F5DC]">
           <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>

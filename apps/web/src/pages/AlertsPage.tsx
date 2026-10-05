@@ -34,10 +34,10 @@ export function AlertsPage() {
       header: 'Subject Animal',
       accessor: (item) => (
         <div>
-          <span className="font-bold text-white block">
+          <span className="font-bold text-[#1C2A1E] block">
             {item.animalName || 'Tracked Elephant'}
           </span>
-          <span className="text-slate-400 text-xs">
+          <span className="text-stone-500 text-xs">
             {item.animalSpecies || 'Elephas maximus maximus'}
           </span>
         </div>
@@ -46,7 +46,7 @@ export function AlertsPage() {
     {
       header: 'Risk Zone',
       accessor: (item) => (
-        <span className="text-slate-300 font-medium">
+        <span className="text-stone-700 font-medium">
           {item.zoneName || 'Buffer Zone / Corridor'}
         </span>
       ),
@@ -58,7 +58,7 @@ export function AlertsPage() {
     {
       header: 'Generated At',
       accessor: (item) => (
-        <span className="text-slate-400 text-xs">
+        <span className="text-stone-500 text-xs">
           {item.generatedAt ? new Date(item.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
         </span>
       ),
@@ -75,14 +75,14 @@ export function AlertsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-extrabold text-white tracking-tight">
+            <h2 className="text-2xl font-extrabold text-[#1C2A1E] tracking-tight">
               Wildlife Risk Alerts & Early Warning
             </h2>
-            <span className="px-2 py-0.5 text-xs font-bold bg-rose-950 text-rose-400 border border-rose-800 rounded">
+            <span className="px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 rounded">
               UC03 SHELL
             </span>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[#A76D40] font-medium mt-1">
             Real-time animal geofence breaches, high-risk buffer zone proximity, and dispatch actions.
           </p>
         </div>
@@ -93,10 +93,10 @@ export function AlertsPage() {
             <button
               key={st}
               onClick={() => setFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-150 ${
                 filter === st
-                  ? 'bg-rose-600 text-white'
-                  : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-rose-700 text-white shadow-xs'
+                  : 'bg-white text-stone-700 hover:bg-[#F5F5DC] border border-[#D1B370]/60'
               }`}
             >
               {st}
@@ -106,12 +106,12 @@ export function AlertsPage() {
       </div>
 
       {/* Feature Architecture Note */}
-      <div className="p-4 bg-rose-950/40 border border-rose-800/60 rounded-xl flex items-start gap-3">
-        <Info className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-        <div className="text-xs text-rose-200/90 leading-relaxed">
-          <strong className="text-rose-300">Team Member 3 Feature Workspace:</strong> Automated risk zone
+      <div className="p-4 bg-[#FAF7EE] border border-[#D1B370]/70 rounded-xl flex items-start gap-3 shadow-xs">
+        <Info className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" />
+        <div className="text-xs text-stone-700 leading-relaxed font-medium">
+          <strong className="text-[#1C2A1E]">Team Member 3 Feature Workspace:</strong> Automated risk zone
           point-in-polygon calculation, early warning dispatch notifications, and field response tracking belong in{' '}
-          <code className="bg-rose-950 px-1.5 py-0.5 rounded border border-rose-800 font-mono text-rose-300">
+          <code className="bg-[#F5F5DC] px-1.5 py-0.5 rounded border border-[#D1B370]/60 font-mono text-[#A76D40]">
             apps/web/src/features/uc03-alerts/
           </code>
           .

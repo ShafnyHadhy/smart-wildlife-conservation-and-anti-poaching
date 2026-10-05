@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     height: 8,
   },
   text: {
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 0.5,
   },
   smallText: {
@@ -111,28 +111,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // Variants
-  success: { backgroundColor: 'rgba(34, 197, 94, 0.15)', borderWidth: 1, borderColor: '#22c55e' },
-  successDot: { backgroundColor: '#22c55e' },
-  successText: { color: '#4ade80' },
+  // Variants using #3E8E41, #A76D40, #D1B370
+  success: { backgroundColor: 'rgba(62, 142, 65, 0.15)', borderWidth: 1, borderColor: '#3E8E41' },
+  successDot: { backgroundColor: '#3E8E41' },
+  successText: { color: '#2E6B31' },
 
-  warning: { backgroundColor: 'rgba(234, 179, 8, 0.15)', borderWidth: 1, borderColor: '#eab308' },
-  warningDot: { backgroundColor: '#eab308' },
-  warningText: { color: '#facc15' },
+  warning: { backgroundColor: 'rgba(167, 109, 64, 0.15)', borderWidth: 1, borderColor: '#A76D40' },
+  warningDot: { backgroundColor: '#A76D40' },
+  warningText: { color: '#854F26' },
 
-  danger: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 1, borderColor: '#ef4444' },
-  dangerDot: { backgroundColor: '#ef4444' },
-  dangerText: { color: '#f87171' },
+  danger: { backgroundColor: 'rgba(220, 38, 38, 0.12)', borderWidth: 1, borderColor: '#DC2626' },
+  dangerDot: { backgroundColor: '#DC2626' },
+  dangerText: { color: '#991B1B' },
 
-  info: { backgroundColor: 'rgba(14, 165, 233, 0.15)', borderWidth: 1, borderColor: '#0ea5e9' },
-  infoDot: { backgroundColor: '#0ea5e9' },
-  infoText: { color: '#38bdf8' },
+  info: { backgroundColor: 'rgba(209, 179, 112, 0.25)', borderWidth: 1, borderColor: '#D1B370' },
+  infoDot: { backgroundColor: '#A76D40' },
+  infoText: { color: '#735A22' },
 
-  offline: { backgroundColor: 'rgba(249, 115, 22, 0.15)', borderWidth: 1, borderColor: '#f97316' },
-  offlineDot: { backgroundColor: '#f97316' },
-  offlineText: { color: '#fb923c' },
+  offline: { backgroundColor: 'rgba(167, 109, 64, 0.2)', borderWidth: 1, borderColor: '#A76D40' },
+  offlineDot: { backgroundColor: '#A76D40' },
+  offlineText: { color: '#854F26' },
 
-  neutral: { backgroundColor: 'rgba(148, 163, 184, 0.15)', borderWidth: 1, borderColor: '#64748b' },
-  neutralDot: { backgroundColor: '#94a3b8' },
-  neutralText: { color: '#cbd5e1' },
+  neutral: { backgroundColor: 'rgba(120, 113, 108, 0.15)', borderWidth: 1, borderColor: '#A8A29E' },
+  neutralDot: { backgroundColor: '#78716C' },
+  neutralText: { color: '#44403C' },
 });

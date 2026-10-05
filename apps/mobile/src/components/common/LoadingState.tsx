@@ -8,7 +8,7 @@ interface LoadingStateProps {
 export function LoadingState({ message = 'Loading...' }: LoadingStateProps) {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#0284c7" />
+      <ActivityIndicator size="large" color="#3E8E41" />
       <Text style={styles.text}>{message}</Text>
     </View>
   );
@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
   text: {
     marginTop: 12,
     fontSize: 14,
-    color: '#94a3b8',
-    fontWeight: '500',
+    color: '#A76D40',
+    fontWeight: '600',
   },
 });

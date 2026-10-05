@@ -4,13 +4,13 @@
     "slug": "wildlife-monitoring-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#090d16"
+        "backgroundColor": "#F5F5DC"
       }
     },
     "web": {

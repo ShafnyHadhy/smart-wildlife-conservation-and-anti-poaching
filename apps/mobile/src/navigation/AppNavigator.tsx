@@ -102,7 +102,7 @@ export function AppNavigator({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F5F5DC',
   },
   screenContainer: {
     flex: 1,

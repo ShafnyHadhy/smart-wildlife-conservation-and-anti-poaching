@@ -68,12 +68,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: 64,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#FAF7EE',
     borderTopWidth: 1,
-    borderTopColor: '#1e293b',
+    borderTopColor: '#D1B370',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingBottom: 4,
+    elevation: 4,
+    shadowColor: '#A76D40',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   tabButton: {
     flex: 1,
@@ -84,7 +89,7 @@ const styles = StyleSheet.create({
   },
   activeTabButton: {
     borderTopWidth: 3,
-    borderTopColor: '#0284c7',
+    borderTopColor: '#3E8E41',
   },
   iconWrapper: {
     position: 'relative',
@@ -95,27 +100,27 @@ const styles = StyleSheet.create({
   },
   tabIcon: {
     fontSize: 20,
-    color: '#64748b',
+    color: '#78716C',
   },
   activeTabIcon: {
-    color: '#38bdf8',
+    color: '#3E8E41',
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: '700',
+    color: '#78716C',
     marginTop: 2,
     letterSpacing: 0.2,
   },
   activeTabLabel: {
-    color: '#38bdf8',
-    fontWeight: '700',
+    color: '#3E8E41',
+    fontWeight: '800',
   },
   badge: {
     position: 'absolute',
     top: -4,
     right: -8,
-    backgroundColor: '#ef4444',
+    backgroundColor: '#A76D40',
     borderRadius: 8,
     paddingHorizontal: 4,
     paddingVertical: 1,

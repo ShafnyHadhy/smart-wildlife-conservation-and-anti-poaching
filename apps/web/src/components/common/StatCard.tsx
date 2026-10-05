@@ -18,30 +18,30 @@ export function StatCard({
   onClick,
 }: StatCardProps) {
   const borderColors = {
-    default: 'border-slate-800 hover:border-slate-700',
-    success: 'border-emerald-900/50 hover:border-emerald-700',
-    warning: 'border-amber-900/50 hover:border-amber-700',
-    danger: 'border-rose-900/50 hover:border-rose-700',
-    info: 'border-sky-900/50 hover:border-sky-700',
+    default: 'border-[#D1B370]/60 hover:border-[#D1B370]',
+    success: 'border-[#3E8E41]/40 hover:border-[#3E8E41]',
+    warning: 'border-[#A76D40]/40 hover:border-[#A76D40]',
+    danger: 'border-rose-300 hover:border-rose-500',
+    info: 'border-[#D1B370]/80 hover:border-[#A76D40]',
   };
 
   const badgeBg = {
-    default: 'bg-slate-800/80 text-slate-300',
-    success: 'bg-emerald-950 text-emerald-400',
-    warning: 'bg-amber-950 text-amber-400',
-    danger: 'bg-rose-950 text-rose-400',
-    info: 'bg-sky-950 text-sky-400',
+    default: 'bg-[#F5F5DC] text-[#3E8E41]',
+    success: 'bg-[#3E8E41]/15 text-[#3E8E41]',
+    warning: 'bg-[#A76D40]/15 text-[#A76D40]',
+    danger: 'bg-rose-50 text-rose-600',
+    info: 'bg-[#D1B370]/25 text-[#A76D40]',
   };
 
   return (
     <div
       onClick={onClick}
-      className={`bg-slate-900/90 border ${borderColors[variant]} rounded-xl p-5 shadow-lg backdrop-blur transition-all duration-150 ${
-        onClick ? 'cursor-pointer hover:scale-[1.01]' : ''
+      className={`bg-white border ${borderColors[variant]} rounded-xl p-5 shadow-xs transition-all duration-150 ${
+        onClick ? 'cursor-pointer hover:scale-[1.01] hover:shadow-md' : ''
       }`}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+        <span className="text-xs font-bold tracking-wider text-[#A76D40] uppercase">
           {title}
         </span>
         {icon && (
@@ -50,11 +50,11 @@ export function StatCard({
           </div>
         )}
       </div>
-      <div className="text-3xl font-extrabold text-white tracking-tight">
+      <div className="text-3xl font-extrabold text-[#1C2A1E] tracking-tight">
         {value}
       </div>
       {subtitle && (
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-stone-500">
           {subtitle}
         </p>
       )}

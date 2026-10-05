@@ -78,7 +78,7 @@ export default function App() {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0b1120" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
       <AppNavigator
         isOnline={isOnline}
         pendingCount={pendingCount}
@@ -92,6 +92,6 @@ export default function App() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F5F5DC',
   },
 });

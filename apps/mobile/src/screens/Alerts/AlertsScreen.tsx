@@ -165,30 +165,33 @@ export function AlertsScreen() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F5F5DC',
   },
   filterRow: {
     flexDirection: 'row',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#FAF7EE',
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: '#D1B370',
   },
   filterTab: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#F5F5DC',
+    borderWidth: 1,
+    borderColor: '#D1B370',
   },
   filterTabActive: {
-    backgroundColor: '#0284c7',
+    backgroundColor: '#3E8E41',
+    borderColor: '#3E8E41',
   },
   filterTabText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: '#A76D40',
   },
   filterTabTextActive: {
     color: '#ffffff',
@@ -197,12 +200,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#F5F5DC',
+    borderWidth: 1,
+    borderColor: '#D1B370',
   },
   clearToggleText: {
     fontSize: 11,
-    color: '#94a3b8',
-    fontWeight: '600',
+    color: '#A76D40',
+    fontWeight: '700',
   },
   listContent: {
     padding: 16,
@@ -221,27 +226,27 @@ const styles = StyleSheet.create({
   alertType: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#f97316',
+    color: '#A76D40',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   animalName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#f8fafc',
+    color: '#1C2A1E',
     marginTop: 2,
   },
   animalSpecies: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#94a3b8',
+    color: '#6B7280',
   },
   cardBody: {
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#1e293b',
+    borderTopColor: '#E5E0D0',
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: '#E5E0D0',
     gap: 4,
   },
   infoRow: {
@@ -254,7 +259,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: '#cbd5e1',
+    color: '#4B5563',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -263,7 +268,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   respondButton: {
-    backgroundColor: '#0284c7',
+    backgroundColor: '#3E8E41',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
