@@ -35,15 +35,44 @@ function mapRowToEvidence(row: any): SupportingEvidence {
 }
 
 export class IncidentRepository {
-  async findAll(): Promise<Incident[]> {
-    const sql = `
+  async findAll(filter?: {
+    status?: IncidentStatus;
+    rangerId?: string;
+    patrolId?: string;
+    incidentType?: IncidentType;
+  }): Promise<Incident[]> {
+    let sql = `
       SELECT i.*, u.full_name AS ranger_name, p.patrol_code
       FROM incidents i
       JOIN users u ON i.ranger_id = u.id
       LEFT JOIN patrols p ON i.patrol_id = p.id
-      ORDER BY i.reported_at DESC
     `;
-    const res = await query(sql);
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (filter?.status) {
+      params.push(filter.status);
+      conditions.push(`i.status = $${params.length}`);
+    }
+    if (filter?.rangerId) {
+      params.push(filter.rangerId);
+      conditions.push(`i.ranger_id = $${params.length}`);
+    }
+    if (filter?.patrolId) {
+      params.push(filter.patrolId);
+      conditions.push(`i.patrol_id = $${params.length}`);
+    }
+    if (filter?.incidentType) {
+      params.push(filter.incidentType);
+      conditions.push(`i.incident_type = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    sql += ' ORDER BY i.reported_at DESC';
+    const res = await query(sql, params);
     return res.rows.map(mapRowToIncident);
   }
 
@@ -63,6 +92,22 @@ export class IncidentRepository {
     return incident;
   }
 
+  async findByClientMutationId(clientMutationId: string): Promise<Incident | null> {
+    const sql = `
+      SELECT i.*, u.full_name AS ranger_name, p.patrol_code
+      FROM incidents i
+      JOIN users u ON i.ranger_id = u.id
+      LEFT JOIN patrols p ON i.patrol_id = p.id
+      WHERE i.client_mutation_id = $1
+    `;
+    const res = await query(sql, [clientMutationId]);
+    if (!res.rows[0]) return null;
+
+    const incident = mapRowToIncident(res.rows[0]);
+    incident.evidence = await this.findEvidenceByIncidentId(incident.id);
+    return incident;
+  }
+
   async findEvidenceByIncidentId(incidentId: string): Promise<SupportingEvidence[]> {
     const res = await query(
       'SELECT * FROM supporting_evidence WHERE incident_id = $1 ORDER BY captured_at ASC',
@@ -78,13 +123,22 @@ export class IncidentRepository {
     description: string;
     latitude: number;
     longitude: number;
+    reportedAt?: string | Date;
     clientMutationId?: string;
   }): Promise<Incident> {
     const sql = `
-      INSERT INTO incidents (ranger_id, patrol_id, incident_type, description, latitude, longitude, client_mutation_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO incidents (
+        ranger_id, patrol_id, incident_type, description, latitude, longitude, reported_at, client_mutation_id
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
+    const reportedAt = data.reportedAt
+      ? typeof data.reportedAt === 'string'
+        ? new Date(data.reportedAt)
+        : data.reportedAt
+      : new Date();
+
     const params = [
       data.rangerId,
       data.patrolId || null,
@@ -92,6 +146,7 @@ export class IncidentRepository {
       data.description,
       data.latitude,
       data.longitude,
+      reportedAt,
       data.clientMutationId || null,
     ];
     const res = await query(sql, params);

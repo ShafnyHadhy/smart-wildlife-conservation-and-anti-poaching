@@ -117,12 +117,51 @@ export class WildlifeRepository {
     return res.rows[0] ? mapRowToAnimal(res.rows[0]) : null;
   }
 
+  async findCollarById(id: string): Promise<TrackingCollar | null> {
+    const res = await query('SELECT * FROM tracking_collars WHERE id = $1', [id]);
+    return res.rows[0] ? mapRowToCollar(res.rows[0]) : null;
+  }
+
   async findCollarByAnimalId(animalId: string): Promise<TrackingCollar | null> {
     const res = await query('SELECT * FROM tracking_collars WHERE animal_id = $1', [animalId]);
     return res.rows[0] ? mapRowToCollar(res.rows[0]) : null;
   }
 
-  async findRecentLocationsByAnimal(animalId: string, limit = 10): Promise<LocationRecord[]> {
+  async createLocationRecord(data: {
+    animalId: string;
+    collarId?: string;
+    latitude: number;
+    longitude: number;
+    recordedAt: string | Date;
+    isSimulated?: boolean;
+  }): Promise<LocationRecord> {
+    const sql = `
+      INSERT INTO location_records (animal_id, collar_id, latitude, longitude, recorded_at, is_simulated)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+    const recordedAt = typeof data.recordedAt === 'string' ? new Date(data.recordedAt) : data.recordedAt;
+    const res = await query(sql, [
+      data.animalId,
+      data.collarId || null,
+      data.latitude,
+      data.longitude,
+      recordedAt,
+      data.isSimulated ?? true,
+    ]);
+
+    // Also update collar's last transmission time if collarId is provided
+    if (data.collarId) {
+      await query(
+        'UPDATE tracking_collars SET last_transmission_at = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [recordedAt, data.collarId]
+      );
+    }
+
+    return mapRowToLocationRecord(res.rows[0]);
+  }
+
+  async findRecentLocationsByAnimal(animalId: string, limit = 20): Promise<LocationRecord[]> {
     const res = await query(
       'SELECT * FROM location_records WHERE animal_id = $1 ORDER BY recorded_at DESC LIMIT $2',
       [animalId, limit]
@@ -139,7 +178,46 @@ export class WildlifeRepository {
     return res.rows.map(mapRowToRiskZone);
   }
 
+  async findRiskZoneById(id: string): Promise<RiskZone | null> {
+    const res = await query('SELECT * FROM risk_zones WHERE id = $1', [id]);
+    return res.rows[0] ? mapRowToRiskZone(res.rows[0]) : null;
+  }
+
+  async findAlerts(filter?: { status?: AlertStatus; animalId?: string }): Promise<WildlifeRiskAlert[]> {
+    let sql = `
+      SELECT a.*, w.name AS animal_name, w.species AS animal_species, rz.name AS zone_name,
+             lr.latitude, lr.longitude
+      FROM wildlife_risk_alerts a
+      JOIN wildlife_animals w ON a.animal_id = w.id
+      JOIN risk_zones rz ON a.risk_zone_id = rz.id
+      LEFT JOIN location_records lr ON a.location_record_id = lr.id
+    `;
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (filter?.status) {
+      params.push(filter.status);
+      conditions.push(`a.status = $${params.length}`);
+    }
+    if (filter?.animalId) {
+      params.push(filter.animalId);
+      conditions.push(`a.animal_id = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    sql += ' ORDER BY a.generated_at DESC';
+    const res = await query(sql, params);
+    return res.rows.map(mapRowToAlert);
+  }
+
   async findActiveAlerts(): Promise<WildlifeRiskAlert[]> {
+    return this.findAlerts({ status: AlertStatus.ACTIVE });
+  }
+
+  async findAlertById(id: string): Promise<WildlifeRiskAlert | null> {
     const sql = `
       SELECT a.*, w.name AS animal_name, w.species AS animal_species, rz.name AS zone_name,
              lr.latitude, lr.longitude
@@ -147,11 +225,14 @@ export class WildlifeRepository {
       JOIN wildlife_animals w ON a.animal_id = w.id
       JOIN risk_zones rz ON a.risk_zone_id = rz.id
       LEFT JOIN location_records lr ON a.location_record_id = lr.id
-      WHERE a.status = 'ACTIVE'
-      ORDER BY a.generated_at DESC
+      WHERE a.id = $1
     `;
-    const res = await query(sql);
-    return res.rows.map(mapRowToAlert);
+    const res = await query(sql, [id]);
+    if (!res.rows[0]) return null;
+
+    const alert = mapRowToAlert(res.rows[0]);
+    alert.responses = await this.findResponsesByAlertId(id);
+    return alert;
   }
 
   async findResponsesByAlertId(alertId: string): Promise<AlertResponse[]> {
@@ -164,6 +245,35 @@ export class WildlifeRepository {
     `;
     const res = await query(sql, [alertId]);
     return res.rows.map(mapRowToResponse);
+  }
+
+  async createAlertResponse(data: {
+    alertId: string;
+    responderId: string;
+    actionTaken: string;
+    status: ResponseStatus;
+    notes?: string;
+  }): Promise<AlertResponse> {
+    const sql = `
+      INSERT INTO alert_responses (alert_id, responder_id, action_taken, status, notes)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+    const res = await query(sql, [
+      data.alertId,
+      data.responderId,
+      data.actionTaken,
+      data.status,
+      data.notes || null,
+    ]);
+    return mapRowToResponse(res.rows[0]);
+  }
+
+  async updateAlertStatus(alertId: string, status: AlertStatus): Promise<void> {
+    await query(
+      'UPDATE wildlife_risk_alerts SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [status, alertId]
+    );
   }
 }
 

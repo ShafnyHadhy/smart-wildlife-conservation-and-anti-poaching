@@ -47,7 +47,7 @@ export class UserRepository {
   }
 
   async findRangers(): Promise<User[]> {
-    return this.findByRole('RANGER');
+    return this.findByRole(UserRole.RANGER);
   }
 
   async findAllCommunityMembers(): Promise<CommunityMember[]> {

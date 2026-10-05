@@ -33,6 +33,7 @@ function mapRowToRoute(row: any): PatrolRoute {
     isActive: row.is_active,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
+    parkName: row.park_name,
   };
 }
 
@@ -51,16 +52,37 @@ function mapRowToWaypoint(row: any): Waypoint {
 }
 
 export class PatrolRepository {
-  async findAll(): Promise<Patrol[]> {
-    const sql = `
+  async findAll(filter?: { status?: PatrolStatus; rangerId?: string; parkId?: string }): Promise<Patrol[]> {
+    let sql = `
       SELECT p.*, u.full_name AS ranger_name, pr.name AS route_name, pk.name AS park_name
       FROM patrols p
       JOIN users u ON p.ranger_id = u.id
       JOIN patrol_routes pr ON p.patrol_route_id = pr.id
       JOIN parks pk ON p.park_id = pk.id
-      ORDER BY p.start_time DESC
     `;
-    const res = await query(sql);
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (filter?.status) {
+      params.push(filter.status);
+      conditions.push(`p.status = $${params.length}`);
+    }
+    if (filter?.rangerId) {
+      params.push(filter.rangerId);
+      conditions.push(`p.ranger_id = $${params.length}`);
+    }
+    if (filter?.parkId) {
+      params.push(filter.parkId);
+      conditions.push(`p.park_id = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    sql += ' ORDER BY p.start_time DESC';
+
+    const res = await query(sql, params);
     return res.rows.map(mapRowToPatrol);
   }
 
@@ -82,22 +104,38 @@ export class PatrolRepository {
   }
 
   async findActivePatrols(): Promise<Patrol[]> {
-    const sql = `
-      SELECT p.*, u.full_name AS ranger_name, pr.name AS route_name, pk.name AS park_name
-      FROM patrols p
-      JOIN users u ON p.ranger_id = u.id
-      JOIN patrol_routes pr ON p.patrol_route_id = pr.id
-      JOIN parks pk ON p.park_id = pk.id
-      WHERE p.status = 'ACTIVE'
-      ORDER BY p.start_time DESC
+    return this.findAll({ status: PatrolStatus.ACTIVE });
+  }
+
+  async findAllRoutes(parkId?: string): Promise<PatrolRoute[]> {
+    let sql = `
+      SELECT pr.*, pk.name AS park_name
+      FROM patrol_routes pr
+      JOIN parks pk ON pr.park_id = pk.id
     `;
-    const res = await query(sql);
-    return res.rows.map(mapRowToPatrol);
+    const params: any[] = [];
+    if (parkId) {
+      params.push(parkId);
+      sql += ` WHERE pr.park_id = $1`;
+    }
+    sql += ' ORDER BY pr.name ASC';
+    const res = await query(sql, params);
+    return res.rows.map(mapRowToRoute);
+  }
+
+  async findRouteById(id: string): Promise<PatrolRoute | null> {
+    const sql = `
+      SELECT pr.*, pk.name AS park_name
+      FROM patrol_routes pr
+      JOIN parks pk ON pr.park_id = pk.id
+      WHERE pr.id = $1
+    `;
+    const res = await query(sql, [id]);
+    return res.rows[0] ? mapRowToRoute(res.rows[0]) : null;
   }
 
   async findRoutesByPark(parkId: string): Promise<PatrolRoute[]> {
-    const res = await query('SELECT * FROM patrol_routes WHERE park_id = $1 ORDER BY name ASC', [parkId]);
-    return res.rows.map(mapRowToRoute);
+    return this.findAllRoutes(parkId);
   }
 
   async findWaypointsByPatrolId(patrolId: string): Promise<Waypoint[]> {
