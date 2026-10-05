@@ -1,2 +1,4 @@
-export * from './enums';
-export * from './types';
+export * from './enums/index';
+export * from './types/index';
+export * from './utils/coordinates';
+

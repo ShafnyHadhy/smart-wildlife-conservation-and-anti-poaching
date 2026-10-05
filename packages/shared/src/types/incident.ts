@@ -37,7 +37,9 @@ export interface CreateIncidentDTO {
   patrolId?: string;
   incidentType: IncidentType;
   description: string;
-  location: Coordinates;
+  latitude: number;
+  longitude: number;
+  location?: Coordinates;
   reportedAt?: string;
   clientMutationId?: string;
   evidence?: {

@@ -35,6 +35,7 @@ export interface WildlifeRiskAlert {
   animalSpecies?: string;
   zoneName?: string;
   location?: Coordinates;
+  responses?: AlertResponse[];
 }
 
 export interface AlertResponse {

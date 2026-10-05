@@ -10,6 +10,7 @@ export interface PatrolRoute {
   estimatedDurationMinutes: number;
   routeType: string;
   isActive: boolean;
+  parkName?: string;
   createdAt: string;
   updatedAt: string;
 }

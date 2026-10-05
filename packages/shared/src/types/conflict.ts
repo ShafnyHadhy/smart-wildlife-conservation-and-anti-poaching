@@ -26,7 +26,10 @@ export interface CreateConflictReportDTO {
   parkId?: string;
   conflictType: ConflictType;
   description: string;
-  location: Coordinates;
+  latitude: number;
+  longitude: number;
+  location?: Coordinates;
   reportedAt?: string;
   clientMutationId?: string;
 }
+
