@@ -1,7 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import { config } from './config/env';
-import healthRoutes from './routes/healthRoutes';
+import apiRouter from './routes';
 import { errorHandler } from './middleware/errorHandler';
 
 export function createApp(): Application {
@@ -20,12 +20,22 @@ export function createApp(): Application {
       version: '1.0.0',
       endpoints: {
         health: '/api/health',
+        parks: '/api/parks',
+        users: '/api/users',
+        patrols: '/api/patrols',
+        patrolRoutes: '/api/patrol-routes',
+        animals: '/api/animals',
+        riskZones: '/api/risk-zones',
+        alerts: '/api/alerts',
+        incidents: '/api/incidents',
+        conflictReports: '/api/conflict-reports',
+        sync: '/api/sync/batch',
       },
     });
   });
 
   // Mount API Routes
-  app.use('/api', healthRoutes);
+  app.use('/api', apiRouter);
 
   // Centralized Error Handling Middleware
   app.use(errorHandler);
