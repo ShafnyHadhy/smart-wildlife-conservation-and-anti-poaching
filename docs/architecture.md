@@ -315,29 +315,38 @@ To avoid code duplication across use cases and tiers, the following reusable cor
 
 ## 9. REST API Strategy
 
-All endpoints follow RESTful conventions, using JSON for payloads and standard HTTP status codes (`200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`).
+All endpoints follow RESTful conventions, using JSON for payloads and standard HTTP status codes (`200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `422 Unprocessable Entity`). Single entities and mutations return `{ success: true, data: ... }`, collections return `{ success: true, data: [...], meta: { count: ... } }`, and errors return `{ success: false, error: { code, message, details } }`.
 
-### 9.1 API Group Summary
+*See [api.md](file:///d:/Academics/Y3S2/CSSE/Project/docs/api.md) for full endpoint specifications and [offline-sync.md](file:///d:/Academics/Y3S2/CSSE/Project/docs/offline-sync.md) for offline batch synchronization details.*
+
+### 9.1 Phase 3 Implemented API Endpoints
 
 | Resource Group | Method | Endpoint | Use Case | Purpose |
 |---|---|---|---|---|
-| **Patrols** | `GET` | `/api/patrols` | UC01 | List all patrols with filters (status, ranger, date) |
-| | `GET` | `/api/patrols/:id` | UC01 | Fetch patrol details, assigned route, and route history |
-| | `GET` | `/api/patrols/overview/live` | UC01 | Fetch latest locations and staleness indicators for active rangers |
-| | `GET` | `/api/patrols/:id/coverage` | UC01 | Calculate patrol coverage score & identify under-patrolled areas |
-| | `POST` | `/api/patrols/:id/telemetry` | UC01 | Ingest live or simulated ranger coordinates |
-| **Incidents** | `POST` | `/api/incidents` | UC02 | Create new incident report (idempotent with `client_mutation_id`) |
-| | `GET` | `/api/incidents` | UC02 | List incident reports with filtering & photo URLs |
+| **Health** | `GET` | `/api/health` | System | Healthcheck for backend service & database connectivity |
+| **Parks & Users** | `GET` | `/api/parks` | Core | List protected parks / reserves |
+| | `GET` | `/api/users` | Core | List staff & community users with role filters |
+| **Patrols** | `GET` | `/api/patrols` | UC01 | List patrols with filters (`status`, `rangerId`, `parkId`) |
+| | `GET` | `/api/patrols/:id` | UC01 | Fetch patrol details aggregated with ranger, route & waypoints |
+| | `GET` | `/api/patrol-routes` | UC01 | List designated patrol routes |
+| | `GET` | `/api/patrol-routes/:id` | UC01 | Fetch route details with ordered checkpoints |
+| **Telemetry & Alerts** | `GET` | `/api/animals` | UC03 | List monitored wildlife individuals |
+| | `GET` | `/api/animals/:id` | UC03 | Single tracked animal details |
+| | `GET` | `/api/animals/:id/locations`| UC03 | Retrieve animal GPS fix history |
+| | `POST`| `/api/animal-locations` | UC03 | Ingest simulated GPS collar telemetry fix |
+| | `GET` | `/api/risk-zones` | UC03 | List defined geofenced zones |
+| | `GET` | `/api/alerts` | UC03 | List alerts with status/animal filters |
+| | `GET` | `/api/alerts/:id` | UC03 | Fetch single alert details with response history |
+| | `POST`| `/api/alerts/:id/respond`| UC03 | Record field response and update alert state |
+| **Incidents** | `GET` | `/api/incidents` | UC02 | List incident reports with filters |
 | | `GET` | `/api/incidents/:id` | UC02 | Detailed incident view |
-| **Telemetry & Alerts** | `POST` | `/api/animals/telemetry` | UC03 | Ingest animal collar ping & trigger risk evaluation |
-| | `GET` | `/api/alerts` | UC03 | List active and historical wildlife risk alerts |
-| | `PATCH` | `/api/alerts/:id/respond`| UC03 | Respond to / resolve risk alert (offline-compatible) |
-| | `GET` | `/api/zones` | UC03 | List high-risk zones and boundaries |
-| **Conflict Reports** | `POST` | `/api/conflicts` | UC04 | Submit human-wildlife conflict report |
-| | `GET` | `/api/conflicts` | UC04 | List conflict reports with duplicate detection flags |
-| | `PATCH` | `/api/conflicts/:id/status`| UC04 | Update operational triage status |
-| **Batch Sync** | `POST` | `/api/sync/batch` | UC02/03/04 | Bulk synchronizer for mobile devices returning online |
-| **Simulation Harness**| `POST` | `/api/simulator/tick` | UC01/03 | Step simulation for testing / demo without waiting on timers |
+| | `POST`| `/api/incidents` | UC02 | Create incident (idempotent with `clientMutationId`) |
+| **Conflict Reports** | `GET` | `/api/conflict-reports` | UC04 | List conflict reports with filters |
+| | `GET` | `/api/conflict-reports/:id`| UC04 | Detailed conflict report view |
+| | `POST`| `/api/conflict-reports` | UC04 | Create conflict report (idempotent with `clientMutationId`) |
+| | `PATCH`| `/api/conflict-reports/:id/status`| UC04 | Update operational triage status |
+| **Batch Sync** | `POST` | `/api/sync/batch` | UC02/03/04 | Bulk idempotent synchronizer for mobile devices returning online |
+
 
 ---
 
