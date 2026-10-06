@@ -19,6 +19,12 @@ export interface ConflictReport {
   reporterPhone?: string;
   villageName?: string;
   parkName?: string;
+  // Intelligent Duplicate Detection & Triage Workflow
+  potentialDuplicateOf?: string;
+  distanceToDuplicateKm?: number;
+  triageNotes?: string;
+  mitigationAction?: string;
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
 export interface CreateConflictReportDTO {
@@ -31,5 +37,25 @@ export interface CreateConflictReportDTO {
   location?: Coordinates;
   reportedAt?: string;
   clientMutationId?: string;
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+export interface UpdateConflictStatusDTO {
+  status: ConflictStatus;
+  triageNotes?: string;
+  mitigationAction?: string;
+}
+
+export interface ConflictStats {
+  total: number;
+  submitted: number;
+  underReview: number;
+  responding: number;
+  resolved: number;
+  closed: number;
+  cropDamageCount: number;
+  elephantHumanCount: number;
+  propertyDamageCount: number;
+  livestockAttackCount: number;
 }
 
