@@ -42,6 +42,7 @@ export function AppNavigator({
           <ReportsScreen
             pendingCount={pendingCount}
             onSyncPress={onSyncNow}
+            isOnline={isOnline}
           />
         );
       case 'PROFILE':
