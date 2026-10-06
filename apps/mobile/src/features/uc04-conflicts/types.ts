@@ -11,4 +11,5 @@ export interface ConflictDraft {
   reportedAt: string;
 }
 
-export type { ConflictReport, ConflictType, ConflictStatus, CreateConflictReportDTO };
+export { ConflictType, ConflictStatus };
+export type { ConflictReport, CreateConflictReportDTO };
