@@ -1,19 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
 import { AppCard } from '../../components/common/AppCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { ConflictReportFormScreen } from '../../features/uc04-conflicts/screens/ConflictReportFormScreen';
+import { ConflictListScreen } from '../../features/uc04-conflicts/screens/ConflictListScreen';
 
 interface ReportsScreenProps {
   pendingCount?: number;
   onSyncPress?: () => void;
+  isOnline?: boolean;
 }
 
 export function ReportsScreen({
   pendingCount = 0,
   onSyncPress,
+  isOnline = true,
 }: ReportsScreenProps) {
+  const [activeView, setActiveView] = useState<'hub' | 'conflict_form' | 'conflict_list'>('hub');
+
+  if (activeView === 'conflict_form') {
+    return (
+      <ConflictReportFormScreen
+        isOnline={isOnline}
+        onBack={() => setActiveView('hub')}
+        onSubmitSuccess={() => setActiveView('conflict_list')}
+      />
+    );
+  }
+
+  if (activeView === 'conflict_list') {
+    return (
+      <ConflictListScreen
+        onBack={() => setActiveView('hub')}
+        onNewReportPress={() => setActiveView('conflict_form')}
+      />
+    );
+  }
   const handleFeatureNavigate = (title: string, featureCode: string, description: string) => {
     Alert.alert(
       `${title} (${featureCode})`,
@@ -85,13 +109,7 @@ export function ReportsScreen({
         {/* UC04 Option */}
         <AppCard
           variant="elevated"
-          onPress={() =>
-            handleFeatureNavigate(
-              'Report Conflict',
-              'UC04',
-              'Log agricultural crop damage, elephant village incursions, or property destruction.'
-            )
-          }
+          onPress={() => setActiveView('conflict_form')}
         >
           <View style={styles.reportRow}>
             <View style={[styles.iconBadge, { backgroundColor: '#FFFBEB', borderColor: '#D1B370', borderWidth: 1 }]}>
@@ -114,13 +132,7 @@ export function ReportsScreen({
 
         {/* Submitted Reports */}
         <AppCard
-          onPress={() =>
-            handleFeatureNavigate(
-              'Submitted Reports',
-              'Shared',
-              'View synced historical reports stored in Neon PostgreSQL.'
-            )
-          }
+          onPress={() => setActiveView('conflict_list')}
         >
           <View style={styles.simpleRow}>
             <Text style={styles.simpleRowIcon}>📂</Text>
