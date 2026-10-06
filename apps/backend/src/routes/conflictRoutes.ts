@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getConflicts,
   getConflictById,
+  getConflictStats,
   createConflict,
   updateConflictStatus,
 } from '../controllers/conflictController';
@@ -16,6 +17,7 @@ import {
 const router = Router();
 
 router.get('/', validateQuery(conflictFilterSchema), getConflicts);
+router.get('/stats', getConflictStats);
 router.get('/:id', validateParams(idParamSchema), getConflictById);
 router.post('/', validateBody(createConflictReportSchema), createConflict);
 router.patch(

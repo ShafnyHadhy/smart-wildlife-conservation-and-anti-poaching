@@ -1,9 +1,24 @@
-import { ConflictReport, ConflictType, ConflictStatus } from '@wildlife/shared';
+import {
+  ConflictReport,
+  ConflictType,
+  ConflictStatus,
+  ConflictStats,
+  CreateConflictReportDTO,
+  UpdateConflictStatusDTO,
+} from '@wildlife/shared';
 
 export interface ConflictFilterOptions {
-  status?: ConflictStatus;
-  conflictType?: ConflictType;
+  status?: ConflictStatus | 'ALL';
+  conflictType?: ConflictType | 'ALL';
   parkId?: string;
+  search?: string;
 }
 
-export type { ConflictReport, ConflictType, ConflictStatus };
+export { ConflictType, ConflictStatus };
+
+export type {
+  ConflictReport,
+  ConflictStats,
+  CreateConflictReportDTO,
+  UpdateConflictStatusDTO,
+};
