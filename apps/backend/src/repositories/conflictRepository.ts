@@ -1,7 +1,18 @@
 import { query } from '../config/database';
 import { ConflictReport, ConflictType, ConflictStatus } from '@wildlife/shared';
 
+interface ConflictMetadata {
+  triageNotes?: string;
+  mitigationAction?: string;
+  potentialDuplicateOf?: string;
+  distanceToDuplicateKm?: number;
+  severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+}
+
+const metadataStore = new Map<string, ConflictMetadata>();
+
 function mapRowToConflict(row: any): ConflictReport {
+  const meta = metadataStore.get(row.id) || {};
   return {
     id: row.id,
     communityMemberId: row.community_member_id,
@@ -11,14 +22,19 @@ function mapRowToConflict(row: any): ConflictReport {
     latitude: parseFloat(row.latitude),
     longitude: parseFloat(row.longitude),
     status: row.status as ConflictStatus,
-    reportedAt: row.reported_at.toISOString(),
+    reportedAt: row.reported_at instanceof Date ? row.reported_at.toISOString() : new Date(row.reported_at).toISOString(),
     clientMutationId: row.client_mutation_id,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : new Date(row.updated_at).toISOString(),
     reporterName: row.reporter_name,
     reporterPhone: row.reporter_phone,
     villageName: row.village_name,
     parkName: row.park_name,
+    potentialDuplicateOf: row.potential_duplicate_of || meta.potentialDuplicateOf,
+    distanceToDuplicateKm: row.distance_to_duplicate_km ? parseFloat(row.distance_to_duplicate_km) : meta.distanceToDuplicateKm,
+    triageNotes: row.triage_notes || meta.triageNotes,
+    mitigationAction: row.mitigation_action || meta.mitigationAction,
+    severity: row.severity || meta.severity || 'MEDIUM',
   };
 }
 
@@ -100,6 +116,9 @@ export class ConflictRepository {
     longitude: number;
     reportedAt?: string | Date;
     clientMutationId?: string;
+    severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    potentialDuplicateOf?: string;
+    distanceToDuplicateKm?: number;
   }): Promise<ConflictReport> {
     const sql = `
       INSERT INTO conflict_reports (
@@ -125,10 +144,28 @@ export class ConflictRepository {
       data.clientMutationId || null,
     ];
     const res = await query(sql, params);
-    return mapRowToConflict(res.rows[0]);
+    const report = mapRowToConflict(res.rows[0]);
+
+    if (data.severity || data.potentialDuplicateOf || data.distanceToDuplicateKm) {
+      metadataStore.set(report.id, {
+        severity: data.severity,
+        potentialDuplicateOf: data.potentialDuplicateOf,
+        distanceToDuplicateKm: data.distanceToDuplicateKm,
+      });
+      report.severity = data.severity || 'MEDIUM';
+      report.potentialDuplicateOf = data.potentialDuplicateOf;
+      report.distanceToDuplicateKm = data.distanceToDuplicateKm;
+    }
+
+    return report;
   }
 
-  async updateStatus(id: string, status: ConflictStatus): Promise<ConflictReport | null> {
+  async updateStatus(
+    id: string,
+    status: ConflictStatus,
+    triageNotes?: string,
+    mitigationAction?: string
+  ): Promise<ConflictReport | null> {
     const sql = `
       UPDATE conflict_reports
       SET status = $1, updated_at = CURRENT_TIMESTAMP
@@ -137,6 +174,16 @@ export class ConflictRepository {
     `;
     const res = await query(sql, [status, id]);
     if (!res.rows[0]) return null;
+
+    if (triageNotes || mitigationAction) {
+      const existingMeta = metadataStore.get(id) || {};
+      metadataStore.set(id, {
+        ...existingMeta,
+        ...(triageNotes !== undefined && { triageNotes }),
+        ...(mitigationAction !== undefined && { mitigationAction }),
+      });
+    }
+
     return this.findById(id);
   }
 }
