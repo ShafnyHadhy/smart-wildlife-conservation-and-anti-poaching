@@ -35,8 +35,10 @@ export function AppNavigator({
             onSyncNow={onSyncNow}
           />
         );
+
       case 'ALERTS':
         return <AlertsScreen />;
+
       case 'REPORTS':
         return (
           <ReportsScreen
@@ -47,6 +49,7 @@ export function AppNavigator({
             onGoHome={() => setActiveTab('HOME')}
           />
         );
+
       case 'PROFILE':
         return (
           <ProfileScreen
@@ -56,6 +59,7 @@ export function AppNavigator({
             onSyncNow={onSyncNow}
           />
         );
+
       case 'MENU':
         return (
           <MenuScreen
@@ -66,6 +70,7 @@ export function AppNavigator({
             onToggleOnline={onToggleOnline}
           />
         );
+
       default:
         return (
           <HomeScreen
@@ -81,7 +86,6 @@ export function AppNavigator({
 
   return (
     <View style={styles.container}>
-      {/* Offline Alert Strip */}
       <OfflineBanner
         isOnline={isOnline}
         pendingCount={pendingCount}
@@ -89,10 +93,10 @@ export function AppNavigator({
         onToggleOnline={onToggleOnline}
       />
 
-      {/* Screen Body */}
-      <View style={styles.screenContainer}>{renderActiveScreen()}</View>
+      <View style={styles.screenContainer}>
+        {renderActiveScreen()}
+      </View>
 
-      {/* Persistent Bottom Tab Bar */}
       <BottomTabBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}

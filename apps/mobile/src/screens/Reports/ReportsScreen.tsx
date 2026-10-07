@@ -11,7 +11,11 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
 import { AppCard } from '../../components/common/AppCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
+
 import { CreateIncidentScreen } from '../../features/uc02-incidents/screens';
+
+import { ConflictReportFormScreen } from '../../features/uc04-conflicts/screens/ConflictReportFormScreen';
+import { ConflictListScreen } from '../../features/uc04-conflicts/screens/ConflictListScreen';
 
 interface ReportsScreenProps {
   isOnline: boolean;
@@ -21,6 +25,12 @@ interface ReportsScreenProps {
   onGoHome: () => void;
 }
 
+type ReportsView =
+  | 'LIST'
+  | 'CREATE_INCIDENT'
+  | 'CONFLICT_FORM'
+  | 'CONFLICT_LIST';
+
 export function ReportsScreen({
   isOnline,
   pendingCount = 0,
@@ -28,9 +38,8 @@ export function ReportsScreen({
   onIncidentSubmitted,
   onGoHome,
 }: ReportsScreenProps) {
-  const [activeView, setActiveView] = useState<
-    'LIST' | 'CREATE_INCIDENT'
-  >('LIST');
+  const [activeView, setActiveView] =
+    useState<ReportsView>('LIST');
 
   const handleFeatureNavigate = (
     title: string,
@@ -43,7 +52,7 @@ export function ReportsScreen({
     );
   };
 
-  // Open UC02 Incident Form
+  // UC02 - Ranger Incident Form
   if (activeView === 'CREATE_INCIDENT') {
     return (
       <CreateIncidentScreen
@@ -51,6 +60,31 @@ export function ReportsScreen({
         onBack={() => setActiveView('LIST')}
         onSubmitted={onIncidentSubmitted}
         onGoHome={onGoHome}
+      />
+    );
+  }
+
+  // UC04 - Conflict Report Form
+  if (activeView === 'CONFLICT_FORM') {
+    return (
+      <ConflictReportFormScreen
+        isOnline={isOnline}
+        onBack={() => setActiveView('LIST')}
+        onSubmitSuccess={() =>
+          setActiveView('CONFLICT_LIST')
+        }
+      />
+    );
+  }
+
+  // UC04 - Conflict Report List
+  if (activeView === 'CONFLICT_LIST') {
+    return (
+      <ConflictListScreen
+        onBack={() => setActiveView('LIST')}
+        onNewReportPress={() =>
+          setActiveView('CONFLICT_FORM')
+        }
       />
     );
   }
@@ -99,7 +133,9 @@ export function ReportsScreen({
         {/* UC02 Option */}
         <AppCard
           variant="elevated"
-          onPress={() => setActiveView('CREATE_INCIDENT')}
+          onPress={() =>
+            setActiveView('CREATE_INCIDENT')
+          }
         >
           <View style={styles.reportRow}>
             <View
@@ -144,11 +180,7 @@ export function ReportsScreen({
         <AppCard
           variant="elevated"
           onPress={() =>
-            handleFeatureNavigate(
-              'Report Conflict',
-              'UC04',
-              'Log agricultural crop damage, elephant village incursions, or property destruction.'
-            )
+            setActiveView('CONFLICT_FORM')
           }
         >
           <View style={styles.reportRow}>
@@ -197,11 +229,7 @@ export function ReportsScreen({
         {/* Submitted Reports */}
         <AppCard
           onPress={() =>
-            handleFeatureNavigate(
-              'Submitted Reports',
-              'Shared',
-              'View synced historical reports stored in Neon PostgreSQL.'
-            )
+            setActiveView('CONFLICT_LIST')
           }
         >
           <View style={styles.simpleRow}>

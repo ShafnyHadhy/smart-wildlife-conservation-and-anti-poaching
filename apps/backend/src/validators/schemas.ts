@@ -64,6 +64,7 @@ export const conflictFilterSchema = z.object({
   parkId: uuidSchema.optional(),
   communityMemberId: uuidSchema.optional(),
   conflictType: z.nativeEnum(ConflictType).optional(),
+  search: z.string().optional(),
 });
 
 // Request bodies
@@ -126,6 +127,7 @@ export const createConflictReportSchema = z.object({
   longitude: coordinateSchema.shape.longitude,
   reportedAt: isoDateString.optional(),
   clientMutationId: z.string().max(64).optional(),
+  severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
 });
 
 // PATCH /api/conflict-reports/:id/status
@@ -135,6 +137,8 @@ export const updateConflictStatusSchema = z.object({
       message: 'Invalid status. Must be SUBMITTED, UNDER_REVIEW, RESPONDING, RESOLVED, or CLOSED',
     }),
   }),
+  triageNotes: z.string().optional(),
+  mitigationAction: z.string().optional(),
 });
 
 // POST /api/sync/batch
