@@ -30,9 +30,9 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const displayName = user?.fullName || 'Saman Perera';
   const displayRoleText = user ? user.subtitle : 'Ranger • Yala National Park';
-  const displayInitials = user?.initials || 'SP';
   const isCommunityMember = user?.role === 'COMMUNITY_MEMBER';
-  const [activeModal, setActiveModal] = React.useState<'none' | 'wildlife_info' | 'safety_tips' | 'settings'>('none');
+  const displayInitials = user?.initials || 'SP';
+  const [activeModal, setActiveModal] = React.useState<'none' | 'wildlife_info' | 'safety_tips'>('none');
 
   const handleAction = (label: string, targetTab?: TabKey) => {
     if (targetTab) {
@@ -164,21 +164,6 @@ export function HomeScreen({
             <Text style={styles.commCardChevron}>›</Text>
           </TouchableOpacity>
 
-          {/* 5. Settings */}
-          <TouchableOpacity
-            style={styles.commActionRowCard}
-            onPress={() => setActiveModal('settings')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.commCardIconBox}>
-              <Text style={styles.commCardEmoji}>⚙️</Text>
-            </View>
-            <View style={styles.commCardTextCol}>
-              <Text style={styles.commCardTitle}>Settings</Text>
-              <Text style={styles.commCardSubtitle}>App preferences</Text>
-            </View>
-            <Text style={styles.commCardChevron}>›</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Modal: Wildlife Information */}
@@ -237,45 +222,6 @@ export function HomeScreen({
                 onPress={() => setActiveModal('none')}
               >
                 <Text style={styles.modalDoneText}>Understood</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Modal: Settings */}
-        {activeModal === 'settings' && (
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalCard}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>⚙️ Community App Settings</Text>
-                <TouchableOpacity onPress={() => setActiveModal('none')}>
-                  <Text style={styles.modalCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>Network Mode</Text>
-                <TouchableOpacity
-                  style={styles.settingToggleBtn}
-                  onPress={onToggleOnline}
-                >
-                  <Text style={styles.settingToggleText}>
-                    {isOnline ? 'Online (Tap to Simulate Offline)' : 'Offline (Tap to Go Online)'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>Language</Text>
-                <Text style={styles.settingValue}>English (Selected) • සිංහල • தமிழ்</Text>
-              </View>
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>Authenticated Reporter</Text>
-                <Text style={styles.settingValue}>{displayName} (NIC: 197512345678)</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.modalDoneBtn}
-                onPress={() => setActiveModal('none')}
-              >
-                <Text style={styles.modalDoneText}>Save & Close</Text>
               </TouchableOpacity>
             </View>
           </View>
