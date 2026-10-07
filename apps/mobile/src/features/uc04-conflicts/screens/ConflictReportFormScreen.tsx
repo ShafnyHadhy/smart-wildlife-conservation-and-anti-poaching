@@ -279,104 +279,140 @@ export function ConflictReportFormScreen({
   if (step === 5 && result) {
     return (
       <View style={s.page}>
-        <AppHeader title="Report sent" subtitle="Thank you for helping your community" />
+        <AppHeader title="Report Submitted" subtitle="Human-Wildlife Conflict • UC04" />
         <ScrollView contentContainerStyle={s.scroll}>
           <View style={s.successCard}>
             <View style={s.successCheck}>
               <Text style={s.successCheckText}>✓</Text>
             </View>
             <Text style={s.successTitle}>
-              {result.queued ? 'Saved on your phone' : 'Report Submitted!'}
+              {result.queued ? 'Saved on your phone' : 'Report Logged Successfully!'}
             </Text>
             <Text style={s.successText}>
               {result.queued
-                ? 'You are offline. Your report is stored safely and will be sent automatically when you are back online.'
-                : 'Rangers can now see your report on the operations dashboard.'}
+                ? 'Your report has been stored in your offline queue and will automatically transmit once connected to the network.'
+                : 'Wildlife Rangers have been notified at central command and can view your report immediately.'}
             </Text>
+
             <View style={s.refBox}>
-              <Text style={s.refLabel}>Reference Number</Text>
+              <Text style={s.refLabel}>REFERENCE NUMBER</Text>
               <Text style={s.refCode}>{result.reference}</Text>
             </View>
-            {result.duplicate && (
-              <View style={s.infoBox}>
-                <Text style={s.infoBoxText}>
-                  ℹ️ A similar report was already received near this place. Yours is still saved and
-                  will help rangers confirm the situation.
+
+            {result.duplicate ? (
+              <View style={[s.warnBox, { width: '100%' }]}>
+                <Text style={s.warnText}>
+                  ℹ️ Another nearby report was recently received. Rangers are clustering these incidents for rapid triage.
                 </Text>
               </View>
-            )}
-          </View>
+            ) : null}
 
-          <View style={s.nextCard}>
-            <Text style={s.nextTitle}>What happens next?</Text>
-            <Text style={s.nextItem}>1️⃣  A ranger or liaison officer reviews your report.</Text>
-            <Text style={s.nextItem}>2️⃣  You will see the status change in “My Reports”.</Text>
-            <Text style={s.nextItem}>3️⃣  You get a notification when action is taken.</Text>
-          </View>
+            <View style={s.nextCard}>
+              <Text style={s.nextTitle}>What happens next:</Text>
+              <Text style={s.nextItem}>1. 🔍 <Text style={{ fontWeight: '700' }}>Ranger Review:</Text> An officer will inspect the location & details.</Text>
+              <Text style={s.nextItem}>2. 🚨 <Text style={{ fontWeight: '700' }}>Field Response:</Text> Mitigation units & patrol teams dispatch if needed.</Text>
+              <Text style={s.nextItem}>3. 📲 <Text style={{ fontWeight: '700' }}>Live Updates:</Text> Track progress and status directly in "My Reports".</Text>
+            </View>
 
-          <TouchableOpacity
-            style={s.primaryBtn}
-            onPress={() => onSubmitSuccess?.(result.reportId)}
-            activeOpacity={0.85}
-          >
-            <Text style={s.primaryBtnText}>📋 View My Reports</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.outlineBtn} onPress={onBack} activeOpacity={0.85}>
-            <Text style={s.outlineBtnText}>Back to home</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={s.primaryBtn}
+              onPress={() => {
+                if (onSubmitSuccess) onSubmitSuccess(result.reportId);
+                else handleBack();
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={s.primaryBtnText}>View My Reports ›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={s.outlineBtn}
+              onPress={() => {
+                setStep(1);
+                setDescription('');
+                setPhotos([]);
+                setResult(null);
+                setSource('none');
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={s.outlineBtnText}>+ Report Another Incident</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </View>
     );
   }
 
-  /* ------------------------------- wizard ---------------------------------- */
+  /* ----------------------------- wizard layout ----------------------------- */
   return (
     <View style={s.page}>
       <AppHeader
-        title="Report Human-Wildlife Conflict"
-        subtitle={isOnline ? 'Online – sent straight to rangers' : 'Offline queue active'}
+        title="Report Conflict"
+        subtitle="Human-Wildlife Coexistence • UC04"
         showBackButton={true}
         onBack={handleBack}
       />
 
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        {/* connectivity chip */}
+        {/* Status Network Badge */}
         <View style={[s.netChip, { backgroundColor: isOnline ? '#DCFCE7' : PALETTE.amberSoft }]}>
+          <View style={[s.netDot, { backgroundColor: isOnline ? '#16A34A' : '#D97706' }]} />
           <Text style={[s.netChipText, { color: isOnline ? '#166534' : '#92400E' }]}>
-            {isOnline ? 'ONLINE' : 'OFFLINE'}
+            {isOnline ? 'ONLINE' : 'OFFLINE MODE ACTIVE'}
           </Text>
           {!isOnline && (
-            <Text style={s.netChipSub}>Offline Queue Active</Text>
+            <Text style={s.netChipSub}>• Local queue enabled</Text>
           )}
         </View>
 
-        {/* progress */}
-        <View style={s.progressRow}>
-          {STEP_LABELS.map((label, idx) => {
-            const n = idx + 1;
-            const done = step > n;
-            const active = step === n;
-            return (
-              <View key={label} style={s.progressItem}>
-                <View style={[s.progressDot, (done || active) && s.progressDotOn]}>
-                  <Text style={[s.progressDotText, (done || active) && { color: PALETTE.white }]}>
-                    {done ? '✓' : n}
+        {/* Progress Stepper */}
+        <View style={s.stepperWrapper}>
+          <View style={s.progressRow}>
+            {STEP_LABELS.map((label, idx) => {
+              const n = idx + 1;
+              const done = step > n;
+              const active = step === n;
+              return (
+                <View key={label} style={s.progressItem}>
+                  <View
+                    style={[
+                      s.progressDot,
+                      active && s.progressDotActive,
+                      done && s.progressDotDone,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.progressDotText,
+                        (active || done) && { color: PALETTE.white, fontWeight: '800' },
+                      ]}
+                    >
+                      {done ? '✓' : n}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      s.progressLabel,
+                      active && s.progressLabelActive,
+                      done && s.progressLabelDone,
+                    ]}
+                  >
+                    {label}
                   </Text>
                 </View>
-                <Text style={[s.progressLabel, active && { color: PALETTE.ink, fontWeight: '800' }]}>
-                  {label}
-                </Text>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
+          <Text style={s.stepCounter}>Step {step} of 4: {STEP_LABELS[step - 1]}</Text>
         </View>
-        <Text style={s.stepCounter}>Step {step} of 4</Text>
 
         {/* ------------------------------ STEP 1 ------------------------------ */}
         {step === 1 && (
-          <View>
-            <Text style={s.h2}>What type of conflict are you reporting?</Text>
-            <Text style={s.hint}>Choose the one that best describes what you saw.</Text>
+          <View style={s.stepContainer}>
+            <Text style={s.h2}>What type of conflict occurred?</Text>
+            <Text style={s.hint}>Choose the category that best matches what you witnessed.</Text>
+            
             {TYPE_ORDER.map((t) => {
               const meta = CONFLICT_TYPE_META[t];
               const selected = type === t;
@@ -387,8 +423,10 @@ export function ConflictReportFormScreen({
                   onPress={() => setType(t)}
                   activeOpacity={0.85}
                 >
-                  <Text style={s.typeIcon}>{meta.icon}</Text>
-                  <View style={{ flex: 1 }}>
+                  <View style={[s.typeIconBox, selected && s.typeIconBoxOn]}>
+                    <Text style={s.typeIcon}>{meta.icon}</Text>
+                  </View>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={[s.typeTitle, selected && { color: PALETTE.forest }]}>
                       {meta.label}
                     </Text>
@@ -400,22 +438,23 @@ export function ConflictReportFormScreen({
                 </TouchableOpacity>
               );
             })}
+
             <TouchableOpacity style={s.primaryBtn} onPress={() => setStep(2)} activeOpacity={0.85}>
-              <Text style={s.primaryBtnText}>Next &gt;</Text>
+              <Text style={s.primaryBtnText}>Continue to Location ›</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* ------------------------------ STEP 2 ------------------------------ */}
         {step === 2 && (
-          <View>
-            <Text style={s.h2}>Where did the incident occur?</Text>
+          <View style={s.stepContainer}>
+            <Text style={s.h2}>Where is the incident located?</Text>
             <Text style={s.hint}>
-              Share your live location, or choose the nearest village if GPS is not working.
+              Use your device's live GPS, or select your nearest village location.
             </Text>
 
             <TouchableOpacity
-              style={[s.primaryBtn, source === 'live' && s.primaryBtnDone]}
+              style={[s.liveLocationBtn, source === 'live' && s.liveLocationBtnActive]}
               onPress={useLiveLocation}
               disabled={locating}
               activeOpacity={0.85}
@@ -423,9 +462,12 @@ export function ConflictReportFormScreen({
               {locating ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={s.primaryBtnText}>
-                  {source === 'live' ? '✅ Live location attached – tap to refresh' : '📍 Use my live location'}
-                </Text>
+                <View style={s.btnContentRow}>
+                  <Text style={s.btnIcon}>{source === 'live' ? '✅' : '📍'}</Text>
+                  <Text style={s.liveLocationBtnText}>
+                    {source === 'live' ? 'Live GPS Attached (Tap to Refresh)' : 'Use My Live GPS Location'}
+                  </Text>
+                </View>
               )}
             </TouchableOpacity>
 
@@ -436,7 +478,7 @@ export function ConflictReportFormScreen({
             ) : null}
 
             {/* Quick Village Presets */}
-            <Text style={s.label}>Or choose nearest village</Text>
+            <Text style={s.sectionHeaderLabel}>Or choose nearest village:</Text>
             <View style={s.chipWrap}>
               {VILLAGE_PRESETS.map((v, idx) => (
                 <TouchableOpacity
@@ -445,6 +487,7 @@ export function ConflictReportFormScreen({
                   onPress={() => chooseVillage(idx)}
                   activeOpacity={0.85}
                 >
+                  <Text style={[s.chipIcon, villageIdx === idx && { color: PALETTE.white }]}>🏡</Text>
                   <Text style={[s.chipText, villageIdx === idx && s.chipTextOn]}>{v.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -452,14 +495,22 @@ export function ConflictReportFormScreen({
 
             {source !== 'none' && hasCoords && (
               <View style={s.locCard}>
-                <Text style={s.locTitle}>📍 Selected location</Text>
-                <Text style={s.locName}>{resolvedPlaceName() || 'Chosen position'}</Text>
+                <View style={s.locHeaderRow}>
+                  <Text style={s.locTitle}>📍 SELECTED LOCATION</Text>
+                  <View style={s.coordBadge}>
+                    <Text style={s.coordBadgeText}>
+                      {source === 'live' ? 'Live GPS Fix' : 'Village Area'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={s.locName}>{resolvedPlaceName() || 'Designated Coordinates'}</Text>
                 <Text style={s.locCoords}>
-                  {lat.toFixed(5)}, {lng.toFixed(5)}
+                  Coordinates: {lat.toFixed(5)}, {lng.toFixed(5)}
                   {source === 'live' && accuracy ? `  (±${Math.round(accuracy)} m)` : ''}
-                  {source === 'village' ? '  (approximate)' : ''}
                 </Text>
-                <MapLink latitude={lat} longitude={lng} />
+                <View style={{ marginTop: 8 }}>
+                  <MapLink latitude={lat} longitude={lng} />
+                </View>
               </View>
             )}
 
@@ -470,7 +521,7 @@ export function ConflictReportFormScreen({
                 <Text style={s.outlineBtnText}>Back</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.navNext} onPress={goNextFromLocation} activeOpacity={0.85}>
-                <Text style={s.primaryBtnText}>Next &gt;</Text>
+                <Text style={s.primaryBtnText}>Continue to Details ›</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -478,11 +529,11 @@ export function ConflictReportFormScreen({
 
         {/* ------------------------------ STEP 3 ------------------------------ */}
         {step === 3 && (
-          <View>
-            <Text style={s.h2}>Tell us more about the incident</Text>
-            <Text style={s.hint}>The more detail you give, the faster rangers can respond.</Text>
+          <View style={s.stepContainer}>
+            <Text style={s.h2}>Incident Details & Severity</Text>
+            <Text style={s.hint}>Providing detailed information assists rangers with rapid triage.</Text>
 
-            <Text style={s.label}>When did it happen?</Text>
+            <Text style={s.sectionHeaderLabel}>When did this happen?</Text>
             <View style={s.chipWrap}>
               {WHEN_OPTIONS.map((w) => (
                 <TouchableOpacity
@@ -496,7 +547,7 @@ export function ConflictReportFormScreen({
               ))}
             </View>
 
-            <Text style={s.label}>Number of animals</Text>
+            <Text style={s.sectionHeaderLabel}>Estimated Number of Animals:</Text>
             <View style={s.stepperRow}>
               <TouchableOpacity
                 style={s.stepperBtn}
@@ -504,59 +555,66 @@ export function ConflictReportFormScreen({
                   setAnimalsUnknown(false);
                   setAnimalCount((c) => Math.max(1, c - 1));
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={s.stepperBtnText}>−</Text>
               </TouchableOpacity>
-              <Text style={s.stepperValue}>{animalsUnknown ? '?' : animalCount}</Text>
+              <View style={s.stepperValueBox}>
+                <Text style={s.stepperValue}>{animalsUnknown ? '?' : animalCount}</Text>
+              </View>
               <TouchableOpacity
                 style={s.stepperBtn}
                 onPress={() => {
                   setAnimalsUnknown(false);
                   setAnimalCount((c) => c + 1);
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={s.stepperBtnText}>+</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.chip, animalsUnknown && s.chipOn, { marginLeft: 12 }]}
+                style={[s.chip, animalsUnknown && s.chipOn, { marginLeft: 14 }]}
                 onPress={() => setAnimalsUnknown(!animalsUnknown)}
+                activeOpacity={0.7}
               >
-                <Text style={[s.chipText, animalsUnknown && s.chipTextOn]}>Not sure</Text>
+                <Text style={[s.chipText, animalsUnknown && s.chipTextOn]}>Unknown Count</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={s.label}>Is anyone in immediate danger?</Text>
+            <Text style={s.sectionHeaderLabel}>Is anyone in immediate danger?</Text>
             <View style={s.twoCols}>
               <TouchableOpacity
                 style={[s.choice, immediateRisk && s.choiceDanger]}
                 onPress={() => setImmediateRisk(true)}
+                activeOpacity={0.8}
               >
                 <Text style={[s.choiceText, immediateRisk && { color: PALETTE.danger }]}>
-                  🚨 Yes, urgent
+                  🚨 Yes, High Risk / Urgent
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.choice, !immediateRisk && s.choiceOk]}
                 onPress={() => setImmediateRisk(false)}
+                activeOpacity={0.8}
               >
                 <Text style={[s.choiceText, !immediateRisk && { color: PALETTE.forest }]}>
-                  No, not urgent
+                  🛡️ No, Stable Situation
                 </Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={s.label}>Description of incident *</Text>
+            <Text style={s.sectionHeaderLabel}>Incident Description *</Text>
             <TextInput
               style={[s.input, s.textArea]}
               value={description}
               onChangeText={setDescription}
-              placeholder="e.g. Bull elephant broke the fence and ate banana plants near the canal"
+              placeholder="e.g. Bull elephant broke through garden fence, destroyed banana trees and is heading toward the canal."
               placeholderTextColor="#9CA3AF"
               multiline={true}
               numberOfLines={4}
             />
 
-            <Text style={s.label}>Photos (optional, up to {MAX_PHOTOS})</Text>
+            <Text style={s.sectionHeaderLabel}>Attach Photos (Optional, max {MAX_PHOTOS}):</Text>
             <View style={s.twoCols}>
               <TouchableOpacity
                 style={s.photoBtn}
@@ -564,7 +622,7 @@ export function ConflictReportFormScreen({
                 disabled={photoBusy}
                 activeOpacity={0.85}
               >
-                <Text style={s.photoBtnText}>📷 Take photo</Text>
+                <Text style={s.photoBtnText}>📷 Live Camera Viewfinder</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.photoBtn}
@@ -572,10 +630,10 @@ export function ConflictReportFormScreen({
                 disabled={photoBusy}
                 activeOpacity={0.85}
               >
-                <Text style={s.photoBtnText}>🖼️ Choose photo</Text>
+                <Text style={s.photoBtnText}>📁 Upload from Device</Text>
               </TouchableOpacity>
             </View>
-            {photoBusy ? <ActivityIndicator size="small" color={PALETTE.forest} /> : null}
+            {photoBusy ? <ActivityIndicator size="small" color={PALETTE.forest} style={{ marginTop: 8 }} /> : null}
             {photoError ? <Text style={s.errorText}>{photoError}</Text> : null}
             {photos.length > 0 && (
               <View style={s.photoRow}>
@@ -585,6 +643,7 @@ export function ConflictReportFormScreen({
                     <TouchableOpacity
                       style={s.photoRemove}
                       onPress={() => setPhotos((p) => p.filter((_, i) => i !== idx))}
+                      activeOpacity={0.8}
                     >
                       <Text style={s.photoRemoveText}>✕</Text>
                     </TouchableOpacity>
@@ -600,7 +659,7 @@ export function ConflictReportFormScreen({
                 <Text style={s.outlineBtnText}>Back</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.navNext} onPress={goNextFromDetails} activeOpacity={0.85}>
-                <Text style={s.primaryBtnText}>Next &gt;</Text>
+                <Text style={s.primaryBtnText}>Review Report ›</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -608,45 +667,45 @@ export function ConflictReportFormScreen({
 
         {/* ------------------------------ STEP 4 ------------------------------ */}
         {step === 4 && (
-          <View>
-            <Text style={s.h2}>Review Your Report</Text>
-            <Text style={s.hint}>Check everything, then press submit.</Text>
+          <View style={s.stepContainer}>
+            <Text style={s.h2}>Review Conflict Summary</Text>
+            <Text style={s.hint}>Verify your observation details before submitting to wildlife personnel.</Text>
 
-            <View style={s.card}>
+            <View style={s.reviewCard}>
               <ReviewRow
-                label="Type"
+                label="Conflict Type"
                 value={`${CONFLICT_TYPE_META[type].icon} ${CONFLICT_TYPE_META[type].label}`}
                 onEdit={() => setStep(1)}
               />
               <ReviewRow
-                label="Location"
-                value={`${resolvedPlaceName() || 'Chosen position'}\n${hasCoords ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : ''}`}
+                label="Location & Sector"
+                value={`${resolvedPlaceName() || 'Designated Coordinates'}\n(${lat.toFixed(5)}, ${lng.toFixed(5)})`}
                 onEdit={() => setStep(2)}
               />
               <ReviewRow
-                label="When"
+                label="Incident Timing"
                 value={(WHEN_OPTIONS.find((w) => w.key === whenKey) || WHEN_OPTIONS[0]).label}
                 onEdit={() => setStep(3)}
               />
               <ReviewRow
-                label="Animals"
-                value={animalsUnknown ? 'Not sure' : String(animalCount)}
+                label="Animals Observed"
+                value={animalsUnknown ? 'Count Unknown' : `${animalCount} Animal(s)`}
                 onEdit={() => setStep(3)}
               />
               <ReviewRow
-                label="Immediate danger"
-                value={immediateRisk ? '🚨 Yes – urgent' : 'No'}
+                label="Urgency Assessment"
+                value={immediateRisk ? '🚨 High Risk / Immediate Threat' : '🛡️ Standard Priority / Stable'}
                 onEdit={() => setStep(3)}
               />
-              <ReviewRow label="Description" value={description.trim()} onEdit={() => setStep(3)} />
+              <ReviewRow label="Description Narrative" value={description.trim()} onEdit={() => setStep(3)} />
               <ReviewRow
-                label="Photos"
-                value={photos.length ? `${photos.length} attached` : 'None'}
+                label="Attached Photos"
+                value={photos.length ? `${photos.length} Photo(s) Attached` : 'No photos attached'}
                 onEdit={() => setStep(3)}
               />
               <ReviewRow
-                label="Reporter"
-                value={`${reporterName || 'You'}${reporterPhone ? `\n${reporterPhone}` : ''}`}
+                label="Registered Reporter"
+                value={`${reporterName || 'Community Member'}${reporterPhone ? ` (${reporterPhone})` : ''}`}
               />
             </View>
 
@@ -661,8 +720,7 @@ export function ConflictReportFormScreen({
             {!isOnline && (
               <View style={s.warnBox}>
                 <Text style={s.warnText}>
-                  📴 No internet. Your report will be saved on this phone and sent automatically as
-                  soon as you are online.
+                  📴 Offline Mode: This report will be queued securely on this device and synced as soon as internet connectivity returns.
                 </Text>
               </View>
             )}
@@ -678,11 +736,12 @@ export function ConflictReportFormScreen({
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={s.primaryBtnText}>Submit Report</Text>
+                <Text style={s.primaryBtnText}>✓ Submit Conflict Report</Text>
               )}
             </TouchableOpacity>
+            
             <TouchableOpacity style={s.outlineBtn} onPress={() => setStep(3)} activeOpacity={0.85}>
-              <Text style={s.outlineBtnText}>Back</Text>
+              <Text style={s.outlineBtnText}>Back to Edit Details</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -707,7 +766,7 @@ function ReviewRow({
         <Text style={s.reviewValue}>{value}</Text>
       </View>
       {onEdit ? (
-        <TouchableOpacity onPress={onEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={onEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={s.reviewEditBadge}>
           <Text style={s.reviewEdit}>Edit</Text>
         </TouchableOpacity>
       ) : null}
@@ -719,8 +778,8 @@ function ReviewRow({
 export const buildMapsUrl = mapsUrl;
 
 const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: PALETTE.page },
-  scroll: { padding: 16, paddingBottom: 40 },
+  page: { flex: 1, backgroundColor: '#F8F9FA' },
+  scroll: { padding: 16, paddingBottom: 48 },
 
   netChip: {
     flexDirection: 'row',
@@ -728,170 +787,242 @@ const s = StyleSheet.create({
     alignSelf: 'flex-start',
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginBottom: 12,
+    paddingVertical: 6,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  netChipText: { fontSize: 11, fontWeight: '900', letterSpacing: 0.6 },
-  netChipSub: { fontSize: 11, color: '#92400E', marginLeft: 8, fontWeight: '600' },
+  netDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  netChipText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  netChipSub: { fontSize: 11, color: '#92400E', marginLeft: 4, fontWeight: '600' },
 
-  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  stepperWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  progressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   progressItem: { alignItems: 'center', flex: 1 },
   progressDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: PALETTE.line,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressDotOn: { backgroundColor: PALETTE.forest },
-  progressDotText: { fontSize: 12, fontWeight: '800', color: PALETTE.muted },
-  progressLabel: { fontSize: 11, color: PALETTE.muted, marginTop: 4, fontWeight: '600' },
+  progressDotActive: { backgroundColor: '#15803D' },
+  progressDotDone: { backgroundColor: '#0F172A' },
+  progressDotText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+  progressLabel: { fontSize: 11, color: '#64748B', marginTop: 6, fontWeight: '600' },
+  progressLabelActive: { color: '#15803D', fontWeight: '800' },
+  progressLabelDone: { color: '#0F172A', fontWeight: '700' },
   stepCounter: {
     textAlign: 'center',
     fontSize: 12,
-    color: PALETTE.earth,
-    fontWeight: '800',
-    marginBottom: 16,
+    color: '#64748B',
+    fontWeight: '700',
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 8,
   },
 
-  h2: { fontSize: 20, fontWeight: '800', color: PALETTE.ink, marginBottom: 4 },
-  hint: { fontSize: 13, color: PALETTE.muted, marginBottom: 14, lineHeight: 18 },
-  label: {
+  stepContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+
+  h2: { fontSize: 19, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
+  hint: { fontSize: 13, color: '#64748B', marginBottom: 16, lineHeight: 18 },
+  sectionHeaderLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: PALETTE.earth,
+    color: '#475569',
     marginTop: 14,
-    marginBottom: 6,
+    marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
 
   typeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: PALETTE.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    borderWidth: 2,
-    borderColor: PALETTE.line,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     padding: 14,
     marginBottom: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  typeCardOn: { borderColor: PALETTE.forest, backgroundColor: PALETTE.forestSoft },
-  typeIcon: { fontSize: 30, marginRight: 14 },
-  typeTitle: { fontSize: 15, fontWeight: '800', color: PALETTE.ink },
-  typeHint: { fontSize: 12, color: PALETTE.muted, marginTop: 2 },
+  typeCardOn: { borderColor: '#15803D', backgroundColor: '#F0FDF4' },
+  typeIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  typeIconBoxOn: { backgroundColor: '#DCFCE7' },
+  typeIcon: { fontSize: 24 },
+  typeTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A' },
+  typeHint: { fontSize: 12, color: '#64748B', marginTop: 2, lineHeight: 16 },
   radio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#9CA3AF',
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOn: { borderColor: PALETTE.forest },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: PALETTE.forest },
+  radioOn: { borderColor: '#15803D' },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#15803D' },
 
-  card: {
-    backgroundColor: PALETTE.white,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: PALETTE.sand,
-    padding: 14,
-    marginTop: 10,
+  liveLocationBtn: {
+    backgroundColor: '#15803D',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  manualCardHeader: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: PALETTE.ink,
-    marginBottom: 6,
-  },
+  liveLocationBtnActive: { backgroundColor: '#166534' },
+  btnContentRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  btnIcon: { fontSize: 16 },
+  liveLocationBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+
   locCard: {
-    backgroundColor: PALETTE.forestSoft,
+    backgroundColor: '#F0FDF4',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: PALETTE.forest,
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
     padding: 14,
     marginTop: 14,
   },
-  locTitle: { fontSize: 12, fontWeight: '800', color: PALETTE.forest, textTransform: 'uppercase' },
-  locName: { fontSize: 16, fontWeight: '800', color: PALETTE.ink, marginTop: 6 },
-  locCoords: { fontSize: 12, color: PALETTE.muted, marginTop: 2 },
+  locHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  locTitle: { fontSize: 11, fontWeight: '800', color: '#166534', letterSpacing: 0.5 },
+  coordBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  coordBadgeText: { fontSize: 10, fontWeight: '800', color: '#166534' },
+  locName: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginTop: 6 },
+  locCoords: { fontSize: 12, color: '#64748B', marginTop: 3 },
 
   input: {
-    backgroundColor: PALETTE.white,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     borderRadius: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
-    color: PALETTE.ink,
+    color: '#0F172A',
   },
-  textArea: { minHeight: 96, textAlignVertical: 'top' },
+  textArea: { minHeight: 90, textAlignVertical: 'top' },
   twoCols: { flexDirection: 'row', gap: 10 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: PALETTE.white,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: PALETTE.sand,
+    borderColor: '#CBD5E1',
+    gap: 6,
   },
-  chipOn: { backgroundColor: PALETTE.forest, borderColor: PALETTE.forest },
-  chipText: { fontSize: 13, fontWeight: '700', color: '#5C4033' },
-  chipTextOn: { color: PALETTE.white },
+  chipOn: { backgroundColor: '#15803D', borderColor: '#15803D' },
+  chipIcon: { fontSize: 12 },
+  chipText: { fontSize: 13, fontWeight: '700', color: '#334155' },
+  chipTextOn: { color: '#FFFFFF' },
 
   stepperRow: { flexDirection: 'row', alignItems: 'center' },
   stepperBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: PALETTE.white,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: PALETTE.sand,
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperBtnText: { fontSize: 20, fontWeight: '800', color: PALETTE.forest },
+  stepperBtnText: { fontSize: 22, fontWeight: '800', color: '#15803D', lineHeight: 26 },
+  stepperValueBox: {
+    minWidth: 50,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stepperValue: {
-    minWidth: 48,
-    textAlign: 'center',
     fontSize: 20,
-    fontWeight: '800',
-    color: PALETTE.ink,
+    fontWeight: '900',
+    color: '#0F172A',
   },
 
   choice: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: PALETTE.line,
-    backgroundColor: PALETTE.white,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  choiceDanger: { borderColor: PALETTE.danger, backgroundColor: PALETTE.dangerSoft },
-  choiceOk: { borderColor: PALETTE.forest, backgroundColor: PALETTE.forestSoft },
-  choiceText: { fontWeight: '800', fontSize: 13, color: PALETTE.muted },
+  choiceDanger: { borderColor: '#EF4444', backgroundColor: '#FEF2F2' },
+  choiceOk: { borderColor: '#15803D', backgroundColor: '#F0FDF4' },
+  choiceText: { fontWeight: '800', fontSize: 13, color: '#475569' },
 
   photoBtn: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: PALETTE.forest,
+    borderWidth: 1.5,
+    borderColor: '#15803D',
     borderStyle: 'dashed',
-    backgroundColor: PALETTE.forestSoft,
+    backgroundColor: '#F0FDF4',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  photoBtnText: { fontWeight: '800', color: PALETTE.forest, fontSize: 13 },
-  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  photoBtnText: { fontWeight: '800', color: '#15803D', fontSize: 12 },
+  photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   photoWrap: { position: 'relative' },
-  photoThumb: { width: 84, height: 84, borderRadius: 10, backgroundColor: PALETTE.line },
+  photoThumb: { width: 80, height: 80, borderRadius: 10, backgroundColor: '#E2E8F0' },
   photoRemove: {
     position: 'absolute',
     top: -6,
@@ -899,113 +1030,145 @@ const s = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: PALETTE.danger,
+    backgroundColor: '#EF4444',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoRemoveText: { color: PALETTE.white, fontSize: 11, fontWeight: '900' },
+  photoRemoveText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
 
   primaryBtn: {
-    backgroundColor: PALETTE.forest,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  primaryBtnDone: { backgroundColor: '#276B2A' },
-  primaryBtnText: { color: PALETTE.white, fontSize: 15, fontWeight: '800' },
-  outlineBtn: {
-    borderRadius: 14,
+    backgroundColor: '#15803D',
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 10,
-    borderWidth: 2,
-    borderColor: PALETTE.forest,
-    backgroundColor: PALETTE.white,
+    marginTop: 16,
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  outlineBtnText: { color: PALETTE.forest, fontSize: 15, fontWeight: '800' },
-  linkBtn: { alignItems: 'center', paddingVertical: 12 },
-  linkBtnText: { color: PALETTE.earth, fontWeight: '800', fontSize: 14 },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  outlineBtn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+  },
+  outlineBtnText: { color: '#475569', fontSize: 14, fontWeight: '800' },
 
   navRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   navBack: {
     flex: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: PALETTE.forest,
-    backgroundColor: PALETTE.white,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
   },
   navNext: {
     flex: 2,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: PALETTE.forest,
+    backgroundColor: '#15803D',
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   warnBox: {
-    backgroundColor: PALETTE.amberSoft,
+    backgroundColor: '#FEF3C7',
     borderRadius: 10,
     padding: 12,
     marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
   },
   warnText: { color: '#92400E', fontSize: 12, fontWeight: '600', lineHeight: 17 },
-  infoBox: { backgroundColor: PALETTE.blueSoft, borderRadius: 10, padding: 12, marginTop: 14 },
-  infoBoxText: { color: PALETTE.blue, fontSize: 12, fontWeight: '600', lineHeight: 17 },
-  errorText: { color: PALETTE.danger, fontSize: 13, fontWeight: '700', marginTop: 10 },
+  errorText: { color: '#DC2626', fontSize: 13, fontWeight: '700', marginTop: 10 },
 
+  reviewCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginTop: 6,
+  },
   reviewRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: PALETTE.line,
+    borderBottomColor: '#E2E8F0',
   },
-  reviewLabel: { fontSize: 11, fontWeight: '800', color: PALETTE.muted, textTransform: 'uppercase' },
-  reviewValue: { fontSize: 14, color: PALETTE.ink, fontWeight: '600', marginTop: 3, lineHeight: 19 },
-  reviewEdit: { color: PALETTE.forest, fontWeight: '800', fontSize: 13 },
+  reviewLabel: { fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 },
+  reviewValue: { fontSize: 14, color: '#0F172A', fontWeight: '700', marginTop: 3, lineHeight: 19 },
+  reviewEditBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#DCFCE7',
+  },
+  reviewEdit: { color: '#15803D', fontWeight: '800', fontSize: 12 },
 
   successCard: {
-    backgroundColor: PALETTE.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: PALETTE.sand,
-    padding: 20,
+    borderColor: '#E2E8F0',
+    padding: 22,
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   successCheck: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: PALETTE.forest,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#15803D',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  successCheckText: { color: PALETTE.white, fontSize: 38, fontWeight: '900' },
-  successTitle: { fontSize: 22, fontWeight: '900', color: PALETTE.ink, marginTop: 14 },
-  successText: { fontSize: 13, color: PALETTE.muted, textAlign: 'center', marginTop: 6, lineHeight: 19 },
+  successCheckText: { color: '#FFFFFF', fontSize: 36, fontWeight: '900' },
+  successTitle: { fontSize: 20, fontWeight: '900', color: '#0F172A', marginTop: 16 },
+  successText: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 6, lineHeight: 19 },
   refBox: {
     alignSelf: 'stretch',
-    backgroundColor: PALETTE.sandSoft,
+    backgroundColor: '#FEF3C7',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: PALETTE.sand,
+    borderColor: '#FDE68A',
     padding: 14,
     alignItems: 'center',
     marginTop: 16,
   },
-  refLabel: { fontSize: 11, fontWeight: '800', color: PALETTE.earth, textTransform: 'uppercase' },
-  refCode: { fontSize: 24, fontWeight: '900', color: PALETTE.ink, marginTop: 4, letterSpacing: 1 },
+  refLabel: { fontSize: 11, fontWeight: '800', color: '#92400E', textTransform: 'uppercase', letterSpacing: 0.6 },
+  refCode: { fontSize: 22, fontWeight: '900', color: '#78350F', marginTop: 4, letterSpacing: 1 },
   nextCard: {
-    backgroundColor: PALETTE.white,
-    borderRadius: 14,
+    alignSelf: 'stretch',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: PALETTE.sand,
-    padding: 16,
-    marginTop: 14,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginTop: 16,
   },
-  nextTitle: { fontSize: 15, fontWeight: '800', color: PALETTE.ink, marginBottom: 8 },
-  nextItem: { fontSize: 13, color: '#374151', marginTop: 6, lineHeight: 19 },
+  nextTitle: { fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 8 },
+  nextItem: { fontSize: 13, color: '#334155', marginTop: 4, lineHeight: 18 },
 });
