@@ -7,6 +7,7 @@ import {
   IncidentStatus,
   ConflictType,
   ConflictStatus,
+  EvidenceType,
 } from '@wildlife/shared';
 
 // Common UUID Schema
@@ -99,6 +100,16 @@ export const createIncidentSchema = z.object({
   longitude: coordinateSchema.shape.longitude,
   reportedAt: isoDateString.optional(),
   clientMutationId: z.string().max(64).optional(),
+});
+
+// POST /api/incidents/:id/evidence
+export const createEvidenceSchema = z.object({
+  evidenceType: z.nativeEnum(EvidenceType).default(EvidenceType.PHOTO),
+  filePath: z.string().trim().min(1, 'File path is required'),
+  fileName: z.string().trim().optional(),
+  fileType: z.string().trim().optional(),
+  capturedAt: isoDateString.optional(),
+  notes: z.string().trim().optional(),
 });
 
 // POST /api/conflict-reports

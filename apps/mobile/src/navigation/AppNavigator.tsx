@@ -40,8 +40,11 @@ export function AppNavigator({
       case 'REPORTS':
         return (
           <ReportsScreen
+            isOnline={isOnline}
             pendingCount={pendingCount}
             onSyncPress={onSyncNow}
+            onIncidentSubmitted={onSyncNow}
+            onGoHome={() => setActiveTab('HOME')}
           />
         );
       case 'PROFILE':

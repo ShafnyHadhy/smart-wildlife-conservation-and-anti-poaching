@@ -1,1 +1,1 @@
-export {};
+export { CreateIncidentScreen } from './CreateIncidentScreen';

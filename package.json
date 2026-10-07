@@ -28,5 +28,12 @@
     "neon-postgres"
   ],
   "author": "Wildlife Conservation Software Engineering Team",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@expo/metro-config": "^0.18.11",
+    "expo": "51.0.39",
+    "metro": "^0.80.8",
+    "metro-config": "^0.80.8",
+    "metro-transform-worker": "^0.80.8"
+  }
 }

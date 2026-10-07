@@ -24,8 +24,10 @@ declare module 'react-native' {
   export const ScrollView: React.FC<any>;
   export const TouchableOpacity: React.FC<any>;
   export const StatusBar: React.FC<any>;
+  export const Image: React.FC<any>;
+  export const TextInput: React.FC<any>;
+
   export const Alert: {
     alert(title: string, message?: string, buttons?: any[]): void;
   };
 }
-
