@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
+    "web": "expo start --web",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "lint": "tsc --noEmit",
@@ -14,6 +15,8 @@
     "@expo/metro-runtime": "~3.2.3",
     "@wildlife/shared": "*",
     "expo": "~51.0.0",
+    "expo-image-picker": "~15.1.0",
+    "expo-location": "~17.0.1",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -22,6 +25,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@testing-library/react": "^15.0.7",
     "@types/react": "~18.2.45",
     "typescript": "~5.3.3"
   }

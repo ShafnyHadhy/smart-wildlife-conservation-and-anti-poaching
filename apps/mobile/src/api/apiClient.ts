@@ -113,6 +113,48 @@ export class MobileApiClient {
     }
   }
 
+  async patch<T>(endpoint: string, body?: any, options: RequestInit = {}): Promise<T> {
+    const url = this.getFullUrl(endpoint);
+    try {
+      const res = await fetch(url, {
+        ...options,
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers as Record<string, string> || {}),
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        if (json && json.success === false && json.error) {
+          const err = json as ApiErrorResponse;
+          throw new MobileApiError(err.error.message, err.error.code, res.status, err.error.details);
+        }
+        throw new MobileApiError(
+          json?.message || `HTTP ${res.status}: ${res.statusText}`,
+          'HTTP_ERROR',
+          res.status
+        );
+      }
+
+      if (json && typeof json === 'object' && json.success === true && 'data' in json) {
+        return json.data as T;
+      }
+
+      return json as T;
+    } catch (err: any) {
+      if (err instanceof MobileApiError) throw err;
+      throw new MobileApiError(
+        `Network request failed to ${endpoint}: ${err.message || 'Check connection'}`,
+        'NETWORK_ERROR',
+        0
+      );
+    }
+  }
+
   // Submit directly if online, otherwise enqueue locally for background sync
   async reportIncident(
     data: CreateIncidentDTO,
