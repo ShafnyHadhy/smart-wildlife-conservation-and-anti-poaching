@@ -6,6 +6,8 @@ import { AppCard } from '../../components/common/AppCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EmptyState } from '../../components/common/EmptyState';
 
+import { AuthUser } from '../../services/authService';
+
 interface AlertItem {
   id: string;
   type: string;
@@ -15,6 +17,12 @@ interface AlertItem {
   locationSummary: string;
   timeAgo: string;
   status: 'ACTIVE' | 'RESPONDING' | 'RESOLVED';
+  safetyTip?: string;
+}
+
+interface AlertsScreenProps {
+  user?: AuthUser;
+  onReportConflict?: (notes?: string) => void;
 }
 
 const DEMO_ALERTS: AlertItem[] = [
@@ -27,6 +35,7 @@ const DEMO_ALERTS: AlertItem[] = [
     locationSummary: 'Near Kittulkote Buffer Zone',
     timeAgo: '10 min ago',
     status: 'ACTIVE',
+    safetyTip: 'Stay away from edge tree lines and keep livestock in enclosed pens.',
   },
   {
     id: 'alt-002',
@@ -37,6 +46,7 @@ const DEMO_ALERTS: AlertItem[] = [
     locationSummary: 'Kataragama Agricultural Perimeter',
     timeAgo: '28 min ago',
     status: 'RESPONDING',
+    safetyTip: 'Avoid agricultural canal paths after dusk. Ranger team is currently responding.',
   },
   {
     id: 'alt-003',
@@ -47,12 +57,17 @@ const DEMO_ALERTS: AlertItem[] = [
     locationSummary: 'Block 2 Northern Boundary Rocks',
     timeAgo: '2 hours ago',
     status: 'ACTIVE',
+    safetyTip: 'Keep domestic animals sheltered and avoid rocky outcrops at night.',
   },
 ];
 
-export function AlertsScreen() {
+export function AlertsScreen({ user, onReportConflict }: AlertsScreenProps) {
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'RESOLVED'>('ALL');
   const [alerts, setAlerts] = useState<AlertItem[]>(DEMO_ALERTS);
+  const [selectedSafetyTip, setSelectedSafetyTip] = useState<{ name: string; tip: string } | null>(null);
+
+  const isRanger = user?.role === 'RANGER';
+  const isCommunityMember = user?.role === 'COMMUNITY_MEMBER';
 
   const filteredAlerts = alerts.filter((a) => {
     if (filter === 'ACTIVE') return a.status === 'ACTIVE' || a.status === 'RESPONDING';
@@ -60,18 +75,44 @@ export function AlertsScreen() {
     return true;
   });
 
-  const handleRespond = (alertItem: AlertItem) => {
+  const handleRespondRanger = (alertItem: AlertItem) => {
     Alert.alert(
-      'Respond to Alert (UC03)',
-      `Response workflow for ${alertItem.animalName} (${alertItem.riskLevel}) will be implemented in UC03.`
+      `Ranger Action • ${alertItem.animalName}`,
+      `Risk Level: ${alertItem.riskLevel}\nLocation: ${alertItem.locationSummary}\n\nRanger units have been alerted for field response.`,
+      [
+        {
+          text: 'Mark Responding',
+          onPress: () => {
+            setAlerts((prev) =>
+              prev.map((a) => (a.id === alertItem.id ? { ...a, status: 'RESPONDING' } : a))
+            );
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
     );
+  };
+
+  const handleReportSightingCommunity = (alertItem: AlertItem) => {
+    if (onReportConflict) {
+      onReportConflict(`Observed tracked animal (${alertItem.animalName} - ${alertItem.species}) near ${alertItem.locationSummary}.`);
+    } else {
+      Alert.alert(
+        'Report Sighting',
+        `To report sighting of ${alertItem.animalName}, please open the Reports tab and click "New Conflict Report".`
+      );
+    }
   };
 
   return (
     <View style={styles.outerContainer}>
       <AppHeader
         title="Wildlife Risk Alerts"
-        subtitle="GPS Collar Geofence Tracking • UC03"
+        subtitle={
+          isCommunityMember
+            ? 'Early Warning Proximity Alerts • Community Safety'
+            : 'GPS Collar Geofence Tracking • Ranger Triage'
+        }
         rightAction={
           <TouchableOpacity
             style={styles.clearToggle}
@@ -84,6 +125,16 @@ export function AlertsScreen() {
           </TouchableOpacity>
         }
       />
+
+      {/* Advisory Banner for Community Members */}
+      {isCommunityMember && (
+        <View style={styles.communityBanner}>
+          <Text style={styles.communityBannerIcon}>ℹ️</Text>
+          <Text style={styles.communityBannerText}>
+            These are automated early-warning alerts for your safety. If you see wildlife near your home or farm, tap <Text style={{ fontWeight: '700' }}>Report Sighting</Text> to alert rangers.
+          </Text>
+        </View>
+      )}
 
       {/* Filter Tabs */}
       <View style={styles.filterRow}>
@@ -142,17 +193,35 @@ export function AlertsScreen() {
                   <Text style={styles.infoIcon}>⏱</Text>
                   <Text style={styles.infoText}>{item.timeAgo}</Text>
                 </View>
+                {item.safetyTip ? (
+                  <View style={styles.safetyRow}>
+                    <Text style={styles.safetyIcon}>💡</Text>
+                    <Text style={styles.safetyText}>{item.safetyTip}</Text>
+                  </View>
+                ) : null}
               </View>
 
               <View style={styles.cardFooter}>
                 <StatusBadge status={item.status} size="small" />
-                <TouchableOpacity
-                  style={styles.respondButton}
-                  onPress={() => handleRespond(item)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.respondButtonText}>Take Action ›</Text>
-                </TouchableOpacity>
+
+                {/* Role-specific Actions */}
+                {isRanger ? (
+                  <TouchableOpacity
+                    style={styles.respondButton}
+                    onPress={() => handleRespondRanger(item)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.respondButtonText}>Take Action ›</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.reportSightingButton}
+                    onPress={() => handleReportSightingCommunity(item)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.reportSightingButtonText}>📢 Report Sighting ›</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </AppCard>
           ))
@@ -267,6 +336,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
+  communityBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    gap: 8,
+  },
+  communityBannerIcon: {
+    fontSize: 16,
+  },
+  communityBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#1E40AF',
+    lineHeight: 17,
+  },
+  safetyRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 4,
+    gap: 6,
+  },
+  safetyIcon: {
+    fontSize: 13,
+  },
+  safetyText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '600',
+    lineHeight: 16,
+  },
   respondButton: {
     backgroundColor: '#3E8E41',
     paddingHorizontal: 12,
@@ -277,5 +387,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  reportSightingButton: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  reportSightingButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

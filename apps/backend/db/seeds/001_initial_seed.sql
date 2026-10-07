@@ -194,10 +194,8 @@ VALUES
 -- ============================================================================
 -- 15. SEED CONFLICT REPORTS (UC04: Community reported human-wildlife conflicts)
 -- ============================================================================
-INSERT INTO conflict_reports (id, community_member_id, park_id, conflict_type, description, latitude, longitude, status, reported_at, client_mutation_id)
-VALUES
-    ('80800001-0000-0000-0000-000000000001', 'bbbb0001-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'CROP_DAMAGE', 'Lone bull elephant entered banana plantation overnight. Damaged perimeter fence and approximately 40 trees.', 6.3680000, 81.3320000, 'UNDER_REVIEW', CURRENT_TIMESTAMP - INTERVAL '5 hours', 'mut-cnf-001'),
-    ('80800002-0000-0000-0000-000000000002', 'bbbb0002-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'ANIMAL_INTRUSION', 'Elephant herd spotted near village irrigation tank at dusk. Community requesting ranger patrol presence.', 6.4180000, 81.3410000, 'RESPONDING', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'mut-cnf-002');
+-- Left empty: Only real reports submitted by users will be recorded in conflict_reports.
+
 
 -- ============================================================================
 -- 16. SEED SYNC OPERATIONS (Offline audit record)

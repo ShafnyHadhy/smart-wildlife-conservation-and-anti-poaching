@@ -7,9 +7,13 @@ import wildlifeRoutes from './wildlifeRoutes';
 import incidentRoutes from './incidentRoutes';
 import conflictRoutes from './conflictRoutes';
 import syncRoutes from './syncRoutes';
+import authRoutes from './authRoutes';
 
 export function createApiRouter(): Router {
   const router = Router();
+
+  // Authentication
+  router.use('/auth', authRoutes);
 
   // Core & Health
   router.use(healthRoutes);

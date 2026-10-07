@@ -120,6 +120,12 @@ export class ConflictService {
     reportedAt?: string;
     clientMutationId?: string;
     severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    estimatedDamageLkr?: number;
+    cropTypeLost?: string;
+    estimatedAnimalsInvolved?: number;
+    locationName?: string;
+    immediateRisk?: boolean;
+    photoUrls?: string[];
   }): Promise<ConflictReport> {
     if (!isValidCoordinate(data.latitude, data.longitude)) {
       throw new ValidationError('Latitude must be between -90 and 90, and longitude between -180 and 180', [
@@ -166,6 +172,13 @@ export class ConflictService {
       severity: data.severity,
       potentialDuplicateOf: duplicateCheck.duplicateOf,
       distanceToDuplicateKm: duplicateCheck.distanceKm,
+      estimatedDamageLkr: data.estimatedDamageLkr,
+      cropTypeLost: data.cropTypeLost,
+      estimatedAnimalsInvolved: data.estimatedAnimalsInvolved,
+      locationName: data.locationName,
+      immediateRisk: data.immediateRisk,
+      photoUrls: data.photoUrls,
+      reporterName: member.fullName,
     });
   }
 
@@ -173,9 +186,38 @@ export class ConflictService {
     id: string,
     status: ConflictStatus,
     triageNotes?: string,
-    mitigationAction?: string
+    mitigationAction?: string,
+    damageData?: {
+      estimatedDamageLkr?: number;
+      cropTypeLost?: string;
+      compensationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
+    },
+    actorName?: string
   ): Promise<ConflictReport> {
-    const updated = await conflictRepository.updateStatus(id, status, triageNotes, mitigationAction);
+    const updated =
+      actorName !== undefined
+        ? await conflictRepository.updateStatus(
+            id,
+            status,
+            triageNotes,
+            mitigationAction,
+            damageData,
+            actorName
+          )
+        : damageData !== undefined
+        ? await conflictRepository.updateStatus(
+            id,
+            status,
+            triageNotes,
+            mitigationAction,
+            damageData
+          )
+        : await conflictRepository.updateStatus(
+            id,
+            status,
+            triageNotes,
+            mitigationAction
+          );
     if (!updated) {
       throw new NotFoundError('ConflictReport', id);
     }

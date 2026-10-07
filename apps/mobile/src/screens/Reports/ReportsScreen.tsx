@@ -6,26 +6,45 @@ import { AppCard } from '../../components/common/AppCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { ConflictReportFormScreen } from '../../features/uc04-conflicts/screens/ConflictReportFormScreen';
 import { ConflictListScreen } from '../../features/uc04-conflicts/screens/ConflictListScreen';
+import { AuthUser } from '../../services/authService';
 
 interface ReportsScreenProps {
   pendingCount?: number;
   onSyncPress?: () => void;
   isOnline?: boolean;
+  user?: AuthUser;
+  initialView?: 'hub' | 'conflict_form' | 'conflict_list';
+  onResetView?: () => void;
 }
 
 export function ReportsScreen({
   pendingCount = 0,
   onSyncPress,
   isOnline = true,
+  user,
+  initialView = 'hub',
+  onResetView,
 }: ReportsScreenProps) {
-  const [activeView, setActiveView] = useState<'hub' | 'conflict_form' | 'conflict_list'>('hub');
+  const [activeView, setActiveView] = useState<'hub' | 'conflict_form' | 'conflict_list'>(initialView);
+
+  React.useEffect(() => {
+    if (initialView) {
+      setActiveView(initialView);
+    }
+  }, [initialView]);
+
+  const handleBackToHub = () => {
+    setActiveView('hub');
+    onResetView?.();
+  };
 
   if (activeView === 'conflict_form') {
     return (
       <ConflictReportFormScreen
         isOnline={isOnline}
-        onBack={() => setActiveView('hub')}
+        onBack={handleBackToHub}
         onSubmitSuccess={() => setActiveView('conflict_list')}
+        user={user}
       />
     );
   }
@@ -33,11 +52,13 @@ export function ReportsScreen({
   if (activeView === 'conflict_list') {
     return (
       <ConflictListScreen
-        onBack={() => setActiveView('hub')}
+        onBack={handleBackToHub}
         onNewReportPress={() => setActiveView('conflict_form')}
+        user={user}
       />
     );
   }
+
   const handleFeatureNavigate = (title: string, featureCode: string, description: string) => {
     Alert.alert(
       `${title} (${featureCode})`,
@@ -45,11 +66,20 @@ export function ReportsScreen({
     );
   };
 
+  const isCommunityMember = user?.role === 'COMMUNITY_MEMBER';
+  const isRanger = user?.role === 'RANGER';
+
   return (
     <View style={styles.outerContainer}>
       <AppHeader
         title="Field Reports"
-        subtitle="Incident & Conflict Submissions"
+        subtitle={
+          isCommunityMember
+            ? 'Community Conflict Submissions & Tracking'
+            : isRanger
+            ? 'Ranger Operations & Conflict Triage'
+            : 'Incident & Conflict Submissions'
+        }
       />
 
       <ScreenContainer scrollable={true}>
@@ -76,37 +106,66 @@ export function ReportsScreen({
           </AppCard>
         ) : null}
 
-        <Text style={styles.sectionHeading}>New Submissions</Text>
-
-        {/* UC02 Option */}
-        <AppCard
-          variant="elevated"
-          onPress={() =>
-            handleFeatureNavigate(
-              'Report Incident',
-              'UC02',
-              'Record wire snares, animal carcasses, illegal logging, or armed poaching activity with GPS fixes.'
-            )
-          }
-        >
-          <View style={styles.reportRow}>
-            <View style={[styles.iconBadge, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', borderWidth: 1 }]}>
-              <Text style={styles.reportIcon}>🚨</Text>
-            </View>
-            <View style={styles.reportTextColumn}>
-              <View style={styles.tagRow}>
-                <Text style={styles.reportCategory}>UC02 • RANGER</Text>
-                <StatusBadge status="OFFLINE READY" size="small" variant="info" />
+        {/* Ranger Operations & Triage Section (Front and Center for Rangers) */}
+        {isRanger && (
+          <>
+            <Text style={styles.sectionHeading}>Field Operations & Triage</Text>
+            <AppCard
+              variant="highlight"
+              onPress={() => setActiveView('conflict_list')}
+            >
+              <View style={styles.simpleRow}>
+                <Text style={styles.simpleRowIcon}>🛡️</Text>
+                <View style={styles.simpleRowText}>
+                  <View style={styles.badgeHeadingRow}>
+                    <Text style={styles.simpleRowTitle}>Community Conflict Triage</Text>
+                    <StatusBadge status="UC04 TRIAGE" size="small" variant="warning" />
+                  </View>
+                  <Text style={styles.simpleRowDesc}>
+                    Review incoming villager reports, accept alerts & dispatch response teams.
+                  </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
               </View>
-              <Text style={styles.reportTitle}>Wildlife / Poaching Incident</Text>
-              <Text style={styles.reportDesc}>
-                Log snares, carcasses, campsites, or suspect tracks with GPS & photos.
-              </Text>
-            </View>
-          </View>
-        </AppCard>
+            </AppCard>
+          </>
+        )}
 
-        {/* UC04 Option */}
+        <Text style={styles.sectionHeading}>
+          {isRanger ? 'Log New Observations' : 'New Submissions'}
+        </Text>
+
+        {/* UC02 Option (Shown for Rangers or default view) */}
+        {!isCommunityMember && (
+          <AppCard
+            variant="elevated"
+            onPress={() =>
+              handleFeatureNavigate(
+                'Report Incident',
+                'UC02',
+                'Record wire snares, animal carcasses, illegal logging, or armed poaching activity with GPS fixes.'
+              )
+            }
+          >
+            <View style={styles.reportRow}>
+              <View style={[styles.iconBadge, { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', borderWidth: 1 }]}>
+                <Text style={styles.reportIcon}>🚨</Text>
+              </View>
+              <View style={styles.reportTextColumn}>
+                <View style={styles.tagRow}>
+                  <Text style={styles.reportCategory}>UC02 • RANGER</Text>
+                  <StatusBadge status="OFFLINE READY" size="small" variant="info" />
+                </View>
+                <Text style={styles.reportTitle}>Wildlife / Poaching Incident</Text>
+                <Text style={styles.reportDesc}>
+                  Log snares, carcasses, campsites, or suspect tracks with GPS & photos.
+                </Text>
+              </View>
+            </View>
+          </AppCard>
+        )}
+
+        {/* UC04 Option (For Community Members, or field assist for Rangers) */}
         <AppCard
           variant="elevated"
           onPress={() => setActiveView('conflict_form')}
@@ -117,34 +176,53 @@ export function ReportsScreen({
             </View>
             <View style={styles.reportTextColumn}>
               <View style={styles.tagRow}>
-                <Text style={styles.reportCategory}>UC04 • COMMUNITY</Text>
+                <Text style={styles.reportCategory}>
+                  {isRanger ? 'UC04 • FIELD ASSIST' : 'UC04 • COMMUNITY'}
+                </Text>
                 <StatusBadge status="OFFLINE READY" size="small" variant="info" />
               </View>
               <Text style={styles.reportTitle}>Human-Wildlife Conflict</Text>
               <Text style={styles.reportDesc}>
-                Report elephant crop raids, fence breaches, or cattle attacks.
+                {isRanger
+                  ? 'Record elephant crop raids or fence breaches on behalf of local villagers.'
+                  : 'Report elephant crop raids, fence breaches, or cattle attacks.'}
               </Text>
             </View>
           </View>
         </AppCard>
 
-        <Text style={styles.sectionHeading}>History & Status</Text>
+        <Text style={styles.sectionHeading}>
+          {isRanger ? 'Ranger Records & Queue' : 'History & Status'}
+        </Text>
 
-        {/* Submitted Reports */}
-        <AppCard
-          onPress={() => setActiveView('conflict_list')}
-        >
-          <View style={styles.simpleRow}>
-            <Text style={styles.simpleRowIcon}>📂</Text>
-            <View style={styles.simpleRowText}>
-              <Text style={styles.simpleRowTitle}>My Submitted Reports</Text>
-              <Text style={styles.simpleRowDesc}>
-                View status of synced incidents and triage updates.
-              </Text>
+        {/* Community Members: My Submitted Reports / Rangers: All Community Reports Queue */}
+        {isCommunityMember ? (
+          <AppCard onPress={() => setActiveView('conflict_list')}>
+            <View style={styles.simpleRow}>
+              <Text style={styles.simpleRowIcon}>📂</Text>
+              <View style={styles.simpleRowText}>
+                <Text style={styles.simpleRowTitle}>My Submitted Reports</Text>
+                <Text style={styles.simpleRowDesc}>
+                  Track live status, ranger dispatch, and updates for your conflict reports.
+                </Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
-          </View>
-        </AppCard>
+          </AppCard>
+        ) : (
+          <AppCard onPress={() => setActiveView('conflict_list')}>
+            <View style={styles.simpleRow}>
+              <Text style={styles.simpleRowIcon}>📋</Text>
+              <View style={styles.simpleRowText}>
+                <Text style={styles.simpleRowTitle}>All Community Conflict Reports</Text>
+                <Text style={styles.simpleRowDesc}>
+                  View all active and resolved reports logged by village community members.
+                </Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </View>
+          </AppCard>
+        )}
 
         {/* Local Offline Reports Queue */}
         <AppCard
@@ -277,6 +355,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#1C2A1E',
+  },
+  badgeHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginRight: 8,
   },
   simpleRowDesc: {
     fontSize: 12,

@@ -4,6 +4,7 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
 import { AppCard } from '../../components/common/AppCard';
 import { TabKey } from '../../components/navigation/BottomTabBar';
+import { AuthUser } from '../../services/authService';
 
 interface MenuScreenProps {
   onNavigateTab: (tab: TabKey) => void;
@@ -11,6 +12,8 @@ interface MenuScreenProps {
   pendingCount: number;
   onSyncNow?: () => void;
   onToggleOnline?: () => void;
+  user?: AuthUser;
+  onLogout?: () => void;
 }
 
 export function MenuScreen({
@@ -19,7 +22,12 @@ export function MenuScreen({
   pendingCount,
   onSyncNow,
   onToggleOnline,
+  user,
+  onLogout,
 }: MenuScreenProps) {
+  const isCommunityMember = user?.role === 'COMMUNITY_MEMBER';
+  const profileLabel = isCommunityMember ? 'Community Profile' : 'Ranger Profile';
+
   const handleItemPress = (action: string) => {
     switch (action) {
       case 'HOME':
@@ -34,10 +42,15 @@ export function MenuScreen({
       case 'ONLINE_TOGGLE':
         if (onToggleOnline) onToggleOnline();
         break;
+      case 'LOGOUT':
+        if (onLogout) onLogout();
+        break;
       case 'HELP':
         Alert.alert(
-          'Field Ranger Help',
-          '• To report an incident off-grid, simply submit as normal. It will be queued in local storage.\n• When returning to park HQ, toggle Online to batch synchronize.\n• For urgent animal geofence breaches, check the Alerts tab.'
+          isCommunityMember ? 'Community Reporter Guide' : 'Field Ranger Help',
+          isCommunityMember
+            ? '• To report crop damage or elephant encounters, tap Reports > Human-Wildlife Conflict.\n• Reports are stored offline if network is low and synced when online.\n• For life-threatening emergencies, contact the local range hotline.'
+            : '• To report an incident off-grid, simply submit as normal. It will be queued in local storage.\n• When returning to park HQ, toggle Online to batch synchronize.\n• For urgent animal geofence breaches, check the Alerts tab.'
         );
         break;
       case 'ABOUT':
@@ -56,6 +69,34 @@ export function MenuScreen({
       <AppHeader title="System Menu" subtitle="Application Directory & Diagnostics" />
 
       <ScreenContainer scrollable={true}>
+        {/* Active Session Card */}
+        {user && (
+          <>
+            <Text style={styles.sectionHeading}>Active Terminal Session</Text>
+            <AppCard>
+              <View style={styles.sessionRow}>
+                <View style={styles.sessionAvatar}>
+                  <Text style={styles.sessionAvatarText}>{user.initials}</Text>
+                </View>
+                <View style={styles.sessionDetails}>
+                  <Text style={styles.sessionName}>{user.fullName}</Text>
+                  <Text style={styles.sessionEmail}>{user.email}</Text>
+                  <Text style={styles.sessionRole}>{user.subtitle}</Text>
+                </View>
+              </View>
+              {onLogout && (
+                <TouchableOpacity
+                  style={styles.switchUserButton}
+                  onPress={() => handleItemPress('LOGOUT')}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.switchUserButtonText}>🚪 Switch Account / Sign Out</Text>
+                </TouchableOpacity>
+              )}
+            </AppCard>
+          </>
+        )}
+
         <Text style={styles.sectionHeading}>Navigation Shortcuts</Text>
         <AppCard>
           <TouchableOpacity
@@ -79,22 +120,12 @@ export function MenuScreen({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, styles.lastItem]}
             onPress={() => handleItemPress('REPORTS')}
             activeOpacity={0.7}
           >
             <Text style={styles.menuIcon}>📋</Text>
             <Text style={styles.menuLabel}>Field Reports (Incidents & Conflict)</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.menuItem, styles.lastItem]}
-            onPress={() => handleItemPress('PROFILE')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.menuIcon}>👤</Text>
-            <Text style={styles.menuLabel}>Ranger Profile</Text>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         </AppCard>
@@ -221,5 +252,58 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#3E8E41',
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sessionAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#3E8E41',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sessionAvatarText: {
+    color: '#FAF7EE',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  sessionDetails: {
+    flex: 1,
+  },
+  sessionName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1C2A1E',
+  },
+  sessionEmail: {
+    fontSize: 12,
+    color: '#A76D40',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  sessionRole: {
+    fontSize: 11,
+    color: '#556658',
+    marginTop: 2,
+  },
+  switchUserButton: {
+    marginTop: 10,
+    backgroundColor: '#FAF7EE',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+    borderRadius: 6,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchUserButtonText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

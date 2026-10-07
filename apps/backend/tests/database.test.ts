@@ -226,14 +226,30 @@ describe('Phase 2: PostgreSQL Database & Domain Model Verification', () => {
   // 5. Community Conflict Domain (UC04)
   // --------------------------------------------------------------------------
   it('11. should query conflict reports with community member details (UC04)', async () => {
-    const reports = await conflictRepository.findAll();
-    expect(reports.length).toBeGreaterThanOrEqual(2);
+    // Self-contained test: fetch or create a community member and conflict report
+    const members = await userRepository.findAllCommunityMembers();
+    const reporter = members[0];
+    expect(reporter).toBeDefined();
 
-    const cropDamage = reports.find((r) => r.conflictType === 'CROP_DAMAGE');
+    const created = await conflictRepository.create({
+      communityMemberId: reporter.id,
+      conflictType: 'CROP_DAMAGE',
+      description: 'Test conflict report for automated verification',
+      latitude: 6.368,
+      longitude: 81.332,
+      animalCount: 2,
+      immediateRisk: false,
+    });
+    expect(created.id).toBeDefined();
+
+    const reports = await conflictRepository.findAll();
+    expect(reports.length).toBeGreaterThanOrEqual(1);
+
+    const cropDamage = reports.find((r) => r.id === created.id);
     expect(cropDamage).toBeDefined();
-    expect(cropDamage?.reporterName).toBe('Gamini Senanayake');
-    expect(cropDamage?.villageName).toBe('Palatupana');
-    expect(cropDamage?.status).toBe('UNDER_REVIEW');
+    expect(cropDamage?.reporterName).toBe(reporter.fullName);
+    expect(cropDamage?.villageName).toBe(reporter.villageName);
+    expect(cropDamage?.status).toBe('SUBMITTED');
   });
 
   // --------------------------------------------------------------------------

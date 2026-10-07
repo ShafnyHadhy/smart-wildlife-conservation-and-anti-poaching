@@ -40,11 +40,29 @@ export async function getConflictStats(req: Request, res: Response, next: NextFu
 
 export async function updateConflictStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const {
+      status,
+      triageNotes,
+      mitigationAction,
+      estimatedDamageLkr,
+      cropTypeLost,
+      compensationStatus,
+      updatedByName,
+    } = req.body;
+    const damageData =
+      estimatedDamageLkr !== undefined ||
+      cropTypeLost !== undefined ||
+      compensationStatus !== undefined
+        ? { estimatedDamageLkr, cropTypeLost, compensationStatus }
+        : undefined;
+
     const updated = await conflictService.updateStatus(
       req.params.id,
-      req.body.status,
-      req.body.triageNotes,
-      req.body.mitigationAction
+      status,
+      triageNotes,
+      mitigationAction,
+      damageData,
+      updatedByName
     );
     sendSuccess(res, updated);
   } catch (error) {

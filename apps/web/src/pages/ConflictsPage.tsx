@@ -77,14 +77,20 @@ export function ConflictsPage() {
     id: string,
     status: ConflictStatus,
     triageNotes?: string,
-    mitigationAction?: string
+    mitigationAction?: string,
+    damageData?: {
+      estimatedDamageLkr?: number;
+      cropTypeLost?: string;
+      compensationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
+    }
   ) => {
     await webConflictService.updateConflictStatus(id, {
       status,
       triageNotes,
       mitigationAction,
+      ...damageData,
     });
-    setNotification('Operational triage status updated successfully.');
+    setNotification('Operational triage & damage assessment updated successfully.');
     setTimeout(() => setNotification(null), 3500);
     await loadData();
   };

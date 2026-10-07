@@ -146,6 +146,11 @@ export class SyncService {
           longitude: payload.longitude,
           reportedAt: payload.reportedAt || op.createdAt,
           clientMutationId,
+          severity: payload.severity,
+          estimatedAnimalsInvolved: payload.estimatedAnimalsInvolved,
+          locationName: payload.locationName,
+          immediateRisk: payload.immediateRisk,
+          photoUrls: payload.photoUrls,
         });
         entityId = conflict.id;
         break;

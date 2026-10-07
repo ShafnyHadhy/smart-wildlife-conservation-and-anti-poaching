@@ -1,5 +1,5 @@
 import { ConflictStatus, ConflictType } from '../types';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 
 interface ConflictFilterBarProps {
   statusFilter: ConflictStatus | 'ALL';
@@ -8,7 +8,7 @@ interface ConflictFilterBarProps {
   onTypeChange: (type: ConflictType | 'ALL') => void;
   searchTerm: string;
   onSearchChange: (search: string) => void;
-  onOpenCreateModal: () => void;
+  onOpenCreateModal?: () => void;
 }
 
 const STATUS_OPTIONS: { label: string; value: ConflictStatus | 'ALL' }[] = [
@@ -71,15 +71,6 @@ export function ConflictFilterBar({
             </select>
             <Filter className="w-3.5 h-3.5 text-stone-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
-
-          {/* Log New Report Action */}
-          <button
-            onClick={onOpenCreateModal}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#3E8E41] hover:bg-[#347837] text-white text-xs font-bold rounded-xl shadow-xs transition-colors shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Log Conflict Report</span>
-          </button>
         </div>
       </div>
 
