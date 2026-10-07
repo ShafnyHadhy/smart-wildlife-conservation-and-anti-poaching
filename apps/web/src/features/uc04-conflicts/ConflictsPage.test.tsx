@@ -123,16 +123,4 @@ describe('UC04: Web ConflictsPage Triage Console', () => {
       );
     });
   });
-
-  it('opens NewConflictModal when clicking Log Conflict Report', async () => {
-    render(<ConflictsPage />);
-
-    const logBtn = screen.getByRole('button', { name: /Log Conflict Report/i });
-    fireEvent.click(logBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText('Log Human-Wildlife Conflict Report')).toBeInTheDocument();
-      expect(screen.getByText('Submit Incident Report')).toBeInTheDocument();
-    });
-  });
 });

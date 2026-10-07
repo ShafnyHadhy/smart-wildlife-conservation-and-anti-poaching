@@ -69,6 +69,7 @@ export function AppNavigator({
             onResetView={() => setReportInitialView('hub')}
           />
         );
+      case 'PROFILE':
       case 'MENU':
         return (
           <MenuScreen

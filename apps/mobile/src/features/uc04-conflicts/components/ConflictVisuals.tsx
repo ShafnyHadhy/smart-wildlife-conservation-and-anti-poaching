@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Image } from 'react-native';
 
 /**
  * High-fidelity visual thumbnails for the 6 conflict categories
@@ -95,10 +95,29 @@ export function BufferZoneMapGraphic({
   );
 }
 
+let customBannerSource: any = null;
+try {
+  customBannerSource = require('../../../../assets/banner.png');
+} catch {
+  customBannerSource = null;
+}
+
 /**
  * Scenic Wildlife Nature Banner for Community Home Header
  */
 export function ScenicNatureBanner() {
+  if (customBannerSource) {
+    return (
+      <View style={styles.scenicBanner}>
+        <Image
+          source={customBannerSource}
+          style={styles.scenicBannerImage}
+          resizeMode="cover"
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.scenicBanner}>
       <View style={styles.scenicSky}>
@@ -275,12 +294,15 @@ const styles = StyleSheet.create({
   },
   scenicBanner: {
     width: '100%',
-    height: 120,
+    height: 220,
     backgroundColor: '#BFDBFE',
     position: 'relative',
     overflow: 'hidden',
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+    borderRadius: 16,
+  },
+  scenicBannerImage: {
+    width: '100%',
+    height: '100%',
   },
   scenicSky: {
     position: 'absolute',

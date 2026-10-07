@@ -1,5 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { HiPlus, HiChevronRight, HiOutlineBookOpen } from 'react-icons/hi2';
+import { TbReportSearch, TbShieldCheck, TbSettings } from 'react-icons/tb';
+import { FiUser } from 'react-icons/fi';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppCard } from '../../components/common/AppCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -47,7 +50,7 @@ export function HomeScreen({
 
   if (isCommunityMember) {
     return (
-      <ScreenContainer scrollable={true}>
+      <ScreenContainer scrollable={true} contentContainerStyle={{ paddingBottom: 14 }}>
         {/* Scenic Banner Header matching wireframe */}
         <View style={styles.communityHeaderBanner}>
           <ScenicNatureBanner />
@@ -60,10 +63,10 @@ export function HomeScreen({
             </View>
             <TouchableOpacity
               style={styles.communityAvatarCircle}
-              onPress={() => onNavigateTab('MENU')}
+              onPress={() => onNavigateTab('PROFILE')}
               activeOpacity={0.8}
             >
-              <Text style={styles.communityAvatarText}>{displayInitials}</Text>
+              <FiUser size={22} color="#14532D" />
             </TouchableOpacity>
           </View>
         </View>
@@ -95,7 +98,7 @@ export function HomeScreen({
             activeOpacity={0.85}
           >
             <View style={styles.heroPlusCircle}>
-              <Text style={styles.heroPlusIcon}>+</Text>
+              <HiPlus size={26} color="#14532D" />
             </View>
             <View style={styles.heroTextColumn}>
               <Text style={styles.heroBtnTitle}>
@@ -105,7 +108,7 @@ export function HomeScreen({
                 Help keep your community and wildlife safe
               </Text>
             </View>
-            <Text style={styles.heroChevronIcon}>›</Text>
+            <HiChevronRight size={22} color="#FFFFFF" />
           </TouchableOpacity>
 
           {/* 2. My Reports */}
@@ -117,7 +120,7 @@ export function HomeScreen({
             activeOpacity={0.8}
           >
             <View style={styles.commCardIconBox}>
-              <Text style={styles.commCardEmoji}>📋</Text>
+              <TbReportSearch size={22} color="#14532D" />
             </View>
             <View style={styles.commCardTextCol}>
               <Text style={styles.commCardTitle}>My Reports</Text>
@@ -125,7 +128,7 @@ export function HomeScreen({
                 View and track your submitted reports
               </Text>
             </View>
-            <Text style={styles.commCardChevron}>›</Text>
+            <HiChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
           {/* 3. Wildlife Information */}
@@ -135,7 +138,7 @@ export function HomeScreen({
             activeOpacity={0.8}
           >
             <View style={styles.commCardIconBox}>
-              <Text style={styles.commCardEmoji}>📖</Text>
+              <HiOutlineBookOpen size={22} color="#14532D" />
             </View>
             <View style={styles.commCardTextCol}>
               <Text style={styles.commCardTitle}>Wildlife Information</Text>
@@ -143,7 +146,7 @@ export function HomeScreen({
                 Learn about local wildlife and safety
               </Text>
             </View>
-            <Text style={styles.commCardChevron}>›</Text>
+            <HiChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
           {/* 4. Safety Tips */}
@@ -153,7 +156,7 @@ export function HomeScreen({
             activeOpacity={0.8}
           >
             <View style={styles.commCardIconBox}>
-              <Text style={styles.commCardEmoji}>🛡️</Text>
+              <TbShieldCheck size={22} color="#14532D" />
             </View>
             <View style={styles.commCardTextCol}>
               <Text style={styles.commCardTitle}>Safety Tips</Text>
@@ -161,9 +164,26 @@ export function HomeScreen({
                 How to live safely alongside wildlife
               </Text>
             </View>
-            <Text style={styles.commCardChevron}>›</Text>
+            <HiChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
+          {/* 5. Settings */}
+          <TouchableOpacity
+            style={styles.commActionRowCard}
+            onPress={() => onNavigateTab('PROFILE')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.commCardIconBox}>
+              <TbSettings size={22} color="#14532D" />
+            </View>
+            <View style={styles.commCardTextCol}>
+              <Text style={styles.commCardTitle}>Settings</Text>
+              <Text style={styles.commCardSubtitle}>
+                App preferences
+              </Text>
+            </View>
+            <HiChevronRight size={20} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
 
         {/* Modal: Wildlife Information */}
@@ -588,48 +608,58 @@ const styles = StyleSheet.create({
   },
   communityHeaderBanner: {
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: 14,
     borderRadius: 16,
     overflow: 'hidden',
   },
   communityHeaderOverlay: {
     position: 'absolute',
-    top: 14,
+    top: 16,
     left: 16,
     right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   communityHeaderTitles: {
     flex: 1,
+    paddingRight: 10,
   },
   communityAppTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: '#0F5132',
     letterSpacing: 0.2,
+    textShadowColor: 'rgba(255, 255, 255, 0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   communityAppSubtitle: {
-    fontSize: 12,
-    color: '#334155',
-    fontWeight: '600',
-    marginTop: 2,
+    fontSize: 13,
+    color: '#1E293B',
+    fontWeight: '700',
+    marginTop: 3,
+    textShadowColor: 'rgba(255, 255, 255, 0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 5,
   },
   communityAvatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: '#14532D',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
   communityAvatarText: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 18,
     color: '#14532D',
   },
   commOfflineStrip: {
@@ -642,7 +672,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   commOfflineText: {
     fontSize: 11,
@@ -663,7 +693,7 @@ const styles = StyleSheet.create({
   },
   communityCardsStack: {
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   heroConflictBtn: {
     backgroundColor: '#14532D',
