@@ -112,7 +112,70 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
     });
   });
 
-  it('renders patrol records and route corridors in the UI', async () => {
+  it('renders patrol records, Progress column, and route corridors in the UI', async () => {
+    // Mock fetchPatrolById for patrol-1 returning 8 waypoints out of 10 expected (8 / 10 = 80%)
+    vi.mocked(webPatrolService.fetchPatrolById).mockImplementation(async (id: string) => {
+      if (id === 'patrol-1') {
+        return {
+          id: 'patrol-1',
+          patrolCode: 'PAT-2026-YAL-001',
+          parkId: 'park-1',
+          rangerId: 'ranger-1',
+          patrolRouteId: 'route-1',
+          status: PatrolStatus.ACTIVE,
+          startTime: '2026-10-07T09:25:00.000Z',
+          coverageScore: 65.5,
+          createdAt: '2026-10-07T09:00:00.000Z',
+          updatedAt: '2026-10-07T09:00:00.000Z',
+          expectedWaypoints: 10,
+          waypoints: Array.from({ length: 8 }, (_, i) => ({
+            id: `w-${i}`,
+            latitude: 6.37 + i * 0.01,
+            longitude: 81.51 + i * 0.01,
+            sequenceOrder: i + 1,
+            locationType: 'GPS' as any,
+            recordedAt: new Date().toISOString(),
+          })),
+        } as any;
+      }
+      if (id === 'patrol-3') {
+        // Completed patrol with all 10 expected waypoints recorded
+        return {
+          id: 'patrol-3',
+          patrolCode: 'PAT-2026-YAL-002',
+          parkId: 'park-1',
+          rangerId: 'ranger-3',
+          patrolRouteId: 'route-3',
+          status: PatrolStatus.COMPLETED,
+          startTime: '2026-10-06T06:00:00.000Z',
+          coverageScore: 92,
+          createdAt: '2026-10-06T06:00:00.000Z',
+          updatedAt: '2026-10-06T10:00:00.000Z',
+          expectedWaypoints: 10,
+          waypoints: Array.from({ length: 10 }, (_, i) => ({
+            id: `w-c-${i}`,
+            latitude: 6.37 + i * 0.01,
+            longitude: 81.51 + i * 0.01,
+            sequenceOrder: i + 1,
+            locationType: 'GPS' as any,
+            recordedAt: new Date().toISOString(),
+          })),
+        } as any;
+      }
+      return {
+        id,
+        patrolCode: 'TEST',
+        parkId: 'park-1',
+        rangerId: 'r-1',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.PLANNED,
+        startTime: new Date().toISOString(),
+        coverageScore: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
     render(<PatrolsPage />);
 
     await waitFor(() => {
@@ -123,6 +186,19 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
       expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
       expect(screen.getByText('Nimal Perera')).toBeInTheDocument();
     });
+
+    // Verify Progress column header
+    expect(screen.getByRole('columnheader', { name: /Progress/i })).toBeInTheDocument();
+
+    // Verify progress values for different statuses
+    // Active patrol with 8 waypoints / 10 expected = 80%
+    await waitFor(() => {
+      expect(screen.getByText('80%')).toBeInTheDocument();
+    });
+    // Planned patrol has not started = 0%
+    expect(screen.getByText('0%')).toBeInTheDocument();
+    // Completed patrol with all 10 expected waypoints recorded = 100%
+    expect(screen.getByText('100%')).toBeInTheDocument();
 
     // Verify pre-approved corridors section
     expect(screen.getByText('Pre-Approved Designated Corridors (2)')).toBeInTheDocument();
@@ -197,6 +273,53 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
       expect(
         screen.getByText('There are currently no active, planned, or completed ranger patrols.')
       ).toBeInTheDocument();
+    });
+  });
+
+  it('displays 80% (not 100%) for a completed patrol with 8 of 10 waypoints recorded', async () => {
+    vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue([
+      {
+        id: 'patrol-comp',
+        patrolCode: 'PAT-2026-COMP-001',
+        parkId: 'park-1',
+        rangerId: 'ranger-1',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.COMPLETED,
+        startTime: '2026-10-06T06:00:00.000Z',
+        coverageScore: 90,
+        createdAt: '2026-10-06T06:00:00.000Z',
+        updatedAt: '2026-10-06T10:00:00.000Z',
+      },
+    ]);
+
+    vi.mocked(webPatrolService.fetchPatrolById).mockResolvedValue({
+      id: 'patrol-comp',
+      patrolCode: 'PAT-2026-COMP-001',
+      parkId: 'park-1',
+      rangerId: 'ranger-1',
+      patrolRouteId: 'route-1',
+      status: PatrolStatus.COMPLETED,
+      startTime: '2026-10-06T06:00:00.000Z',
+      coverageScore: 90,
+      createdAt: '2026-10-06T06:00:00.000Z',
+      updatedAt: '2026-10-06T10:00:00.000Z',
+      expectedWaypoints: 10,
+      waypoints: Array.from({ length: 8 }, (_, i) => ({
+        id: `w-${i}`,
+        latitude: 6.37 + i * 0.01,
+        longitude: 81.51 + i * 0.01,
+        sequenceOrder: i + 1,
+        locationType: 'GPS' as any,
+        recordedAt: new Date().toISOString(),
+      })),
+    } as any);
+
+    render(<PatrolsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('PAT-2026-COMP-001')).toBeInTheDocument();
+      expect(screen.getByText('80%')).toBeInTheDocument();
+      expect(screen.queryByText('100%')).not.toBeInTheDocument();
     });
   });
 });

@@ -6,6 +6,10 @@ import { EmptyState } from '../components/common/EmptyState';
 import { Compass, Info, AlertTriangle } from 'lucide-react';
 import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
 import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
+import {
+  calculatePatrolProgress,
+  formatProgress,
+} from '../features/uc01-patrol/utils/patrolProgress';
 
 const STATUS_FILTERS: readonly (PatrolStatus | 'ALL')[] = [
   'ALL',
@@ -29,7 +33,34 @@ export function PatrolsPage() {
         webPatrolService.fetchPatrols(),
         webPatrolService.fetchPatrolRoutes(),
       ]);
-      setPatrols(patrolsRes);
+
+      // Enrich active/completed patrols with detailed waypoints if not already present
+      const enrichedPatrols = await Promise.all(
+        patrolsRes.map(async (patrol) => {
+          if (patrol.waypoints && patrol.waypoints.length > 0) {
+            return patrol;
+          }
+          // Do not fetch details for planned or cancelled patrols
+          if (
+            patrol.status === PatrolStatus.PLANNED ||
+            patrol.status === PatrolStatus.CANCELLED
+          ) {
+            return { ...patrol, waypoints: [] };
+          }
+          try {
+            const detail = await webPatrolService.fetchPatrolById(patrol.id);
+            return {
+              ...patrol,
+              ...detail,
+              waypoints: detail.waypoints || [],
+            };
+          } catch {
+            return patrol;
+          }
+        })
+      );
+
+      setPatrols(enrichedPatrols);
       setRoutes(routesRes);
     } catch (err: unknown) {
       const message =
@@ -83,6 +114,31 @@ export function PatrolsPage() {
           {p.startTime ? new Date(p.startTime).toLocaleTimeString() : 'Scheduled'}
         </span>
       ),
+    },
+    {
+      header: 'Progress',
+      accessor: (p) => {
+        const progress = calculatePatrolProgress(p);
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-16 bg-stone-200 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  progress === 100
+                    ? 'bg-emerald-600'
+                    : progress > 0
+                    ? 'bg-[#3E8E41]'
+                    : 'bg-stone-300'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="font-bold text-stone-800 text-xs font-mono">
+              {formatProgress(progress)}
+            </span>
+          </div>
+        );
+      },
     },
     {
       header: 'Status',
