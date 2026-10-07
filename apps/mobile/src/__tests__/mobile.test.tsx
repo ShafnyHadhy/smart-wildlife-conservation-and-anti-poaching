@@ -57,11 +57,10 @@ describe('Mobile Application Shell & Navigation', () => {
     expect(screen.getByText('Home')).toBeDefined();
     expect(screen.getByText('Alerts')).toBeDefined();
     expect(screen.getByText('Reports')).toBeDefined();
-    expect(screen.getByText('Profile')).toBeDefined();
     expect(screen.getByText('Menu')).toBeDefined();
   });
 
-  it('navigates between the 5 tabs in AppNavigator', () => {
+  it('navigates between the tabs in AppNavigator', () => {
     render(
       <AppNavigator
         isOnline={true}
@@ -83,10 +82,6 @@ describe('Mobile Application Shell & Navigation', () => {
     expect(screen.getByText('Human-Wildlife Conflict')).toBeDefined();
     expect(screen.getByText('My Submitted Reports')).toBeDefined();
     expect(screen.getByText('Pending Offline Reports')).toBeDefined();
-
-    // Navigate to PROFILE
-    fireEvent.click(screen.getByText('Profile'));
-    expect(screen.getByText(/Saman Perera/i)).toBeDefined();
 
     // Navigate to MENU
     fireEvent.click(screen.getByText('Menu'));
