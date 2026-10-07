@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 
-export type TabKey = 'HOME' | 'ALERTS' | 'REPORTS' | 'PROFILE' | 'MENU';
+export type TabKey = 'HOME' | 'ALERTS' | 'REPORTS' | 'MENU';
 
 interface TabItem {
   key: TabKey;
@@ -27,7 +27,6 @@ export function BottomTabBar({
     { key: 'HOME', label: 'Home', icon: '⌂' },
     { key: 'ALERTS', label: 'Alerts', icon: '⚠', badgeCount: alertsCount },
     { key: 'REPORTS', label: 'Reports', icon: '📋', badgeCount: reportsCount },
-    { key: 'PROFILE', label: 'Profile', icon: '👤' },
     { key: 'MENU', label: 'Menu', icon: '☰' },
   ];
 
