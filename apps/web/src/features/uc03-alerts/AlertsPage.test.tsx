@@ -16,6 +16,7 @@ vi.mock('./services/alertService', () => ({
     fetchAlertById: vi.fn(),
     respondToAlert: vi.fn(),
     fetchAnimals: vi.fn(),
+    fetchRiskZones: vi.fn(),
     simulatePing: vi.fn(),
   },
 }));
@@ -145,6 +146,25 @@ describe('UC03: Web AlertsPage & Alert Lifecycle Integration', () => {
     vi.clearAllMocks();
     vi.mocked(webAlertService.fetchAlerts).mockResolvedValue(mockAlerts);
     vi.mocked(webAlertService.fetchAnimals).mockResolvedValue(mockAnimals);
+    vi.mocked(webAlertService.fetchRiskZones).mockResolvedValue([
+      {
+        id: 'zone-1',
+        parkId: 'park-1',
+        name: 'Kittulkote Village Settlement Zone',
+        zoneType: 'VILLAGE_SETTLEMENT' as any,
+        riskLevel: RiskLevel.CRITICAL,
+        boundaryCoordinates: [
+          { latitude: 6.35, longitude: 81.33 },
+          { latitude: 6.36, longitude: 81.33 },
+          { latitude: 6.36, longitude: 81.34 },
+          { latitude: 6.35, longitude: 81.34 },
+        ],
+        description: 'Village zone',
+        isActive: true,
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+      },
+    ]);
     vi.mocked(webAlertService.fetchAlertById).mockImplementation(async (id: string) => {
       const match = mockAlerts.find((a) => a.id === id);
       if (!match) throw new Error('Not found');
@@ -403,5 +423,24 @@ describe('UC03: Web AlertsPage & Alert Lifecycle Integration', () => {
 
     expect(screen.getByText('No New Alert Created')).toBeInTheDocument();
     expect(screen.getAllByText(/safe sanctuary interior/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('11. Renders Live Wildlife Telemetry & Geofence Map with toggle control', async () => {
+    render(<AlertsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wildlife-live-map')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('button', { name: /hide live map/i })).toBeInTheDocument();
+
+    // Toggle hide map
+    fireEvent.click(screen.getByRole('button', { name: /hide live map/i }));
+    expect(screen.queryByTestId('wildlife-live-map')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show live map/i })).toBeInTheDocument();
+
+    // Toggle show map again
+    fireEvent.click(screen.getByRole('button', { name: /show live map/i }));
+    expect(screen.getByTestId('wildlife-live-map')).toBeInTheDocument();
   });
 });
