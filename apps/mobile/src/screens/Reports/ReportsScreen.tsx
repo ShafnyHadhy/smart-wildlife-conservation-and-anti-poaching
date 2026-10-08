@@ -26,6 +26,7 @@ export function ReportsScreen({
   onResetView,
 }: ReportsScreenProps) {
   const [activeView, setActiveView] = useState<'hub' | 'conflict_form' | 'conflict_list'>(initialView);
+  const [listFilter, setListFilter] = useState<any>('ALL');
 
   React.useEffect(() => {
     if (initialView) {
@@ -35,6 +36,7 @@ export function ReportsScreen({
 
   const handleBackToHub = () => {
     setActiveView('hub');
+    setListFilter('ALL');
     onResetView?.();
   };
 
@@ -43,7 +45,10 @@ export function ReportsScreen({
       <ConflictReportFormScreen
         isOnline={isOnline}
         onBack={handleBackToHub}
-        onSubmitSuccess={() => setActiveView('conflict_list')}
+        onSubmitSuccess={() => {
+          setListFilter('ALL');
+          setActiveView('conflict_list');
+        }}
         user={user}
       />
     );
@@ -54,7 +59,9 @@ export function ReportsScreen({
       <ConflictListScreen
         onBack={handleBackToHub}
         onNewReportPress={() => setActiveView('conflict_form')}
+        onSyncPress={onSyncPress}
         user={user}
+        initialFilter={listFilter}
       />
     );
   }
@@ -197,7 +204,12 @@ export function ReportsScreen({
 
         {/* Community Members: My Submitted Reports / Rangers: All Community Reports Queue */}
         {isCommunityMember ? (
-          <AppCard onPress={() => setActiveView('conflict_list')}>
+          <AppCard
+            onPress={() => {
+              setListFilter('ALL');
+              setActiveView('conflict_list');
+            }}
+          >
             <View style={styles.simpleRow}>
               <Text style={styles.simpleRowIcon}>📂</Text>
               <View style={styles.simpleRowText}>
@@ -210,7 +222,12 @@ export function ReportsScreen({
             </View>
           </AppCard>
         ) : (
-          <AppCard onPress={() => setActiveView('conflict_list')}>
+          <AppCard
+            onPress={() => {
+              setListFilter('ALL');
+              setActiveView('conflict_list');
+            }}
+          >
             <View style={styles.simpleRow}>
               <Text style={styles.simpleRowIcon}>📋</Text>
               <View style={styles.simpleRowText}>
@@ -226,13 +243,10 @@ export function ReportsScreen({
 
         {/* Local Offline Reports Queue */}
         <AppCard
-          onPress={() =>
-            handleFeatureNavigate(
-              'Offline Storage Queue',
-              'Shared',
-              'Inspect and retry unsynchronized operations in local persistent storage.'
-            )
-          }
+          onPress={() => {
+            setListFilter('PENDING_SYNC');
+            setActiveView('conflict_list');
+          }}
         >
           <View style={styles.simpleRow}>
             <Text style={styles.simpleRowIcon}>💾</Text>
