@@ -17,10 +17,16 @@ import { ConflictReport, ConflictStatus } from '../types';
 import { mobileConflictService } from '../services/conflictService';
 import { AuthUser } from '../../../services/authService';
 
+export interface EnrichedConflictReport extends ConflictReport {
+  isPendingSync?: boolean;
+}
+
 interface ConflictListScreenProps {
   onBack?: () => void;
   onNewReportPress?: () => void;
+  onSyncPress?: () => void;
   user?: AuthUser;
+  initialFilter?: ConflictStatus | 'ALL' | 'PENDING_SYNC';
 }
 
 const MITIGATION_PRESETS = [
@@ -39,15 +45,24 @@ const STATUS_PIPELINE: { status: ConflictStatus; label: string; icon: string; st
   { status: ConflictStatus.RESOLVED, label: 'Resolved', icon: '✅', stepNumber: 4 },
 ];
 
-export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictListScreenProps) {
-  const [reports, setReports] = useState<ConflictReport[]>([]);
+export function ConflictListScreen({
+  onBack,
+  onNewReportPress,
+  onSyncPress,
+  user,
+  initialFilter = 'ALL',
+}: ConflictListScreenProps) {
+  const [reports, setReports] = useState<EnrichedConflictReport[]>([]);
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [selectedReport, setSelectedReport] = useState<ConflictReport | null>(null);
+  const [selectedReport, setSelectedReport] = useState<EnrichedConflictReport | null>(null);
 
   // Filter state
-  const [statusFilter, setStatusFilter] = useState<ConflictStatus | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<ConflictStatus | 'ALL' | 'PENDING_SYNC'>(initialFilter);
   const [filterMyReportsOnly, setFilterMyReportsOnly] = useState<boolean>(false);
+
+  // Sync state
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Triage update form state
   const [targetStatus, setTargetStatus] = useState<ConflictStatus>(ConflictStatus.SUBMITTED);
@@ -66,7 +81,7 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
         mobileConflictService.getPendingOfflineConflicts(),
       ]);
 
-      const pendingMapped: ConflictReport[] = pendingOps.map((op) => ({
+      const pendingMapped: EnrichedConflictReport[] = pendingOps.map((op) => ({
         id: op.clientMutationId,
         communityMemberId: op.payload.communityMemberId,
         parkId: op.payload.parkId,
@@ -81,9 +96,10 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
         updatedAt: op.createdAt,
         reporterName: op.payload.reporterName || user?.fullName || 'Local Villager',
         locationName: op.payload.locationName,
+        isPendingSync: true,
       }));
 
-      const combined = [
+      const combined: EnrichedConflictReport[] = [
         ...pendingMapped,
         ...remoteReports.filter((r) => !pendingMapped.some((p) => p.id === r.clientMutationId)),
       ];
@@ -98,7 +114,19 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
     loadData();
   }, [loadData]);
 
-  const handleOpenDetail = (item: ConflictReport) => {
+  const handleSync = async () => {
+    if (onSyncPress) {
+      setIsSyncing(true);
+      try {
+        await onSyncPress();
+        await loadData();
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+  };
+
+  const handleOpenDetail = (item: EnrichedConflictReport) => {
     setSelectedReport(item);
     setTargetStatus(item.status);
     setMitigationAction(item.mitigationAction || MITIGATION_PRESETS[0]);
@@ -133,8 +161,12 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
 
   // Filter reports
   const displayedReports = reports.filter((item) => {
-    if (statusFilter !== 'ALL' && item.status !== statusFilter) {
-      return false;
+    if (statusFilter === 'PENDING_SYNC') {
+      return !!item.isPendingSync;
+    }
+    if (statusFilter !== 'ALL') {
+      if (item.isPendingSync) return false;
+      if (item.status !== statusFilter) return false;
     }
     if (filterMyReportsOnly && user) {
       const matchId = item.communityMemberId === user.id;
@@ -178,11 +210,43 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
         />
 
         <ScreenContainer scrollable={true}>
+          {selectedReport.isPendingSync && (
+            <AppCard variant="highlight" style={styles.detailOfflineBanner}>
+              <View style={styles.detailOfflineRow}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={styles.detailOfflineTitle}>💾 Offline Queued Report</Text>
+                  <Text style={styles.detailOfflineDesc}>
+                    This conflict report is stored on your device. Once network connection is active, tap Sync to transmit to central command.
+                  </Text>
+                </View>
+                {onSyncPress ? (
+                  <TouchableOpacity
+                    style={styles.queueSyncBtn}
+                    onPress={async () => {
+                      await handleSync();
+                      setSelectedReport(null);
+                    }}
+                    disabled={isSyncing}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.queueSyncBtnText}>
+                      {isSyncing ? 'Syncing...' : 'Sync Now'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </AppCard>
+          )}
+
           {/* Visual Status Progress Stepper */}
           <AppCard variant="elevated" style={styles.stepperCard}>
             <View style={styles.stepperHeader}>
               <Text style={styles.stepperTitle}>Live Triage Pipeline</Text>
-              <StatusBadge status={selectedReport.status} size="small" />
+              {selectedReport.isPendingSync ? (
+                <StatusBadge status="PENDING SYNC" size="small" variant="warning" />
+              ) : (
+                <StatusBadge status={selectedReport.status} size="small" />
+              )}
             </View>
 
             <View style={styles.pipelineRow}>
@@ -491,10 +555,28 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
         {pendingCount > 0 && (
           <AppCard variant="highlight" style={styles.queueCard}>
             <View style={styles.queueRow}>
-              <Text style={styles.queueText}>
-                ⚠️ {pendingCount} offline conflict report(s) queued on device.
-              </Text>
-              <StatusBadge status="PENDING SYNC" size="small" variant="warning" />
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.queueText}>
+                  ⚠️ {pendingCount} offline conflict report(s) queued on device.
+                </Text>
+                <Text style={{ fontSize: 11, color: '#A76D40', marginTop: 2, fontWeight: '600' }}>
+                  Awaiting network transmission to central command.
+                </Text>
+              </View>
+              {onSyncPress ? (
+                <TouchableOpacity
+                  style={styles.queueSyncBtn}
+                  onPress={handleSync}
+                  disabled={isSyncing}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.queueSyncBtnText}>
+                    {isSyncing ? 'Syncing...' : 'Sync Now'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <StatusBadge status="PENDING SYNC" size="small" variant="warning" />
+              )}
             </View>
           </AppCard>
         )}
@@ -510,6 +592,27 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
                 All ({reports.length})
               </Text>
             </TouchableOpacity>
+
+            {pendingCount > 0 && (
+              <TouchableOpacity
+                style={[
+                  styles.filterPill,
+                  styles.filterPillOffline,
+                  statusFilter === 'PENDING_SYNC' && styles.filterPillOfflineActive,
+                ]}
+                onPress={() => setStatusFilter('PENDING_SYNC')}
+              >
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    styles.filterPillOfflineText,
+                    statusFilter === 'PENDING_SYNC' && styles.filterPillOfflineTextActive,
+                  ]}
+                >
+                  💾 Pending Sync ({pendingCount})
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[styles.filterPill, statusFilter === ConflictStatus.SUBMITTED && styles.filterPillActive]}
@@ -582,7 +685,9 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
           <AppCard style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No Conflicts Recorded</Text>
             <Text style={styles.emptyDesc}>
-              {statusFilter !== 'ALL'
+              {statusFilter === 'PENDING_SYNC'
+                ? 'No pending offline reports. All mutations are synchronized with the server.'
+                : statusFilter !== 'ALL'
                 ? `No reports found matching status "${statusFilter}".`
                 : 'No human-wildlife encounters logged in this sector yet.'}
             </Text>
@@ -594,15 +699,32 @@ export function ConflictListScreen({ onBack, onNewReportPress, user }: ConflictL
               onPress={() => handleOpenDetail(item)}
               activeOpacity={0.85}
             >
-              <AppCard style={styles.reportCard}>
+              <AppCard
+                style={[
+                  styles.reportCard,
+                  item.isPendingSync && styles.reportCardOffline,
+                ]}
+              >
                 <View style={styles.cardTopRow}>
                   <View style={styles.categoryBadge}>
                     <Text style={styles.categoryText}>
                       {item.conflictType.replace(/_/g, ' ')}
                     </Text>
                   </View>
-                  <StatusBadge status={item.status} size="small" />
+                  {item.isPendingSync ? (
+                    <StatusBadge status="PENDING SYNC" size="small" variant="warning" />
+                  ) : (
+                    <StatusBadge status={item.status} size="small" />
+                  )}
                 </View>
+
+                {item.isPendingSync ? (
+                  <View style={styles.offlineItemTag}>
+                    <Text style={styles.offlineItemTagText}>
+                      💾 Stored in local offline queue • Tap to review
+                    </Text>
+                  </View>
+                ) : null}
 
                 <Text style={styles.reportDesc} numberOfLines={3}>
                   {item.description}
@@ -681,6 +803,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#3E8E41',
     borderColor: '#3E8E41',
   },
+  filterPillOffline: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#F59E0B',
+  },
+  filterPillOfflineActive: {
+    backgroundColor: '#D97706',
+    borderColor: '#D97706',
+  },
   filterPillText: {
     fontSize: 12,
     fontWeight: '600',
@@ -688,6 +818,65 @@ const styles = StyleSheet.create({
   },
   filterPillTextActive: {
     color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  filterPillOfflineText: {
+    color: '#92400E',
+    fontWeight: '700',
+  },
+  filterPillOfflineTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  queueSyncBtn: {
+    backgroundColor: '#3E8E41',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  queueSyncBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  detailOfflineBanner: {
+    marginBottom: 12,
+    borderColor: '#F59E0B',
+    borderWidth: 1.5,
+    backgroundColor: '#FFFBEB',
+  },
+  detailOfflineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  detailOfflineTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#92400E',
+    marginBottom: 2,
+  },
+  detailOfflineDesc: {
+    fontSize: 11,
+    color: '#78350F',
+    lineHeight: 16,
+  },
+  reportCardOffline: {
+    borderColor: '#F59E0B',
+    borderWidth: 1.5,
+    backgroundColor: '#FFFDF5',
+  },
+  offlineItemTag: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  offlineItemTagText: {
+    fontSize: 11,
+    color: '#92400E',
     fontWeight: '700',
   },
   myReportsToggle: {

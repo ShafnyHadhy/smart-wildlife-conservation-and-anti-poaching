@@ -1,5 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import {
+  HiOutlineHome,
+  HiChevronRight,
+  HiOutlineSignal,
+  HiOutlineArrowPath,
+  HiOutlineQuestionMarkCircle,
+  HiOutlineInformationCircle,
+} from 'react-icons/hi2';
+import { TbAlertTriangle, TbReportSearch } from 'react-icons/tb';
+import { FiLogOut } from 'react-icons/fi';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
 import { AppCard } from '../../components/common/AppCard';
@@ -90,7 +100,10 @@ export function MenuScreen({
                   onPress={() => handleItemPress('LOGOUT')}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.switchUserButtonText}>🚪 Switch Account / Sign Out</Text>
+                  <View style={styles.switchUserContent}>
+                    <FiLogOut size={15} color="#DC2626" style={{ marginRight: 6 }} />
+                    <Text style={styles.switchUserButtonText}>Switch Account / Sign Out</Text>
+                  </View>
                 </TouchableOpacity>
               )}
             </AppCard>
@@ -104,9 +117,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('HOME')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>⌂</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineHome size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>Dashboard / Home</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -114,9 +129,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('ALERTS')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>⚠</Text>
+            <View style={styles.menuIconBox}>
+              <TbAlertTriangle size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>Wildlife Risk Alerts</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -124,9 +141,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('REPORTS')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>📋</Text>
+            <View style={styles.menuIconBox}>
+              <TbReportSearch size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>Field Reports (Incidents & Conflict)</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
         </AppCard>
 
@@ -137,7 +156,9 @@ export function MenuScreen({
             onPress={() => handleItemPress('ONLINE_TOGGLE')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>📡</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineSignal size={20} color="#3E8E41" />
+            </View>
             <View style={styles.menuTextColumn}>
               <Text style={styles.menuLabel}>Connectivity Mode</Text>
               <Text style={styles.menuSubLabel}>
@@ -152,7 +173,9 @@ export function MenuScreen({
             onPress={() => handleItemPress('SYNC')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>🔄</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineArrowPath size={20} color="#3E8E41" />
+            </View>
             <View style={styles.menuTextColumn}>
               <Text style={styles.menuLabel}>Batch Synchronize</Text>
               <Text style={styles.menuSubLabel}>
@@ -170,9 +193,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('HELP')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>❓</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineQuestionMarkCircle size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>Field User Guide</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -180,9 +205,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('ABOUT')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>ℹ</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineInformationCircle size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>About System</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
         </AppCard>
       </ScreenContainer>
@@ -301,9 +328,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  switchUserContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   switchUserButtonText: {
     color: '#DC2626',
     fontSize: 12,
     fontWeight: '700',
+  },
+  menuIconBox: {
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
 });

@@ -54,20 +54,20 @@ export function StatusBadge({
 }
 
 function getVariantFromStatus(status: string): BadgeVariant {
-  const normalized = status.toUpperCase();
+  const normalized = status.toUpperCase().replace(/[_\s]+/g, '_');
   if (['ACTIVE', 'RESOLVED', 'COMPLETED', 'SYNCED', 'ONLINE'].includes(normalized)) {
     return 'success';
   }
   if (['HIGH', 'CRITICAL', 'FAILED', 'CANCELLED'].includes(normalized)) {
     return 'danger';
   }
-  if (['PENDING', 'UNDER_REVIEW', 'RESPONDING', 'IN_PROGRESS', 'MEDIUM'].includes(normalized)) {
+  if (['PENDING', 'PENDING_SYNC', 'UNDER_REVIEW', 'RESPONDING', 'IN_PROGRESS', 'MEDIUM'].includes(normalized)) {
     return 'warning';
   }
   if (['SUBMITTED', 'SCHEDULED', 'PLANNED', 'LOW'].includes(normalized)) {
     return 'info';
   }
-  if (['OFFLINE'].includes(normalized)) {
+  if (['OFFLINE', 'OFFLINE_QUEUED'].includes(normalized)) {
     return 'offline';
   }
   return 'neutral';

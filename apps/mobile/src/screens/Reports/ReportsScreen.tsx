@@ -19,17 +19,17 @@ import { ConflictListScreen } from '../../features/uc04-conflicts/screens/Confli
 import { AuthUser } from '../../services/authService';
 
 interface ReportsScreenProps {
-  isOnline: boolean;
+  isOnline?: boolean;
   pendingCount?: number;
   onSyncPress?: () => void;
 
   // UC02
   onIncidentSubmitted?: () => void;
-  onGoHome: () => void;
+  onGoHome?: () => void;
 
   // Latest dev / UC04
   user?: AuthUser;
-  initialView?: 'hub' | 'conflict_form' | 'conflict_list';
+  initialView?: ReportsView;
   onResetView?: () => void;
 }
 
@@ -40,17 +40,17 @@ type ReportsView =
   | 'conflict_list';
 
 export function ReportsScreen({
-  isOnline,
+  isOnline = true,
   pendingCount = 0,
   onSyncPress,
   onIncidentSubmitted,
-  onGoHome,
+  onGoHome = () => {},
   user,
   initialView = 'hub',
   onResetView,
 }: ReportsScreenProps) {
-  const [activeView, setActiveView] =
-    useState<ReportsView>(initialView);
+  const [activeView, setActiveView] = useState<ReportsView>(initialView);
+  const [listFilter, setListFilter] = useState<any>('ALL');
 
   React.useEffect(() => {
     setActiveView(initialView);
@@ -58,6 +58,7 @@ export function ReportsScreen({
 
   const handleBackToHub = () => {
     setActiveView('hub');
+    setListFilter('ALL');
     onResetView?.();
   };
 
@@ -79,7 +80,10 @@ export function ReportsScreen({
       <ConflictReportFormScreen
         isOnline={isOnline}
         onBack={handleBackToHub}
-        onSubmitSuccess={() => setActiveView('conflict_list')}
+        onSubmitSuccess={() => {
+          setListFilter('ALL');
+          setActiveView('conflict_list');
+        }}
         user={user}
       />
     );
@@ -91,7 +95,9 @@ export function ReportsScreen({
       <ConflictListScreen
         onBack={handleBackToHub}
         onNewReportPress={() => setActiveView('conflict_form')}
+        onSyncPress={onSyncPress}
         user={user}
+        initialFilter={listFilter}
       />
     );
   }
@@ -291,7 +297,12 @@ export function ReportsScreen({
 
         {/* Community Members: My Submitted Reports / Rangers: All Community Reports Queue */}
         {isCommunityMember ? (
-          <AppCard onPress={() => setActiveView('conflict_list')}>
+          <AppCard
+            onPress={() => {
+              setListFilter('ALL');
+              setActiveView('conflict_list');
+            }}
+          >
             <View style={styles.simpleRow}>
               <Text style={styles.simpleRowIcon}>📂</Text>
 
@@ -309,7 +320,12 @@ export function ReportsScreen({
             </View>
           </AppCard>
         ) : (
-          <AppCard onPress={() => setActiveView('conflict_list')}>
+          <AppCard
+            onPress={() => {
+              setListFilter('ALL');
+              setActiveView('conflict_list');
+            }}
+          >
             <View style={styles.simpleRow}>
               <Text style={styles.simpleRowIcon}>📋</Text>
 
@@ -330,13 +346,10 @@ export function ReportsScreen({
 
         {/* Local Offline Reports Queue */}
         <AppCard
-          onPress={() =>
-            handleFeatureNavigate(
-              'Offline Storage Queue',
-              'Shared',
-              'Inspect and retry unsynchronized operations in local persistent storage.'
-            )
-          }
+          onPress={() => {
+            setListFilter('PENDING_SYNC');
+            setActiveView('conflict_list');
+          }}
         >
           <View style={styles.simpleRow}>
             <Text style={styles.simpleRowIcon}>💾</Text>

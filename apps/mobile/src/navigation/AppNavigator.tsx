@@ -86,6 +86,7 @@ export function AppNavigator({
         );
 
       case 'MENU':
+      case 'PROFILE':
         return (
           <MenuScreen
             onNavigateTab={setActiveTab}
