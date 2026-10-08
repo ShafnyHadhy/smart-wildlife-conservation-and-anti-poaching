@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, StatusBar, Alert } from 'react-native';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { LoginScreen } from './src/screens/Auth/LoginScreen';
+import { mobileAuthService, AuthUser } from './src/services/authService';
 import { offlineQueue } from './src/services/offlineQueue';
 import { mobileSyncService } from './src/services/syncService';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authInitialized, setAuthInitialized] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [pendingCount, setPendingCount] = useState<number>(0);
 
@@ -18,8 +22,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    mobileAuthService.getStoredUser().then((user) => {
+      if (user) {
+        setCurrentUser(user);
+      }
+      setAuthInitialized(true);
+    });
+  }, []);
+
+  useEffect(() => {
     refreshQueueCount();
   }, [refreshQueueCount]);
+
+  const handleLogout = async () => {
+    await mobileAuthService.logout();
+    setCurrentUser(null);
+  };
 
   const handleSyncNow = async () => {
     if (!isOnline) {
@@ -76,6 +94,19 @@ export default function App() {
     }
   };
 
+  // If session is not authenticated yet, present the login screen
+  if (!currentUser) {
+    return (
+      <View style={styles.root}>
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
+        <LoginScreen
+          onLoginSuccess={(user) => setCurrentUser(user)}
+          isOnline={isOnline}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5DC" />
@@ -84,6 +115,8 @@ export default function App() {
         pendingCount={pendingCount}
         onToggleOnline={handleToggleOnline}
         onSyncNow={handleSyncNow}
+        user={currentUser}
+        onLogout={handleLogout}
       />
     </View>
   );

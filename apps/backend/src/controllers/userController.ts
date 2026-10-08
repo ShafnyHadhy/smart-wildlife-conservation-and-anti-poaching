@@ -20,10 +20,24 @@ export async function getUserById(req: Request, res: Response, next: NextFunctio
   }
 }
 
-export async function getCommunityMembers(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getCommunityMembers(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const members = await userService.getAllCommunityMembers();
+    const filter = {
+      phone: req.query.phone as string | undefined,
+      village: req.query.village as string | undefined,
+      search: req.query.search as string | undefined,
+    };
+    const members = await userService.getCommunityMembers(filter);
     sendList(res, members);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function createCommunityMember(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const member = await userService.registerCommunityMember(req.body);
+    sendSuccess(res, member, 201);
   } catch (error) {
     next(error);
   }

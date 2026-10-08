@@ -61,4 +61,17 @@ export const webConflictService = {
   ): Promise<ConflictReport> {
     return apiClient.patch<ConflictReport>(`/conflict-reports/${id}/status`, dto);
   },
+
+  async fetchCommunityMembers(filter?: { phone?: string; village?: string; search?: string }): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (filter?.phone) params.append('phone', filter.phone);
+    if (filter?.village) params.append('village', filter.village);
+    if (filter?.search) params.append('search', filter.search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiClient.get<any[]>(`/community-members${query}`);
+  },
+
+  async registerCommunityMember(dto: any): Promise<any> {
+    return apiClient.post<any>('/community-members', dto);
+  },
 };

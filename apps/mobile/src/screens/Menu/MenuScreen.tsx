@@ -1,9 +1,20 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import {
+  HiOutlineHome,
+  HiChevronRight,
+  HiOutlineSignal,
+  HiOutlineArrowPath,
+  HiOutlineQuestionMarkCircle,
+  HiOutlineInformationCircle,
+} from 'react-icons/hi2';
+import { TbAlertTriangle, TbReportSearch } from 'react-icons/tb';
+import { FiLogOut } from 'react-icons/fi';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
 import { AppCard } from '../../components/common/AppCard';
 import { TabKey } from '../../components/navigation/BottomTabBar';
+import { AuthUser } from '../../services/authService';
 
 interface MenuScreenProps {
   onNavigateTab: (tab: TabKey) => void;
@@ -11,6 +22,8 @@ interface MenuScreenProps {
   pendingCount: number;
   onSyncNow?: () => void;
   onToggleOnline?: () => void;
+  user?: AuthUser;
+  onLogout?: () => void;
 }
 
 export function MenuScreen({
@@ -19,7 +32,12 @@ export function MenuScreen({
   pendingCount,
   onSyncNow,
   onToggleOnline,
+  user,
+  onLogout,
 }: MenuScreenProps) {
+  const isCommunityMember = user?.role === 'COMMUNITY_MEMBER';
+  const profileLabel = isCommunityMember ? 'Community Profile' : 'Ranger Profile';
+
   const handleItemPress = (action: string) => {
     switch (action) {
       case 'HOME':
@@ -34,10 +52,15 @@ export function MenuScreen({
       case 'ONLINE_TOGGLE':
         if (onToggleOnline) onToggleOnline();
         break;
+      case 'LOGOUT':
+        if (onLogout) onLogout();
+        break;
       case 'HELP':
         Alert.alert(
-          'Field Ranger Help',
-          '• To report an incident off-grid, simply submit as normal. It will be queued in local storage.\n• When returning to park HQ, toggle Online to batch synchronize.\n• For urgent animal geofence breaches, check the Alerts tab.'
+          isCommunityMember ? 'Community Reporter Guide' : 'Field Ranger Help',
+          isCommunityMember
+            ? '• To report crop damage or elephant encounters, tap Reports > Human-Wildlife Conflict.\n• Reports are stored offline if network is low and synced when online.\n• For life-threatening emergencies, contact the local range hotline.'
+            : '• To report an incident off-grid, simply submit as normal. It will be queued in local storage.\n• When returning to park HQ, toggle Online to batch synchronize.\n• For urgent animal geofence breaches, check the Alerts tab.'
         );
         break;
       case 'ABOUT':
@@ -56,6 +79,37 @@ export function MenuScreen({
       <AppHeader title="System Menu" subtitle="Application Directory & Diagnostics" />
 
       <ScreenContainer scrollable={true}>
+        {/* Active Session Card */}
+        {user && (
+          <>
+            <Text style={styles.sectionHeading}>Active Terminal Session</Text>
+            <AppCard>
+              <View style={styles.sessionRow}>
+                <View style={styles.sessionAvatar}>
+                  <Text style={styles.sessionAvatarText}>{user.initials}</Text>
+                </View>
+                <View style={styles.sessionDetails}>
+                  <Text style={styles.sessionName}>{user.fullName}</Text>
+                  <Text style={styles.sessionEmail}>{user.email}</Text>
+                  <Text style={styles.sessionRole}>{user.subtitle}</Text>
+                </View>
+              </View>
+              {onLogout && (
+                <TouchableOpacity
+                  style={styles.switchUserButton}
+                  onPress={() => handleItemPress('LOGOUT')}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.switchUserContent}>
+                    <FiLogOut size={15} color="#DC2626" style={{ marginRight: 6 }} />
+                    <Text style={styles.switchUserButtonText}>Switch Account / Sign Out</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </AppCard>
+          </>
+        )}
+
         <Text style={styles.sectionHeading}>Navigation Shortcuts</Text>
         <AppCard>
           <TouchableOpacity
@@ -63,9 +117,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('HOME')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>⌂</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineHome size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>Dashboard / Home</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -73,29 +129,23 @@ export function MenuScreen({
             onPress={() => handleItemPress('ALERTS')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>⚠</Text>
+            <View style={styles.menuIconBox}>
+              <TbAlertTriangle size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>Wildlife Risk Alerts</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handleItemPress('REPORTS')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.menuIcon}>📋</Text>
-            <Text style={styles.menuLabel}>Field Reports (Incidents & Conflict)</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.menuItem, styles.lastItem]}
-            onPress={() => handleItemPress('PROFILE')}
+            onPress={() => handleItemPress('REPORTS')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>👤</Text>
-            <Text style={styles.menuLabel}>Ranger Profile</Text>
-            <Text style={styles.chevron}>›</Text>
+            <View style={styles.menuIconBox}>
+              <TbReportSearch size={20} color="#3E8E41" />
+            </View>
+            <Text style={styles.menuLabel}>Field Reports (Incidents & Conflict)</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
         </AppCard>
 
@@ -106,7 +156,9 @@ export function MenuScreen({
             onPress={() => handleItemPress('ONLINE_TOGGLE')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>📡</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineSignal size={20} color="#3E8E41" />
+            </View>
             <View style={styles.menuTextColumn}>
               <Text style={styles.menuLabel}>Connectivity Mode</Text>
               <Text style={styles.menuSubLabel}>
@@ -121,7 +173,9 @@ export function MenuScreen({
             onPress={() => handleItemPress('SYNC')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>🔄</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineArrowPath size={20} color="#3E8E41" />
+            </View>
             <View style={styles.menuTextColumn}>
               <Text style={styles.menuLabel}>Batch Synchronize</Text>
               <Text style={styles.menuSubLabel}>
@@ -139,9 +193,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('HELP')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>❓</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineQuestionMarkCircle size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>Field User Guide</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -149,9 +205,11 @@ export function MenuScreen({
             onPress={() => handleItemPress('ABOUT')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>ℹ</Text>
+            <View style={styles.menuIconBox}>
+              <HiOutlineInformationCircle size={20} color="#3E8E41" />
+            </View>
             <Text style={styles.menuLabel}>About System</Text>
-            <Text style={styles.chevron}>›</Text>
+            <HiChevronRight size={18} color="#A76D40" />
           </TouchableOpacity>
         </AppCard>
       </ScreenContainer>
@@ -221,5 +279,69 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#3E8E41',
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sessionAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#3E8E41',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sessionAvatarText: {
+    color: '#FAF7EE',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  sessionDetails: {
+    flex: 1,
+  },
+  sessionName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1C2A1E',
+  },
+  sessionEmail: {
+    fontSize: 12,
+    color: '#A76D40',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  sessionRole: {
+    fontSize: 11,
+    color: '#556658',
+    marginTop: 2,
+  },
+  switchUserButton: {
+    marginTop: 10,
+    backgroundColor: '#FAF7EE',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+    borderRadius: 6,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchUserContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchUserButtonText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  menuIconBox: {
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
 });

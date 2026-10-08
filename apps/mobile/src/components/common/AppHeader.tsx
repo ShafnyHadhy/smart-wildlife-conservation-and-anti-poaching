@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { HiChevronLeft } from 'react-icons/hi2';
 
 interface AppHeaderProps {
   title: string;
@@ -26,7 +27,8 @@ export function AppHeader({
             activeOpacity={0.7}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={styles.backText}>‹ Back</Text>
+            <HiChevronLeft size={16} color="#3E8E41" />
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         )}
         <View style={styles.titleContainer}>
@@ -68,16 +70,19 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginRight: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
     backgroundColor: '#F5F5DC',
     borderWidth: 1,
     borderColor: '#D1B370',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   backText: {
     color: '#3E8E41',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   titleContainer: {

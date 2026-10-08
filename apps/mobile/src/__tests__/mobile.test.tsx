@@ -2,19 +2,46 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
+vi.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: vi.fn().mockResolvedValue({ status: 'granted' }),
+  requestMediaLibraryPermissionsAsync: vi.fn().mockResolvedValue({ status: 'granted' }),
+  launchCameraAsync: vi.fn().mockResolvedValue({ canceled: true, assets: [] }),
+  launchImageLibraryAsync: vi.fn().mockResolvedValue({ canceled: true, assets: [] }),
+}));
+
 // Lightweight React Native element mock for pure unit test environment
 vi.mock('react-native', () => {
   return {
-    View: ({ children, testID, ...props }: any) =>
-      React.createElement('div', { 'data-testid': testID, ...props }, children),
-    Text: ({ children, ...props }: any) =>
-      React.createElement('span', props, children),
-    TouchableOpacity: ({ children, onPress, ...props }: any) =>
-      React.createElement('button', { onClick: onPress, type: 'button', ...props }, children),
-    ScrollView: ({ children, ...props }: any) =>
-      React.createElement('div', props, children),
-    SafeAreaView: ({ children, ...props }: any) =>
-      React.createElement('div', props, children),
+    Platform: {
+      OS: 'web',
+      select: (obj: any) => obj.web || obj.default,
+    },
+    View: ({ children, testID, id, style, className }: any) =>
+      React.createElement('div', { 'data-testid': testID, id, style, className }, children),
+    Text: ({ children, testID, id, style, className }: any) =>
+      React.createElement('span', { 'data-testid': testID, id, style, className }, children),
+    TextInput: ({ value, onChangeText, placeholder, testID, id, style, disabled }: any) =>
+      React.createElement('input', {
+        value,
+        onChange: (e: any) => onChangeText?.(e.target.value),
+        placeholder,
+        'data-testid': testID,
+        id,
+        style,
+        disabled,
+      }),
+    Image: ({ source, style, testID }: any) =>
+      React.createElement('img', {
+        src: typeof source === 'string' ? source : source?.uri,
+        style,
+        'data-testid': testID,
+      }),
+    TouchableOpacity: ({ children, onPress, testID, id, disabled, style }: any) =>
+      React.createElement('button', { onClick: onPress, type: 'button', 'data-testid': testID, id, disabled, style }, children),
+    ScrollView: ({ children, testID, id, style }: any) =>
+      React.createElement('div', { 'data-testid': testID, id, style }, children),
+    SafeAreaView: ({ children, testID, id, style }: any) =>
+      React.createElement('div', { 'data-testid': testID, id, style }, children),
     StatusBar: () => null,
     StyleSheet: {
       create: (styles: any) => styles,
@@ -58,10 +85,9 @@ describe('Mobile Application Shell & Navigation', () => {
     expect(screen.getByText('Alerts')).toBeDefined();
     expect(screen.getByText('Reports')).toBeDefined();
     expect(screen.getByText('Profile')).toBeDefined();
-    expect(screen.getByText('Menu')).toBeDefined();
   });
 
-  it('navigates between the 5 tabs in AppNavigator', () => {
+  it('navigates between the tabs in AppNavigator', () => {
     render(
       <AppNavigator
         isOnline={true}
@@ -81,15 +107,11 @@ describe('Mobile Application Shell & Navigation', () => {
     fireEvent.click(screen.getByText('Reports'));
     expect(screen.getByText('Wildlife / Poaching Incident')).toBeDefined();
     expect(screen.getByText('Human-Wildlife Conflict')).toBeDefined();
-    expect(screen.getByText('My Submitted Reports')).toBeDefined();
+    expect(screen.getByText('All Community Conflict Reports')).toBeDefined();
     expect(screen.getByText('Pending Offline Reports')).toBeDefined();
 
     // Navigate to PROFILE
     fireEvent.click(screen.getByText('Profile'));
-    expect(screen.getByText(/Saman Perera/i)).toBeDefined();
-
-    // Navigate to MENU
-    fireEvent.click(screen.getByText('Menu'));
     expect(screen.getByText('Field User Guide')).toBeDefined();
     expect(screen.getByText('About System')).toBeDefined();
   });

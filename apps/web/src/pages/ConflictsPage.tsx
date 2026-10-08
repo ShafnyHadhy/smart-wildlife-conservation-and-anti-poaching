@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
@@ -18,19 +18,8 @@ import { NewConflictModal } from '../features/uc04-conflicts/components/NewConfl
 
 export function ConflictsPage() {
   const [reports, setReports] = useState<ConflictReport[]>([]);
-  const [stats, setStats] = useState<ConflictStats>({
-    total: 0,
-    submitted: 0,
-    underReview: 0,
-    responding: 0,
-    resolved: 0,
-    closed: 0,
-    cropDamageCount: 0,
-    elephantHumanCount: 0,
-    propertyDamageCount: 0,
-    livestockAttackCount: 0,
-  });
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<ConflictStatus | 'ALL'>('ALL');
   const [typeFilter, setTypeFilter] = useState<ConflictType | 'ALL'>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -40,51 +29,95 @@ export function ConflictsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
-      const [fetchedReports, fetchedStats] = await Promise.all([
-        webConflictService.fetchConflicts({
-          status: statusFilter,
-          conflictType: typeFilter,
-          search: searchTerm,
-        }).catch(() => []),
-        webConflictService.fetchConflictStats().catch(() => ({
-          total: 0,
-          submitted: 0,
-          underReview: 0,
-          responding: 0,
-          resolved: 0,
-          closed: 0,
-          cropDamageCount: 0,
-          elephantHumanCount: 0,
-          propertyDamageCount: 0,
-          livestockAttackCount: 0,
-        })),
-      ]);
+      if (!silent) setLoading(true);
+      else setIsRefreshing(true);
+
+      const fetchedReports = await webConflictService.fetchConflicts().catch(() => []);
       setReports(fetchedReports);
-      setStats(fetchedStats);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  }, [statusFilter, typeFilter, searchTerm]);
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // Compute stats instantly from reports
+  const stats = useMemo<ConflictStats>(() => {
+    const s: ConflictStats = {
+      total: reports.length,
+      submitted: 0,
+      underReview: 0,
+      responding: 0,
+      resolved: 0,
+      closed: 0,
+      cropDamageCount: 0,
+      elephantHumanCount: 0,
+      propertyDamageCount: 0,
+      livestockAttackCount: 0,
+    };
+
+    for (const r of reports) {
+      if (r.status === ConflictStatus.SUBMITTED) s.submitted++;
+      else if (r.status === ConflictStatus.UNDER_REVIEW) s.underReview++;
+      else if (r.status === ConflictStatus.RESPONDING) s.responding++;
+      else if (r.status === ConflictStatus.RESOLVED) s.resolved++;
+      else if (r.status === ConflictStatus.CLOSED) s.closed++;
+
+      if (r.conflictType === ConflictType.CROP_DAMAGE) s.cropDamageCount++;
+      else if (r.conflictType === ConflictType.ELEPHANT_HUMAN_CONFLICT || r.conflictType === ConflictType.ANIMAL_INTRUSION) s.elephantHumanCount++;
+      else if (r.conflictType === ConflictType.PROPERTY_DAMAGE) s.propertyDamageCount++;
+      else if (r.conflictType === ConflictType.LIVESTOCK_ATTACK) s.livestockAttackCount++;
+    }
+
+    return s;
+  }, [reports]);
+
+  // Instant 0ms client-side filtering for smooth UX
+  const filteredReports = useMemo(() => {
+    return reports.filter((item) => {
+      if (statusFilter !== 'ALL' && item.status !== statusFilter) {
+        return false;
+      }
+      if (typeFilter !== 'ALL' && item.conflictType !== typeFilter) {
+        return false;
+      }
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase().trim();
+        const matchDesc = item.description?.toLowerCase().includes(q);
+        const matchVillage = item.villageName?.toLowerCase().includes(q);
+        const matchReporter = item.reporterName?.toLowerCase().includes(q);
+        const matchType = item.conflictType?.toLowerCase().includes(q);
+        if (!matchDesc && !matchVillage && !matchReporter && !matchType) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [reports, statusFilter, typeFilter, searchTerm]);
+
   const handleUpdateStatus = async (
     id: string,
     status: ConflictStatus,
     triageNotes?: string,
-    mitigationAction?: string
+    mitigationAction?: string,
+    damageData?: {
+      estimatedDamageLkr?: number;
+      cropTypeLost?: string;
+      compensationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
+    }
   ) => {
     await webConflictService.updateConflictStatus(id, {
       status,
       triageNotes,
       mitigationAction,
+      ...damageData,
     });
-    setNotification('Operational triage status updated successfully.');
+    setNotification('Operational triage & damage assessment updated successfully.');
     setTimeout(() => setNotification(null), 3500);
     await loadData();
   };
@@ -203,11 +236,12 @@ export function ConflictsPage() {
         </div>
 
         <button
-          onClick={loadData}
+          onClick={() => loadData(true)}
+          disabled={isRefreshing}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs font-bold text-stone-700 hover:text-[#3E8E41] border border-[#D1B370]/60 rounded-xl transition-colors self-start sm:self-auto shadow-xs"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Data</span>
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#3E8E41]' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
         </button>
       </div>
 
@@ -242,7 +276,7 @@ export function ConflictsPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={reports}
+          data={filteredReports}
           keyExtractor={(item) => item.id}
           onRowClick={handleRowClick}
           emptyMessage="No human-wildlife conflict reports match the selected filters."

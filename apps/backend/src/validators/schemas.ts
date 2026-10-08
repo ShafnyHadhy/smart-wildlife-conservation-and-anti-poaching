@@ -7,6 +7,7 @@ import {
   IncidentStatus,
   ConflictType,
   ConflictStatus,
+  EvidenceType,
 } from '@wildlife/shared';
 
 // Common UUID Schema
@@ -102,6 +103,16 @@ export const createIncidentSchema = z.object({
   clientMutationId: z.string().max(64).optional(),
 });
 
+// POST /api/incidents/:id/evidence
+export const createEvidenceSchema = z.object({
+  evidenceType: z.nativeEnum(EvidenceType).default(EvidenceType.PHOTO),
+  filePath: z.string().trim().min(1, 'File path is required'),
+  fileName: z.string().trim().optional(),
+  fileType: z.string().trim().optional(),
+  capturedAt: isoDateString.optional(),
+  notes: z.string().trim().optional(),
+});
+
 // POST /api/conflict-reports
 export const createConflictReportSchema = z.object({
   communityMemberId: uuidSchema,
@@ -117,6 +128,15 @@ export const createConflictReportSchema = z.object({
   reportedAt: isoDateString.optional(),
   clientMutationId: z.string().max(64).optional(),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  estimatedDamageLkr: z.number().min(0).optional(),
+  cropTypeLost: z.string().trim().optional(),
+  estimatedAnimalsInvolved: z.number().int().min(0).optional(),
+  locationName: z.string().trim().max(255).optional(),
+  immediateRisk: z.boolean().optional(),
+  photoUrls: z
+    .array(z.string().max(2_500_000, 'Photo is too large'))
+    .max(5, 'A maximum of 5 photos can be attached')
+    .optional(),
 });
 
 // PATCH /api/conflict-reports/:id/status
@@ -127,7 +147,27 @@ export const updateConflictStatusSchema = z.object({
     }),
   }),
   triageNotes: z.string().optional(),
+  updatedByName: z.string().trim().max(150).optional(),
   mitigationAction: z.string().optional(),
+  estimatedDamageLkr: z.number().min(0).optional(),
+  cropTypeLost: z.string().trim().optional(),
+  compensationStatus: z.enum(['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'DISBURSED']).optional(),
+});
+
+// Community Member Schemas (UC04)
+export const createCommunityMemberSchema = z.object({
+  fullName: z.string().trim().min(2, 'Full name must be at least 2 characters'),
+  nationalId: z.string().trim().optional(),
+  phoneNumber: z.string().trim().min(7, 'Phone number must be at least 7 characters'),
+  villageName: z.string().trim().min(2, 'Village name must be at least 2 characters'),
+  address: z.string().trim().optional(),
+  parkId: uuidSchema.optional().nullable(),
+});
+
+export const communityMemberFilterSchema = z.object({
+  phone: z.string().optional(),
+  village: z.string().optional(),
+  search: z.string().optional(),
 });
 
 // POST /api/sync/batch

@@ -11,6 +11,7 @@
     "dev:backend": "npm --workspace=apps/backend run dev",
     "dev:web": "npm --workspace=apps/web run dev",
     "dev:mobile": "npm --workspace=apps/mobile run start",
+    "dev:mobile:web": "npm --workspace=apps/mobile run web",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
@@ -28,5 +29,12 @@
     "neon-postgres"
   ],
   "author": "Wildlife Conservation Software Engineering Team",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@expo/metro-config": "^0.18.11",
+    "expo": "51.0.39",
+    "metro": "^0.80.8",
+    "metro-config": "^0.80.8",
+    "metro-transform-worker": "^0.80.8"
+  }
 }

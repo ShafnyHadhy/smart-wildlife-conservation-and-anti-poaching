@@ -1,5 +1,5 @@
 import { userRepository } from '../repositories/userRepository';
-import { User, CommunityMember } from '@wildlife/shared';
+import { User, CommunityMember, CreateCommunityMemberDTO } from '@wildlife/shared';
 import { NotFoundError } from '../errors/AppError';
 
 export class UserService {
@@ -19,12 +19,20 @@ export class UserService {
     return userRepository.findAllCommunityMembers();
   }
 
+  async getCommunityMembers(filter?: { phone?: string; village?: string; search?: string }): Promise<CommunityMember[]> {
+    return userRepository.findCommunityMembers(filter);
+  }
+
   async getCommunityMemberById(id: string): Promise<CommunityMember> {
     const member = await userRepository.findCommunityMemberById(id);
     if (!member) {
       throw new NotFoundError('Community Member', id);
     }
     return member;
+  }
+
+  async registerCommunityMember(data: CreateCommunityMemberDTO): Promise<CommunityMember> {
+    return userRepository.createCommunityMember(data);
   }
 }
 

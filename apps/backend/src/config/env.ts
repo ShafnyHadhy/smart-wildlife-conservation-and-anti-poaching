@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Load .env file from apps/backend/.env or project root if present
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export interface AppConfig {

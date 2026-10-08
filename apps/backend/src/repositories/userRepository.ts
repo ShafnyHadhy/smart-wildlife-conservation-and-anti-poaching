@@ -1,5 +1,5 @@
 import { query } from '../config/database';
-import { User, UserRole, CommunityMember } from '@wildlife/shared';
+import { User, UserRole, CommunityMember, CreateCommunityMemberDTO } from '@wildlife/shared';
 
 function mapRowToUser(row: any): User {
   return {
@@ -51,13 +51,57 @@ export class UserRepository {
   }
 
   async findAllCommunityMembers(): Promise<CommunityMember[]> {
-    const res = await query('SELECT * FROM community_members ORDER BY full_name ASC');
+    return this.findCommunityMembers();
+  }
+
+  async findCommunityMembers(filter?: { phone?: string; village?: string; search?: string }): Promise<CommunityMember[]> {
+    let sql = 'SELECT * FROM community_members';
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (filter?.phone) {
+      params.push(`%${filter.phone}%`);
+      conditions.push(`phone_number ILIKE $${params.length}`);
+    }
+    if (filter?.village) {
+      params.push(`%${filter.village}%`);
+      conditions.push(`village_name ILIKE $${params.length}`);
+    }
+    if (filter?.search) {
+      params.push(`%${filter.search}%`);
+      const pIdx = params.length;
+      conditions.push(`(full_name ILIKE $${pIdx} OR phone_number ILIKE $${pIdx} OR village_name ILIKE $${pIdx})`);
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(' AND ')}`;
+    }
+    sql += ' ORDER BY full_name ASC';
+
+    const res = await query(sql, params);
     return res.rows.map(mapRowToCommunityMember);
   }
 
   async findCommunityMemberById(id: string): Promise<CommunityMember | null> {
     const res = await query('SELECT * FROM community_members WHERE id = $1', [id]);
     return res.rows[0] ? mapRowToCommunityMember(res.rows[0]) : null;
+  }
+
+  async createCommunityMember(data: CreateCommunityMemberDTO): Promise<CommunityMember> {
+    const sql = `
+      INSERT INTO community_members (full_name, national_id, phone_number, village_name, address, park_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+    const res = await query(sql, [
+      data.fullName,
+      data.nationalId || null,
+      data.phoneNumber,
+      data.villageName,
+      data.address || null,
+      data.parkId || null,
+    ]);
+    return mapRowToCommunityMember(res.rows[0]);
   }
 }
 
