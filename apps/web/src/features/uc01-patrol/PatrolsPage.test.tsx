@@ -502,4 +502,153 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
     const plannedRow = screen.getByText('PAT-2026-PLAN').closest('tr');
     expect(plannedRow?.textContent).not.toContain('Under-patrolled');
   });
+
+  it('14. Patrol table displays Location Status column with Current, Stale, and Location unavailable states', async () => {
+    const now = Date.now();
+    const fiveMinutesAgo = new Date(now - 5 * 60 * 1000).toISOString();
+    const fortyFiveMinutesAgo = new Date(now - 45 * 60 * 1000).toISOString();
+
+    vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue([
+      {
+        id: 'patrol-current',
+        patrolCode: 'PAT-2026-CUR',
+        parkId: 'park-1',
+        rangerId: 'ranger-1',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.ACTIVE,
+        startTime: '2026-10-07T09:00:00.000Z',
+        coverageScore: 0,
+        createdAt: '2026-10-07T09:00:00.000Z',
+        updatedAt: '2026-10-07T09:00:00.000Z',
+      },
+      {
+        id: 'patrol-stale',
+        patrolCode: 'PAT-2026-STL',
+        parkId: 'park-1',
+        rangerId: 'ranger-2',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.ACTIVE,
+        startTime: '2026-10-07T09:00:00.000Z',
+        coverageScore: 0,
+        createdAt: '2026-10-07T09:00:00.000Z',
+        updatedAt: '2026-10-07T09:00:00.000Z',
+      },
+      {
+        id: 'patrol-planned-loc',
+        patrolCode: 'PAT-2026-PLN-LOC',
+        parkId: 'park-1',
+        rangerId: 'ranger-3',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.PLANNED,
+        startTime: '2026-10-07T12:00:00.000Z',
+        coverageScore: 0,
+        createdAt: '2026-10-07T09:00:00.000Z',
+        updatedAt: '2026-10-07T09:00:00.000Z',
+      },
+      {
+        id: 'patrol-comp-empty',
+        patrolCode: 'PAT-2026-CMP-EMP',
+        parkId: 'park-1',
+        rangerId: 'ranger-4',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.COMPLETED,
+        startTime: '2026-10-06T06:00:00.000Z',
+        coverageScore: 0,
+        createdAt: '2026-10-06T06:00:00.000Z',
+        updatedAt: '2026-10-06T10:00:00.000Z',
+      },
+    ]);
+
+    vi.mocked(webPatrolService.fetchPatrolById).mockImplementation(async (id: string) => {
+      if (id === 'patrol-current') {
+        return {
+          id: 'patrol-current',
+          patrolCode: 'PAT-2026-CUR',
+          parkId: 'park-1',
+          rangerId: 'ranger-1',
+          patrolRouteId: 'route-1',
+          status: PatrolStatus.ACTIVE,
+          startTime: '2026-10-07T09:00:00.000Z',
+          coverageScore: 0,
+          createdAt: '2026-10-07T09:00:00.000Z',
+          updatedAt: '2026-10-07T09:00:00.000Z',
+          waypoints: [
+            {
+              id: 'wp-cur',
+              patrolId: 'patrol-current',
+              latitude: 6.375,
+              longitude: 81.518,
+              sequenceOrder: 1,
+              locationType: 'GPS' as any,
+              recordedAt: fiveMinutesAgo,
+            },
+          ],
+        } as any;
+      }
+      if (id === 'patrol-stale') {
+        return {
+          id: 'patrol-stale',
+          patrolCode: 'PAT-2026-STL',
+          parkId: 'park-1',
+          rangerId: 'ranger-2',
+          patrolRouteId: 'route-1',
+          status: PatrolStatus.ACTIVE,
+          startTime: '2026-10-07T09:00:00.000Z',
+          coverageScore: 0,
+          createdAt: '2026-10-07T09:00:00.000Z',
+          updatedAt: '2026-10-07T09:00:00.000Z',
+          waypoints: [
+            {
+              id: 'wp-stl',
+              patrolId: 'patrol-stale',
+              latitude: 6.381,
+              longitude: 81.524,
+              sequenceOrder: 1,
+              locationType: 'GPS' as any,
+              recordedAt: fortyFiveMinutesAgo,
+            },
+          ],
+        } as any;
+      }
+      if (id === 'patrol-comp-empty') {
+        return {
+          id: 'patrol-comp-empty',
+          patrolCode: 'PAT-2026-CMP-EMP',
+          parkId: 'park-1',
+          rangerId: 'ranger-4',
+          patrolRouteId: 'route-1',
+          status: PatrolStatus.COMPLETED,
+          startTime: '2026-10-06T06:00:00.000Z',
+          coverageScore: 0,
+          createdAt: '2026-10-06T06:00:00.000Z',
+          updatedAt: '2026-10-06T10:00:00.000Z',
+          waypoints: [],
+        } as any;
+      }
+      return {} as any;
+    });
+
+    render(<PatrolsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('columnheader', { name: /Location Status/i })).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-CUR')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-STL')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-PLN-LOC')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-CMP-EMP')).toBeInTheDocument();
+    });
+
+    // Verify Current status badge and coordinates
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('6.3750, 81.5180')).toBeInTheDocument();
+    expect(screen.getByText(/Updated/i)).toBeInTheDocument();
+
+    // Verify Stale status badge and coordinates
+    expect(screen.getByText('Stale')).toBeInTheDocument();
+    expect(screen.getByText('6.3810, 81.5240')).toBeInTheDocument();
+    expect(screen.getByText(/Last known location/i)).toBeInTheDocument();
+
+    // Verify Unavailable status for planned patrol and completed patrol without GPS breadcrumbs
+    expect(screen.getAllByText('Location unavailable').length).toBe(2);
+  });
 });

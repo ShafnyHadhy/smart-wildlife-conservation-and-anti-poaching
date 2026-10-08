@@ -3,7 +3,7 @@ import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
-import { Compass, Info, AlertTriangle } from 'lucide-react';
+import { Compass, Info, AlertTriangle, MapPin, Clock, WifiOff } from 'lucide-react';
 import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
 import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
 import {
@@ -13,6 +13,9 @@ import {
   classifyPatrolCoverage,
   formatCoverage,
   UNDER_PATROLLED_COVERAGE_THRESHOLD,
+  getRangerLocationInfo,
+  formatRangerLocationLabel,
+  formatCoordinates,
 } from '../features/uc01-patrol/utils';
 
 const STATUS_FILTERS: readonly (PatrolStatus | 'ALL')[] = [
@@ -187,6 +190,64 @@ export function PatrolsPage() {
                 {classification}
               </span>
             ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Location Status',
+      accessor: (p) => {
+        const info = getRangerLocationInfo(p.waypoints);
+        const label = formatRangerLocationLabel(info, p.status);
+        const { status, latestWaypoint } = info;
+
+        if (
+          p.status === PatrolStatus.PLANNED ||
+          p.status === PatrolStatus.CANCELLED ||
+          status === 'Unavailable'
+        ) {
+          return (
+            <div className="flex items-center gap-1.5 text-stone-400">
+              <WifiOff className="w-3 h-3 shrink-0" />
+              <span className="text-[11px] font-medium">Location unavailable</span>
+            </div>
+          );
+        }
+
+        const coords = latestWaypoint
+          ? formatCoordinates(latestWaypoint.latitude, latestWaypoint.longitude)
+          : null;
+
+        if (status === 'Stale') {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                  <Clock className="w-2.5 h-2.5" />
+                  Stale
+                </span>
+                {coords && (
+                  <span className="text-[10px] font-mono text-stone-500">{coords}</span>
+                )}
+              </div>
+              <span className="text-[10px] text-stone-500 font-medium">{label}</span>
+            </div>
+          );
+        }
+
+        // Current
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <MapPin className="w-2.5 h-2.5" />
+                Current
+              </span>
+              {coords && (
+                <span className="text-[10px] font-mono text-stone-500">{coords}</span>
+              )}
+            </div>
+            <span className="text-[10px] text-stone-500 font-medium">{label}</span>
           </div>
         );
       },
