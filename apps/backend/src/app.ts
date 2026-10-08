@@ -20,6 +20,7 @@ export function createApp(): Application {
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
+
         if (
           allowedOrigins.includes(origin) ||
           /^http:\/\/localhost:\d+$/.test(origin) ||
@@ -27,11 +28,13 @@ export function createApp(): Application {
         ) {
           return callback(null, true);
         }
+
         return callback(null, true);
       },
       credentials: true,
     })
   );
+
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 

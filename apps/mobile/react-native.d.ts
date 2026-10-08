@@ -42,11 +42,12 @@ declare module 'react-native' {
   export const TextInput: React.FC<TextInputProps>;
   export const ActivityIndicator: React.FC<any>;
   export const Image: React.FC<any>;
+
   export const Linking: {
     openURL(url: string): Promise<any>;
   };
+
   export const Alert: {
     alert(title: string, message?: string, buttons?: any[]): void;
   };
 }
-

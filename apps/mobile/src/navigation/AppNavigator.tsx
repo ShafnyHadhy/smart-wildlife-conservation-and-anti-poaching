@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+
 import { BottomTabBar, TabKey } from '../components/navigation/BottomTabBar';
 import { OfflineBanner } from '../components/common/OfflineBanner';
 import { HomeScreen } from '../screens/Home/HomeScreen';
@@ -26,7 +27,10 @@ export function AppNavigator({
   onLogout,
 }: AppNavigatorProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('HOME');
-  const [reportInitialView, setReportInitialView] = useState<'hub' | 'conflict_form' | 'conflict_list'>('hub');
+
+  const [reportInitialView, setReportInitialView] = useState<
+    'hub' | 'conflict_form' | 'conflict_list'
+  >('hub');
 
   const handleOpenConflictForm = () => {
     setReportInitialView('conflict_form');
@@ -56,20 +60,31 @@ export function AppNavigator({
             user={user}
           />
         );
+
       case 'ALERTS':
-        return <AlertsScreen user={user} onReportConflict={handleOpenConflictForm} />;
+        return (
+          <AlertsScreen
+            user={user}
+            onReportConflict={handleOpenConflictForm}
+          />
+        );
+
       case 'REPORTS':
         return (
           <ReportsScreen
+            isOnline={isOnline}
             pendingCount={pendingCount}
             onSyncPress={onSyncNow}
-            isOnline={isOnline}
             user={user}
             initialView={reportInitialView}
             onResetView={() => setReportInitialView('hub')}
+
+            // UC02 additions
+            onIncidentSubmitted={onSyncNow}
+            onGoHome={() => setActiveTab('HOME')}
           />
         );
-      case 'PROFILE':
+
       case 'MENU':
         return (
           <MenuScreen
@@ -82,12 +97,18 @@ export function AppNavigator({
             onLogout={onLogout}
           />
         );
+
       default:
         return (
           <HomeScreen
             isOnline={isOnline}
             pendingCount={pendingCount}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={(tab) => {
+              setReportInitialView('hub');
+              setActiveTab(tab);
+            }}
+            onOpenConflictForm={handleOpenConflictForm}
+            onOpenConflictList={handleOpenConflictList}
             onToggleOnline={onToggleOnline}
             onSyncNow={onSyncNow}
             user={user}
@@ -98,7 +119,6 @@ export function AppNavigator({
 
   return (
     <View style={styles.container}>
-      {/* Offline Alert Strip */}
       <OfflineBanner
         isOnline={isOnline}
         pendingCount={pendingCount}
@@ -106,10 +126,10 @@ export function AppNavigator({
         onToggleOnline={onToggleOnline}
       />
 
-      {/* Screen Body */}
-      <View style={styles.screenContainer}>{renderActiveScreen()}</View>
+      <View style={styles.screenContainer}>
+        {renderActiveScreen()}
+      </View>
 
-      {/* Persistent Bottom Tab Bar */}
       <BottomTabBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -124,6 +144,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5DC',
   },
+
   screenContainer: {
     flex: 1,
   },
