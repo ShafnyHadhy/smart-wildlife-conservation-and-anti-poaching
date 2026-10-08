@@ -37,7 +37,7 @@ export function ConflictFilterBar({
   onTypeChange,
   searchTerm,
   onSearchChange,
-  onOpenCreateModal,
+  onOpenCreateModal: _onOpenCreateModal,
 }: ConflictFilterBarProps) {
   return (
     <div className="bg-white p-4 rounded-2xl border border-[#D1B370]/60 shadow-xs space-y-4">
