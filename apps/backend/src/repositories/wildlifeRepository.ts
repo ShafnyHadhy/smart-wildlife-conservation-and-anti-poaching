@@ -275,6 +275,62 @@ export class WildlifeRepository {
       [status, alertId]
     );
   }
+
+  async createAlert(data: {
+    animalId: string;
+    riskZoneId: string;
+    locationRecordId?: string;
+    severity: RiskLevel;
+    status?: AlertStatus;
+    generatedAt?: string | Date;
+    notes?: string;
+  }): Promise<WildlifeRiskAlert> {
+    const generatedAt = data.generatedAt
+      ? typeof data.generatedAt === 'string'
+        ? new Date(data.generatedAt)
+        : data.generatedAt
+      : new Date();
+    const status = data.status || AlertStatus.ACTIVE;
+
+    const sql = `
+      INSERT INTO wildlife_risk_alerts (animal_id, risk_zone_id, location_record_id, severity, status, generated_at, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
+    const res = await query(sql, [
+      data.animalId,
+      data.riskZoneId,
+      data.locationRecordId || null,
+      data.severity,
+      status,
+      generatedAt,
+      data.notes || null,
+    ]);
+
+    const created = await this.findAlertById(res.rows[0].id);
+    return created || mapRowToAlert(res.rows[0]);
+  }
+
+  async findActiveAlertForAnimalAndZone(
+    animalId: string,
+    riskZoneId: string
+  ): Promise<WildlifeRiskAlert | null> {
+    const sql = `
+      SELECT a.*, w.name AS animal_name, w.species AS animal_species, rz.name AS zone_name,
+             lr.latitude, lr.longitude
+      FROM wildlife_risk_alerts a
+      JOIN wildlife_animals w ON a.animal_id = w.id
+      JOIN risk_zones rz ON a.risk_zone_id = rz.id
+      LEFT JOIN location_records lr ON a.location_record_id = lr.id
+      WHERE a.animal_id = $1
+        AND a.risk_zone_id = $2
+        AND a.status IN ('ACTIVE', 'ACKNOWLEDGED', 'RESPONDING')
+      ORDER BY a.generated_at DESC
+      LIMIT 1
+    `;
+    const res = await query(sql, [animalId, riskZoneId]);
+    return res.rows[0] ? mapRowToAlert(res.rows[0]) : null;
+  }
 }
 
 export const wildlifeRepository = new WildlifeRepository();
