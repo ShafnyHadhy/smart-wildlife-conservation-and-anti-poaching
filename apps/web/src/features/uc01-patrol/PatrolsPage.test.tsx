@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { PatrolsPage } from '../../pages/PatrolsPage';
 import { webPatrolService } from './services/patrolService';
 import { PatrolStatus } from '@wildlife/shared';
@@ -190,11 +190,11 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
 
     await waitFor(() => {
       expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
-      expect(screen.getByText('Kasun Bandara')).toBeInTheDocument();
+      expect(screen.getAllByText('Kasun Bandara').length).toBeGreaterThan(0);
       expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
-      expect(screen.getByText('Chaminda Silva')).toBeInTheDocument();
+      expect(screen.getAllByText('Chaminda Silva').length).toBeGreaterThan(0);
       expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
-      expect(screen.getByText('Nimal Perera')).toBeInTheDocument();
+      expect(screen.getAllByText('Nimal Perera').length).toBeGreaterThan(0);
     });
 
     // Verify Progress and Coverage column headers
@@ -217,36 +217,36 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
     expect(screen.getByText('Deep forest route covering interior villus')).toBeInTheDocument();
   });
 
-  it('filters patrols when clicking status filter buttons (ACTIVE, PLANNED, COMPLETED, ALL)', async () => {
+  it('filters patrols when clicking status filter buttons (Active, Planned, Completed, All)', async () => {
     render(<PatrolsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByRole('table')).toHaveTextContent('PAT-2026-YAL-001');
     });
 
-    // Click ACTIVE filter
-    fireEvent.click(screen.getByRole('button', { name: 'ACTIVE' }));
-    expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
-    expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
-    expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+    // Click Active filter
+    fireEvent.click(screen.getByRole('button', { name: 'Active' }));
+    expect(screen.getByRole('table')).toHaveTextContent('PAT-2026-YAL-001');
+    expect(screen.getByRole('table')).not.toHaveTextContent('PAT-2026-WIL-001');
+    expect(screen.getByRole('table')).not.toHaveTextContent('PAT-2026-YAL-002');
 
-    // Click PLANNED filter
-    fireEvent.click(screen.getByRole('button', { name: 'PLANNED' }));
-    expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
-    expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
-    expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+    // Click Planned filter
+    fireEvent.click(screen.getByRole('button', { name: 'Planned' }));
+    expect(screen.getByRole('table')).not.toHaveTextContent('PAT-2026-YAL-001');
+    expect(screen.getByRole('table')).toHaveTextContent('PAT-2026-WIL-001');
+    expect(screen.getByRole('table')).not.toHaveTextContent('PAT-2026-YAL-002');
 
-    // Click COMPLETED filter
-    fireEvent.click(screen.getByRole('button', { name: 'COMPLETED' }));
-    expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
-    expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
-    expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+    // Click Completed filter
+    fireEvent.click(screen.getByRole('button', { name: 'Completed' }));
+    expect(screen.getByRole('table')).not.toHaveTextContent('PAT-2026-YAL-001');
+    expect(screen.getByRole('table')).not.toHaveTextContent('PAT-2026-WIL-001');
+    expect(screen.getByRole('table')).toHaveTextContent('PAT-2026-YAL-002');
 
-    // Click ALL filter
-    fireEvent.click(screen.getByRole('button', { name: 'ALL' }));
-    expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
-    expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
-    expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+    // Click All filter
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByRole('table')).toHaveTextContent('PAT-2026-YAL-001');
+    expect(screen.getByRole('table')).toHaveTextContent('PAT-2026-WIL-001');
+    expect(screen.getByRole('table')).toHaveTextContent('PAT-2026-YAL-002');
   });
 
   it('renders EmptyState on error with Retry button', async () => {
@@ -910,5 +910,528 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
     // Average Coverage: (80% + 40%) / 2 = 60%
     expect(screen.getByText('60%')).toBeInTheDocument();
     expect(screen.getByText('across designated routes')).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// UC01 Task 9 — Patrol Monitoring Filters (Integration tests for PatrolsPage)
+// =============================================================================
+describe('UC01 Task 9: Patrol Monitoring Filters — PatrolsPage integration', () => {
+  // Shared patrol fixture used across most Task 9 tests
+  const basePatrols = [
+    {
+      id: 'patrol-1',
+      patrolCode: 'PAT-2026-YAL-001',
+      parkId: 'park-yala',
+      rangerId: 'ranger-kasun',
+      patrolRouteId: 'route-coastal',
+      status: PatrolStatus.ACTIVE,
+      startTime: '2026-10-07T09:00:00.000Z',
+      coverageScore: 0,
+      createdAt: '2026-10-07T09:00:00.000Z',
+      updatedAt: '2026-10-07T09:00:00.000Z',
+      rangerName: 'Kasun Bandara',
+      routeName: 'Yala Coastal Route',
+      parkName: 'Yala National Park',
+      waypoints: [
+        {
+          id: 'wp-1',
+          patrolId: 'patrol-1',
+          latitude: 6.37,
+          longitude: 81.51,
+          sequenceOrder: 1,
+          locationType: 'GPS' as any,
+          recordedAt: new Date().toISOString(),
+        },
+      ],
+    },
+    {
+      id: 'patrol-2',
+      patrolCode: 'PAT-2026-WIL-001',
+      parkId: 'park-wilpattu',
+      rangerId: 'ranger-chaminda',
+      patrolRouteId: 'route-forest',
+      status: PatrolStatus.PLANNED,
+      startTime: '2026-10-07T14:00:00.000Z',
+      coverageScore: 0,
+      createdAt: '2026-10-07T09:00:00.000Z',
+      updatedAt: '2026-10-07T09:00:00.000Z',
+      rangerName: 'Chaminda Silva',
+      routeName: 'Wilpattu Forest Route',
+      parkName: 'Wilpattu National Park',
+      waypoints: [],
+    },
+    {
+      id: 'patrol-3',
+      patrolCode: 'PAT-2026-YAL-002',
+      parkId: 'park-yala',
+      rangerId: 'ranger-nimal',
+      patrolRouteId: 'route-coastal',
+      status: PatrolStatus.COMPLETED,
+      startTime: '2026-10-06T06:00:00.000Z',
+      coverageScore: 92,
+      createdAt: '2026-10-06T06:00:00.000Z',
+      updatedAt: '2026-10-06T10:00:00.000Z',
+      rangerName: 'Nimal Perera',
+      routeName: 'Yala Coastal Route',
+      parkName: 'Yala National Park',
+      waypoints: [],
+    },
+    {
+      id: 'patrol-4',
+      patrolCode: 'PAT-2026-YAL-CANC',
+      parkId: 'park-yala',
+      rangerId: 'ranger-kasun',
+      patrolRouteId: 'route-coastal',
+      status: PatrolStatus.CANCELLED,
+      startTime: '2026-10-05T06:00:00.000Z',
+      coverageScore: 0,
+      createdAt: '2026-10-05T06:00:00.000Z',
+      updatedAt: '2026-10-05T07:00:00.000Z',
+      rangerName: 'Kasun Bandara',
+      routeName: 'Yala Coastal Route',
+      parkName: 'Yala National Park',
+      waypoints: [],
+    },
+  ];
+
+  const baseRoutes = [
+    {
+      id: 'route-coastal',
+      parkId: 'park-yala',
+      name: 'Yala Coastal Route',
+      code: 'YALA-RT-01',
+      description: 'Coastal route',
+      estimatedDurationMinutes: 240,
+      routeType: 'FOOT_PATROL',
+      isActive: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      waypoints: [],
+    },
+    {
+      id: 'route-forest',
+      parkId: 'park-wilpattu',
+      name: 'Wilpattu Forest Route',
+      code: 'WIL-RT-01',
+      description: 'Forest route',
+      estimatedDurationMinutes: 300,
+      routeType: 'FOOT_PATROL',
+      isActive: true,
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+      waypoints: [],
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue(basePatrols as any);
+    vi.mocked(webPatrolService.fetchPatrolRoutes).mockResolvedValue(baseRoutes as any);
+    vi.mocked(webPatrolService.fetchPatrolById).mockResolvedValue({} as any);
+  });
+
+  // -------------------------------------------------------------------------
+  // Status filter — pill buttons
+  // -------------------------------------------------------------------------
+  describe('17. Status filter', () => {
+    it('ALL — shows all patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => {
+        expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+        expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+        expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+        expect(screen.getByText('PAT-2026-YAL-CANC')).toBeInTheDocument();
+      });
+    });
+
+    it('Active — shows only ACTIVE patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Active' }));
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-CANC')).not.toBeInTheDocument();
+    });
+
+    it('Planned — shows only PLANNED patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Planned' }));
+
+      expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-CANC')).not.toBeInTheDocument();
+    });
+
+    it('Completed — shows only COMPLETED patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Completed' }));
+
+      expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-CANC')).not.toBeInTheDocument();
+    });
+
+    it('Cancelled — shows only CANCELLED patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-CANC')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }));
+
+      expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-CANC')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Park filter — dropdown
+  // -------------------------------------------------------------------------
+  describe('18. Park filter', () => {
+    it('All Parks — shows patrols from all parks', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'ALL' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+    });
+
+    it('filter by Yala — shows only Yala patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-yala' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+    });
+
+    it('filter by Wilpattu — shows only Wilpattu patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument());
+
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-wilpattu' } });
+
+      expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+    });
+
+    it('handles patrols with missing park info safely (no crash)', async () => {
+      vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue([
+        { ...basePatrols[0], parkId: '', parkName: undefined } as any,
+        basePatrols[1] as any,
+      ]);
+
+      render(<PatrolsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+      });
+
+      // Page should still render without crash
+      expect(screen.getByTestId('patrol-filter-bar')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Ranger filter — dropdown
+  // -------------------------------------------------------------------------
+  describe('19. Ranger filter', () => {
+    it('All Rangers — shows all patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const rangerSelect = screen.getByRole('combobox', { name: /filter by ranger/i });
+      fireEvent.change(rangerSelect, { target: { value: 'ALL' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+    });
+
+    it('filter by Kasun — shows only Kasun\'s patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const rangerSelect = screen.getByRole('combobox', { name: /filter by ranger/i });
+      fireEvent.change(rangerSelect, { target: { value: 'ranger-kasun' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-CANC')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+    });
+
+    it('handles missing ranger info safely (no crash)', async () => {
+      vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue([
+        { ...basePatrols[0], rangerId: '', rangerName: undefined } as any,
+        basePatrols[1] as any,
+      ]);
+
+      render(<PatrolsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('patrol-filter-bar')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Route filter — dropdown
+  // -------------------------------------------------------------------------
+  describe('20. Route filter', () => {
+    it('All Routes — shows all patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const routeSelect = screen.getByRole('combobox', { name: /filter by route/i });
+      fireEvent.change(routeSelect, { target: { value: 'ALL' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+    });
+
+    it('filter by coastal route — shows only coastal patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const routeSelect = screen.getByRole('combobox', { name: /filter by route/i });
+      fireEvent.change(routeSelect, { target: { value: 'route-coastal' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+    });
+
+    it('filter by forest route — shows only forest patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument());
+
+      const routeSelect = screen.getByRole('combobox', { name: /filter by route/i });
+      fireEvent.change(routeSelect, { target: { value: 'route-forest' } });
+
+      expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+    });
+
+    it('handles missing route info safely (no crash)', async () => {
+      vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue([
+        { ...basePatrols[0], patrolRouteId: '', routeName: undefined } as any,
+        basePatrols[1] as any,
+      ]);
+
+      render(<PatrolsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('patrol-filter-bar')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Combined filters
+  // -------------------------------------------------------------------------
+  describe('21. Combined filters', () => {
+    it('Park + Status — Yala + Active shows only Yala active patrol', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Active' }));
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-yala' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+    });
+
+    it('Park + Ranger — Yala + Kasun shows Kasun Yala patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-yala' } });
+
+      const rangerSelect = screen.getByRole('combobox', { name: /filter by ranger/i });
+      fireEvent.change(rangerSelect, { target: { value: 'ranger-kasun' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-CANC')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+    });
+
+    it('Status + Ranger + Route — Active + Kasun + Coastal returns only one patrol', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Active' }));
+
+      const rangerSelect = screen.getByRole('combobox', { name: /filter by ranger/i });
+      fireEvent.change(rangerSelect, { target: { value: 'ranger-kasun' } });
+
+      const routeSelect = screen.getByRole('combobox', { name: /filter by route/i });
+      fireEvent.change(routeSelect, { target: { value: 'route-coastal' } });
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-002')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-CANC')).not.toBeInTheDocument();
+    });
+
+    it('multiple filters — all four active returns single exact patrol', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Completed' }));
+
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-yala' } });
+
+      const rangerSelect = screen.getByRole('combobox', { name: /filter by ranger/i });
+      fireEvent.change(rangerSelect, { target: { value: 'ranger-nimal' } });
+
+      const routeSelect = screen.getByRole('combobox', { name: /filter by route/i });
+      fireEvent.change(routeSelect, { target: { value: 'route-coastal' } });
+
+      expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-YAL-001')).not.toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Reset / Clear Filters
+  // -------------------------------------------------------------------------
+  describe('22. Reset filters', () => {
+    it('reset restores all patrols after applying a status filter', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      // Apply a filter
+      fireEvent.click(screen.getByRole('button', { name: 'Active' }));
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+
+      // Clear filter button appears and resets
+      const clearBtn = screen.getByRole('button', { name: /clear all filters/i });
+      fireEvent.click(clearBtn);
+
+      expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+      expect(screen.getByText('PAT-2026-YAL-CANC')).toBeInTheDocument();
+    });
+
+    it('reset restores all patrols after applying park filter', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-yala' } });
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+
+      const clearBtn = screen.getByRole('button', { name: /clear all filters/i });
+      fireEvent.click(clearBtn);
+
+      expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+    });
+
+    it('Clear Filters button is NOT shown when all filters are at default', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      expect(screen.queryByRole('button', { name: /clear all filters/i })).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Empty filter results
+  // -------------------------------------------------------------------------
+  describe('23. Empty filter results', () => {
+    it('shows empty result message when no patrols match filters', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      // Select Cancelled + Wilpattu = no match (our data has no cancelled Wilpattu patrol)
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }));
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-wilpattu' } });
+
+      expect(screen.getByTestId('filter-empty-state')).toBeInTheDocument();
+      expect(screen.getByText('No patrols match the selected filters.')).toBeInTheDocument();
+    });
+
+    it('does not display undefined/NaN/Infinity in empty state', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }));
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-wilpattu' } });
+
+      const emptyState = screen.getByTestId('filter-empty-state');
+      expect(emptyState.textContent).not.toContain('undefined');
+      expect(emptyState.textContent).not.toContain('NaN');
+      expect(emptyState.textContent).not.toContain('Infinity');
+    });
+
+    it('clear filters link in empty state restores all patrols', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelled' }));
+      const parkSelect = screen.getByRole('combobox', { name: /filter by park/i });
+      fireEvent.change(parkSelect, { target: { value: 'park-wilpattu' } });
+
+      const emptyState = screen.getByTestId('filter-empty-state');
+      expect(emptyState).toBeInTheDocument();
+
+      // Click the inline "clear all filters" link
+      fireEvent.click(within(emptyState).getByRole('button', { name: /clear all filters/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument();
+        expect(screen.getByText('PAT-2026-WIL-001')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('filter-empty-state')).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Task 7 & Task 8 statistics are unaffected by filters
+  // -------------------------------------------------------------------------
+  describe('24. Statistics (Task 7 & 8) use full dataset regardless of filter', () => {
+    it('overview stats and under-patrolled card still display after applying a filter', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      // Verify stats present before filtering
+      expect(screen.getByText('Active Patrols')).toBeInTheDocument();
+      expect(screen.getByText('All monitored patrols are currently on track.')).toBeInTheDocument();
+
+      // Apply status filter
+      fireEvent.click(screen.getByRole('button', { name: 'Completed' }));
+
+      // Stats cards still visible
+      expect(screen.getByText('Active Patrols')).toBeInTheDocument();
+      expect(screen.getByText('All monitored patrols are currently on track.')).toBeInTheDocument();
+    });
   });
 });

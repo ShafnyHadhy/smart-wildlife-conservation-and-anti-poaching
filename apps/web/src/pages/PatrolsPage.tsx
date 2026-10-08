@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
@@ -19,25 +19,25 @@ import {
   evaluatePatrolAttention,
   getUnderPatrolledSummary,
   calculatePatrolStatistics,
+  applyPatrolFilters,
+  deriveParkOptions,
+  deriveRangerOptions,
+  deriveRouteOptions,
+  DEFAULT_PATROL_FILTERS,
+  PatrolFilterState,
 } from '../features/uc01-patrol/utils';
 import {
   UnderPatrolledOverviewCard,
   PatrolOverviewStats,
+  PatrolFilterBar,
 } from '../features/uc01-patrol/components';
-
-const STATUS_FILTERS: readonly (PatrolStatus | 'ALL')[] = [
-  'ALL',
-  PatrolStatus.ACTIVE,
-  PatrolStatus.PLANNED,
-  PatrolStatus.COMPLETED,
-];
 
 export function PatrolsPage() {
   const [patrols, setPatrols] = useState<Patrol[]>([]);
   const [routes, setRoutes] = useState<PatrolRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<PatrolStatus | 'ALL'>('ALL');
+  const [filters, setFilters] = useState<PatrolFilterState>(DEFAULT_PATROL_FILTERS);
 
   const loadPatrolsData = useCallback(async () => {
     try {
@@ -91,13 +91,28 @@ export function PatrolsPage() {
     loadPatrolsData();
   }, [loadPatrolsData]);
 
-  const filteredPatrols = patrols.filter((p) => {
-    if (filter === 'ALL') return true;
-    return p.status === filter;
-  });
+  // Derive filter options from full patrol dataset
+  const parkOptions = useMemo(() => deriveParkOptions(patrols), [patrols]);
+  const rangerOptions = useMemo(() => deriveRangerOptions(patrols), [patrols]);
+  const routeOptions = useMemo(() => deriveRouteOptions(patrols), [patrols]);
 
+  // Apply all filters together to produce the table dataset
+  const filteredPatrols = useMemo(
+    () => applyPatrolFilters(patrols, filters),
+    [patrols, filters]
+  );
+
+  // Task 8 statistics and Task 7 under-patrolled summary always use the FULL dataset (not filtered)
   const underPatrolledSummary = getUnderPatrolledSummary(patrols, routes);
   const overviewStats = calculatePatrolStatistics(patrols, routes);
+
+  function handleFiltersChange(next: PatrolFilterState) {
+    setFilters(next);
+  }
+
+  function handleResetFilters() {
+    setFilters(DEFAULT_PATROL_FILTERS);
+  }
 
   const columns: Column<Patrol>[] = [
     {
@@ -317,23 +332,6 @@ export function PatrolsPage() {
             Tracking active ranger patrols, pre-approved corridors, and waypoint coverage.
           </p>
         </div>
-
-        {/* Status Filters */}
-        <div className="flex items-center gap-2">
-          {STATUS_FILTERS.map((st) => (
-            <button
-              key={st}
-              onClick={() => setFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-150 ${
-                filter === st
-                  ? 'bg-[#3E8E41] text-white shadow-xs'
-                  : 'bg-white text-stone-700 hover:bg-[#F5F5DC] border border-[#D1B370]/60'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Data Table */}
@@ -367,18 +365,50 @@ export function PatrolsPage() {
             />
           ) : (
             <>
-              {/* Overview Statistics (UC01 Task 8) */}
+              {/* Overview Statistics (UC01 Task 8) — uses full dataset */}
               <PatrolOverviewStats stats={overviewStats} />
 
-              {/* Under-Patrolled & Operational Attention Overview (UC01 Task 7) */}
+              {/* Under-Patrolled & Operational Attention Overview (UC01 Task 7) — uses full dataset */}
               <UnderPatrolledOverviewCard summary={underPatrolledSummary} />
 
-              <DataTable
-                columns={columns}
-                data={filteredPatrols}
-                keyExtractor={(p) => p.id}
-                emptyMessage="No patrols match the selected filter."
+              {/* Filters (UC01 Task 9) */}
+              <PatrolFilterBar
+                filters={filters}
+                parkOptions={parkOptions}
+                rangerOptions={rangerOptions}
+                routeOptions={routeOptions}
+                onFiltersChange={handleFiltersChange}
+                onReset={handleResetFilters}
               />
+
+              {/* Patrol table — uses filtered dataset */}
+              {filteredPatrols.length === 0 ? (
+                <div
+                  data-testid="filter-empty-state"
+                  className="flex flex-col items-center justify-center gap-3 py-12 px-6
+                    bg-white border border-[#D1B370]/60 rounded-2xl shadow-xs text-center"
+                >
+                  <Compass className="w-8 h-8 text-stone-300" />
+                  <p className="text-sm font-bold text-stone-500">No patrols match the selected filters.</p>
+                  <p className="text-xs text-stone-400">
+                    Try adjusting your filters, or{' '}
+                    <button
+                      onClick={handleResetFilters}
+                      className="font-bold text-[#3E8E41] underline underline-offset-2 hover:text-[#2E6B31]"
+                    >
+                      clear all filters
+                    </button>{' '}
+                    to see all patrols.
+                  </p>
+                </div>
+              ) : (
+                <DataTable
+                  columns={columns}
+                  data={filteredPatrols}
+                  keyExtractor={(p) => p.id}
+                  emptyMessage="No patrols match the selected filter."
+                />
+              )}
             </>
           )}
 
