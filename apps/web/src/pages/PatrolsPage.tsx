@@ -1,33 +1,88 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
-import { apiClient } from '../services/apiClient';
-import { Compass, Info } from 'lucide-react';
-import { Patrol, PatrolRoute } from '@wildlife/shared';
+import { EmptyState } from '../components/common/EmptyState';
+import { Compass, Info, AlertTriangle, MapPin, Clock, WifiOff } from 'lucide-react';
+import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
+import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
+import {
+  calculatePatrolProgress,
+  formatProgress,
+  calculatePatrolCoverage,
+  classifyPatrolCoverage,
+  formatCoverage,
+  UNDER_PATROLLED_COVERAGE_THRESHOLD,
+  getRangerLocationInfo,
+  formatRangerLocationLabel,
+  formatCoordinates,
+} from '../features/uc01-patrol/utils';
+
+const STATUS_FILTERS: readonly (PatrolStatus | 'ALL')[] = [
+  'ALL',
+  PatrolStatus.ACTIVE,
+  PatrolStatus.PLANNED,
+  PatrolStatus.COMPLETED,
+];
 
 export function PatrolsPage() {
   const [patrols, setPatrols] = useState<Patrol[]>([]);
   const [routes, setRoutes] = useState<PatrolRoute[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('ALL');
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<PatrolStatus | 'ALL'>('ALL');
+
+  const loadPatrolsData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [patrolsRes, routesRes] = await Promise.all([
+        webPatrolService.fetchPatrols(),
+        webPatrolService.fetchPatrolRoutes(),
+      ]);
+
+      // Enrich active/completed patrols with detailed waypoints if not already present
+      const enrichedPatrols = await Promise.all(
+        patrolsRes.map(async (patrol) => {
+          if (patrol.waypoints && patrol.waypoints.length > 0) {
+            return patrol;
+          }
+          // Do not fetch details for planned or cancelled patrols
+          if (
+            patrol.status === PatrolStatus.PLANNED ||
+            patrol.status === PatrolStatus.CANCELLED
+          ) {
+            return { ...patrol, waypoints: [] };
+          }
+          try {
+            const detail = await webPatrolService.fetchPatrolById(patrol.id);
+            return {
+              ...patrol,
+              ...detail,
+              waypoints: detail.waypoints || [],
+            };
+          } catch {
+            return patrol;
+          }
+        })
+      );
+
+      setPatrols(enrichedPatrols);
+      setRoutes(routesRes);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to fetch patrol monitoring data. Please check connection.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadPatrolsData() {
-      try {
-        setLoading(true);
-        const [patrolsRes, routesRes] = await Promise.all([
-          apiClient.get<Patrol[]>('/patrols').catch(() => []),
-          apiClient.get<PatrolRoute[]>('/patrol-routes').catch(() => []),
-        ]);
-        setPatrols(patrolsRes);
-        setRoutes(routesRes);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadPatrolsData();
-  }, []);
+  }, [loadPatrolsData]);
 
   const filteredPatrols = patrols.filter((p) => {
     if (filter === 'ALL') return true;
@@ -39,7 +94,7 @@ export function PatrolsPage() {
       header: 'Patrol Code',
       accessor: (p) => (
         <span className="font-bold text-[#1C2A1E]">
-          {(p as any).patrolCode || p.id.slice(0, 8)}
+          {p.patrolCode || p.id.slice(0, 8)}
         </span>
       ),
     },
@@ -47,7 +102,7 @@ export function PatrolsPage() {
       header: 'Assigned Ranger',
       accessor: (p) => (
         <span className="text-stone-700">
-          {(p as any).rangerName || p.rangerId?.slice(0, 8) || 'Assigned Ranger'}
+          {p.rangerName || p.rangerId?.slice(0, 8) || 'Assigned Ranger'}
         </span>
       ),
     },
@@ -55,7 +110,7 @@ export function PatrolsPage() {
       header: 'Route Corridor',
       accessor: (p) => (
         <span className="text-stone-600">
-          {(p as any).routeName || 'Coastal Patrol'}
+          {p.routeName || 'Coastal Patrol'}
         </span>
       ),
     },
@@ -63,9 +118,139 @@ export function PatrolsPage() {
       header: 'Start Time',
       accessor: (p) => (
         <span className="text-stone-500 text-xs">
-          {(p as any).startTime ? new Date((p as any).startTime).toLocaleTimeString() : 'Scheduled'}
+          {p.startTime ? new Date(p.startTime).toLocaleTimeString() : 'Scheduled'}
         </span>
       ),
+    },
+    {
+      header: 'Progress',
+      accessor: (p) => {
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const progress = calculatePatrolProgress(p, route?.waypoints?.length || undefined);
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-16 bg-stone-200 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  progress === 100
+                    ? 'bg-emerald-600'
+                    : progress > 0
+                    ? 'bg-[#3E8E41]'
+                    : 'bg-stone-300'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="font-bold text-stone-800 text-xs font-mono">
+              {formatProgress(progress)}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Coverage',
+      accessor: (p) => {
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const plannedCheckpoints = route?.waypoints;
+        const coverage = calculatePatrolCoverage(p, plannedCheckpoints);
+        const classification = classifyPatrolCoverage(p, plannedCheckpoints);
+        const isGood = classification === 'Good Coverage';
+        const isUnder = classification === 'Under-patrolled';
+
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <div className="w-16 bg-stone-200 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    coverage >= UNDER_PATROLLED_COVERAGE_THRESHOLD
+                      ? 'bg-emerald-600'
+                      : coverage > 0
+                      ? 'bg-amber-500'
+                      : 'bg-stone-300'
+                  }`}
+                  style={{ width: `${coverage}%` }}
+                />
+              </div>
+              <span className="font-bold text-stone-800 text-xs font-mono">
+                {formatCoverage(coverage)}
+              </span>
+            </div>
+            {p.status === PatrolStatus.ACTIVE || p.status === PatrolStatus.COMPLETED ? (
+              <span
+                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded w-fit ${
+                  isGood
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : isUnder
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-stone-100 text-stone-600 border border-stone-200'
+                }`}
+              >
+                {classification}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Location Status',
+      accessor: (p) => {
+        const info = getRangerLocationInfo(p.waypoints);
+        const label = formatRangerLocationLabel(info, p.status);
+        const { status, latestWaypoint } = info;
+
+        if (
+          p.status === PatrolStatus.PLANNED ||
+          p.status === PatrolStatus.CANCELLED ||
+          status === 'Unavailable'
+        ) {
+          return (
+            <div className="flex items-center gap-1.5 text-stone-400">
+              <WifiOff className="w-3 h-3 shrink-0" />
+              <span className="text-[11px] font-medium">Location unavailable</span>
+            </div>
+          );
+        }
+
+        const coords = latestWaypoint
+          ? formatCoordinates(latestWaypoint.latitude, latestWaypoint.longitude)
+          : null;
+
+        if (status === 'Stale') {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                  <Clock className="w-2.5 h-2.5" />
+                  Stale
+                </span>
+                {coords && (
+                  <span className="text-[10px] font-mono text-stone-500">{coords}</span>
+                )}
+              </div>
+              <span className="text-[10px] text-stone-500 font-medium">{label}</span>
+            </div>
+          );
+        }
+
+        // Current
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <MapPin className="w-2.5 h-2.5" />
+                Current
+              </span>
+              {coords && (
+                <span className="text-[10px] font-mono text-stone-500">{coords}</span>
+              )}
+            </div>
+            <span className="text-[10px] text-stone-500 font-medium">{label}</span>
+          </div>
+        );
+      },
     },
     {
       header: 'Status',
@@ -93,7 +278,7 @@ export function PatrolsPage() {
 
         {/* Status Filters */}
         <div className="flex items-center gap-2">
-          {['ALL', 'ACTIVE', 'PLANNED', 'COMPLETED'].map((st) => (
+          {STATUS_FILTERS.map((st) => (
             <button
               key={st}
               onClick={() => setFilter(st)}
@@ -125,14 +310,40 @@ export function PatrolsPage() {
       {/* Data Table */}
       {loading ? (
         <LoadingState message="Fetching current patrols and routes..." />
+      ) : error ? (
+        <EmptyState
+          title="Unable to Load Patrol Monitoring Data"
+          message={error}
+          icon={<AlertTriangle className="w-8 h-8 text-amber-600" />}
+          action={{
+            label: 'Retry',
+            onClick: () => {
+              void loadPatrolsData();
+            },
+          }}
+        />
       ) : (
         <div className="space-y-4">
-          <DataTable
-            columns={columns}
-            data={filteredPatrols}
-            keyExtractor={(p) => p.id}
-            emptyMessage="No patrols match the selected filter."
-          />
+          {patrols.length === 0 ? (
+            <EmptyState
+              title="No Patrols Recorded"
+              message="There are currently no active, planned, or completed ranger patrols."
+              icon={<Compass className="w-8 h-8 text-[#3E8E41]" />}
+              action={{
+                label: 'Refresh Data',
+                onClick: () => {
+                  void loadPatrolsData();
+                },
+              }}
+            />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredPatrols}
+              keyExtractor={(p) => p.id}
+              emptyMessage="No patrols match the selected filter."
+            />
+          )}
 
           {/* Available Route Corridors Overview */}
           {routes.length > 0 && (
