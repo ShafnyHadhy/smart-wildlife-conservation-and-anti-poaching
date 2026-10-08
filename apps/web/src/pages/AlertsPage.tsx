@@ -16,6 +16,7 @@ import {
 import {
   WildlifeRiskAlert,
   WildlifeAnimal,
+  RiskZone,
   AlertStatus,
   RiskLevel,
 } from '../features/uc03-alerts/types';
@@ -23,12 +24,15 @@ import { webAlertService } from '../features/uc03-alerts/services/alertService';
 import { CollarFleetCards } from '../features/uc03-alerts/components/CollarFleetCards';
 import { AlertDetailModal } from '../features/uc03-alerts/components/AlertDetailModal';
 import { SimulateTelemetryModal } from '../features/uc03-alerts/components/SimulateTelemetryModal';
+import { WildlifeLiveMap } from '../features/uc03-alerts/components/WildlifeLiveMap';
 
 export function AlertsPage() {
   const [alerts, setAlerts] = useState<WildlifeRiskAlert[]>([]);
   const [animals, setAnimals] = useState<WildlifeAnimal[]>([]);
+  const [zones, setZones] = useState<RiskZone[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showMap, setShowMap] = useState(true);
   const [filter, setFilter] = useState<string>('ALL');
 
   // Modals state
@@ -42,13 +46,15 @@ export function AlertsPage() {
       if (!silent) setLoading(true);
       else setIsRefreshing(true);
 
-      const [alertsData, animalsData] = await Promise.all([
+      const [alertsData, animalsData, zonesData] = await Promise.all([
         webAlertService.fetchAlerts().catch(() => []),
         webAlertService.fetchAnimals().catch(() => []),
+        webAlertService.fetchRiskZones().catch(() => []),
       ]);
 
       setAlerts(alertsData);
       setAnimals(animalsData);
+      setZones(zonesData);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -206,6 +212,18 @@ export function AlertsPage() {
         {/* Primary Header Action Buttons */}
         <div className="flex items-center gap-2.5">
           <button
+            onClick={() => setShowMap(!showMap)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-colors duration-150 ${
+              showMap
+                ? 'bg-[#3E8E41] text-white border-[#3E8E41] shadow-2xs'
+                : 'bg-white text-stone-700 hover:bg-[#F5F5DC] border-[#D1B370]/60'
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            {showMap ? 'Hide Live Map' : 'Show Live Map'}
+          </button>
+
+          <button
             onClick={() => handleOpenSimulate()}
             className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-white bg-[#A76D40] hover:bg-[#8e5a32] rounded-xl shadow-xs transition-colors duration-150"
           >
@@ -280,6 +298,18 @@ export function AlertsPage() {
         loading={loading}
         onSimulateForAnimal={(animal) => handleOpenSimulate(animal)}
       />
+
+      {/* Live Wildlife Telemetry & Geofence Map */}
+      {showMap && (
+        <WildlifeLiveMap
+          animals={animals}
+          zones={zones}
+          activeAlerts={alerts}
+          onSimulatePingForAnimal={(animal) => handleOpenSimulate(animal)}
+          onRefresh={() => loadData(true)}
+          isRefreshing={isRefreshing}
+        />
+      )}
 
       {/* Filters Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
