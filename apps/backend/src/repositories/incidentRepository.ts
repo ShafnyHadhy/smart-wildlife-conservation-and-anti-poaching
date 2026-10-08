@@ -152,6 +152,50 @@ export class IncidentRepository {
     const res = await query(sql, params);
     return mapRowToIncident(res.rows[0]);
   }
+
+  async addEvidence(data: {
+    incidentId: string;
+    evidenceType: EvidenceType;
+    filePath: string;
+    fileName?: string;
+    fileType?: string;
+    capturedAt?: string | Date;
+    notes?: string;
+  }): Promise<SupportingEvidence> {
+    const sql = `
+      INSERT INTO supporting_evidence (
+        incident_id,
+        evidence_type,
+        file_path,
+        file_name,
+        file_type,
+        captured_at,
+        notes
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
+
+    const capturedAt = data.capturedAt
+      ? typeof data.capturedAt === 'string'
+        ? new Date(data.capturedAt)
+        : data.capturedAt
+      : new Date();
+
+    const params = [
+      data.incidentId,
+      data.evidenceType,
+      data.filePath,
+      data.fileName || null,
+      data.fileType || null,
+      capturedAt,
+      data.notes || null,
+    ];
+
+    const res = await query(sql, params);
+
+    return mapRowToEvidence(res.rows[0]);
+  }
 }
 
 export const incidentRepository = new IncidentRepository();

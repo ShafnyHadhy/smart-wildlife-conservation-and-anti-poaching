@@ -2,13 +2,40 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
+vi.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: vi.fn().mockResolvedValue({ status: 'granted' }),
+  requestMediaLibraryPermissionsAsync: vi.fn().mockResolvedValue({ status: 'granted' }),
+  launchCameraAsync: vi.fn().mockResolvedValue({ canceled: true, assets: [] }),
+  launchImageLibraryAsync: vi.fn().mockResolvedValue({ canceled: true, assets: [] }),
+}));
+
 // Lightweight React Native element mock for pure unit test environment
 vi.mock('react-native', () => {
   return {
+    Platform: {
+      OS: 'web',
+      select: (obj: any) => obj.web || obj.default,
+    },
     View: ({ children, testID, id, style, className }: any) =>
       React.createElement('div', { 'data-testid': testID, id, style, className }, children),
     Text: ({ children, testID, id, style, className }: any) =>
       React.createElement('span', { 'data-testid': testID, id, style, className }, children),
+    TextInput: ({ value, onChangeText, placeholder, testID, id, style, disabled }: any) =>
+      React.createElement('input', {
+        value,
+        onChange: (e: any) => onChangeText?.(e.target.value),
+        placeholder,
+        'data-testid': testID,
+        id,
+        style,
+        disabled,
+      }),
+    Image: ({ source, style, testID }: any) =>
+      React.createElement('img', {
+        src: typeof source === 'string' ? source : source?.uri,
+        style,
+        'data-testid': testID,
+      }),
     TouchableOpacity: ({ children, onPress, testID, id, disabled, style }: any) =>
       React.createElement('button', { onClick: onPress, type: 'button', 'data-testid': testID, id, disabled, style }, children),
     ScrollView: ({ children, testID, id, style }: any) =>

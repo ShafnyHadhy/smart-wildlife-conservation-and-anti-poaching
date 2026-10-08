@@ -132,7 +132,22 @@ export class SyncService {
           reportedAt: payload.reportedAt || op.createdAt,
           clientMutationId,
         });
+
         entityId = incident.id;
+
+        if (Array.isArray(payload.evidence)) {
+          for (const evidence of payload.evidence) {
+            await incidentService.addEvidence(incident.id, {
+              evidenceType: evidence.evidenceType,
+              filePath: evidence.filePath,
+              fileName: evidence.fileName,
+              fileType: evidence.fileType,
+              capturedAt: evidence.capturedAt,
+              notes: evidence.notes,
+            });
+          }
+        }
+
         break;
       }
 
