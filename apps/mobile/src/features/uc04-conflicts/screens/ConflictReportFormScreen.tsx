@@ -9,6 +9,29 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import {
+  HiPlus,
+  HiMinus,
+  HiOutlineCamera,
+  HiOutlinePhoto,
+  HiOutlineMapPin,
+  HiOutlineBuildingOffice2,
+  HiChevronLeft,
+  HiChevronRight,
+  HiOutlineCheck,
+  HiOutlineQuestionMarkCircle,
+  HiOutlineExclamationTriangle,
+  HiCheck,
+} from 'react-icons/hi2';
+import {
+  TbAlertTriangle,
+  TbShieldCheck,
+  TbWheat,
+  TbEye,
+  TbHomeShield,
+  TbClock,
+  TbCamera,
+} from 'react-icons/tb';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { ConflictType, CreateConflictReportDTO } from '../types';
 import { mobileConflictService } from '../services/conflictService';
@@ -283,7 +306,7 @@ export function ConflictReportFormScreen({
         <ScrollView contentContainerStyle={s.scroll}>
           <View style={s.successCard}>
             <View style={s.successCheck}>
-              <Text style={s.successCheckText}>✓</Text>
+              <HiCheck size={38} color="#FFFFFF" />
             </View>
             <Text style={s.successTitle}>
               {result.queued ? 'Saved on your phone' : 'Report Logged Successfully!'}
@@ -302,16 +325,25 @@ export function ConflictReportFormScreen({
             {result.duplicate ? (
               <View style={[s.warnBox, { width: '100%' }]}>
                 <Text style={s.warnText}>
-                  ℹ️ Another nearby report was recently received. Rangers are clustering these incidents for rapid triage.
+                  Another nearby report was recently received. Rangers are clustering these incidents for rapid triage.
                 </Text>
               </View>
             ) : null}
 
             <View style={s.nextCard}>
               <Text style={s.nextTitle}>What happens next:</Text>
-              <Text style={s.nextItem}>1. 🔍 <Text style={{ fontWeight: '700' }}>Ranger Review:</Text> An officer will inspect the location & details.</Text>
-              <Text style={s.nextItem}>2. 🚨 <Text style={{ fontWeight: '700' }}>Field Response:</Text> Mitigation units & patrol teams dispatch if needed.</Text>
-              <Text style={s.nextItem}>3. 📲 <Text style={{ fontWeight: '700' }}>Live Updates:</Text> Track progress and status directly in "My Reports".</Text>
+              <View style={s.nextItemRow}>
+                <View style={s.nextDot} />
+                <Text style={s.nextItem}><Text style={{ fontWeight: '700' }}>Ranger Review:</Text> An officer will inspect the location & details.</Text>
+              </View>
+              <View style={s.nextItemRow}>
+                <View style={s.nextDot} />
+                <Text style={s.nextItem}><Text style={{ fontWeight: '700' }}>Field Response:</Text> Mitigation units & patrol teams dispatch if needed.</Text>
+              </View>
+              <View style={s.nextItemRow}>
+                <View style={s.nextDot} />
+                <Text style={s.nextItem}><Text style={{ fontWeight: '700' }}>Live Updates:</Text> Track progress and status directly in "My Reports".</Text>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -322,7 +354,10 @@ export function ConflictReportFormScreen({
               }}
               activeOpacity={0.85}
             >
-              <Text style={s.primaryBtnText}>View My Reports ›</Text>
+              <View style={s.btnContentRow}>
+                <Text style={s.primaryBtnText}>View My Reports</Text>
+                <HiChevronRight size={18} color="#FFFFFF" />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -336,7 +371,10 @@ export function ConflictReportFormScreen({
               }}
               activeOpacity={0.85}
             >
-              <Text style={s.outlineBtnText}>+ Report Another Incident</Text>
+              <View style={s.btnContentRow}>
+                <HiPlus size={16} color="#475569" />
+                <Text style={s.outlineBtnText}>Report Another Incident</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -382,14 +420,18 @@ export function ConflictReportFormScreen({
                       done && s.progressDotDone,
                     ]}
                   >
-                    <Text
-                      style={[
-                        s.progressDotText,
-                        (active || done) && { color: PALETTE.white, fontWeight: '800' },
-                      ]}
-                    >
-                      {done ? '✓' : n}
-                    </Text>
+                    {done ? (
+                      <HiOutlineCheck size={16} color="#FFFFFF" />
+                    ) : (
+                      <Text
+                        style={[
+                          s.progressDotText,
+                          active && { color: PALETTE.white, fontWeight: '800' },
+                        ]}
+                      >
+                        {n}
+                      </Text>
+                    )}
                   </View>
                   <Text
                     style={[
@@ -440,7 +482,10 @@ export function ConflictReportFormScreen({
             })}
 
             <TouchableOpacity style={s.primaryBtn} onPress={() => setStep(2)} activeOpacity={0.85}>
-              <Text style={s.primaryBtnText}>Continue to Location ›</Text>
+              <View style={s.btnContentRow}>
+                <Text style={s.primaryBtnText}>Continue to Location</Text>
+                <HiChevronRight size={18} color="#FFFFFF" />
+              </View>
             </TouchableOpacity>
           </View>
         )}
@@ -463,7 +508,11 @@ export function ConflictReportFormScreen({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <View style={s.btnContentRow}>
-                  <Text style={s.btnIcon}>{source === 'live' ? '✅' : '📍'}</Text>
+                  {source === 'live' ? (
+                    <HiOutlineCheck size={18} color="#FFFFFF" />
+                  ) : (
+                    <HiOutlineMapPin size={18} color="#FFFFFF" />
+                  )}
                   <Text style={s.liveLocationBtnText}>
                     {source === 'live' ? 'Live GPS Attached (Tap to Refresh)' : 'Use My Live GPS Location'}
                   </Text>
@@ -473,30 +522,42 @@ export function ConflictReportFormScreen({
 
             {locNotice ? (
               <View style={s.warnBox}>
-                <Text style={s.warnText}>📍 {locNotice}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <HiOutlineMapPin size={14} color="#92400E" />
+                  <Text style={s.warnText}>{locNotice}</Text>
+                </View>
               </View>
             ) : null}
 
             {/* Quick Village Presets */}
             <Text style={s.sectionHeaderLabel}>Or choose nearest village:</Text>
             <View style={s.chipWrap}>
-              {VILLAGE_PRESETS.map((v, idx) => (
-                <TouchableOpacity
-                  key={v.name}
-                  style={[s.chip, villageIdx === idx && s.chipOn]}
-                  onPress={() => chooseVillage(idx)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={[s.chipIcon, villageIdx === idx && { color: PALETTE.white }]}>🏡</Text>
-                  <Text style={[s.chipText, villageIdx === idx && s.chipTextOn]}>{v.name}</Text>
-                </TouchableOpacity>
-              ))}
+              {VILLAGE_PRESETS.map((v, idx) => {
+                const isSelected = villageIdx === idx;
+                return (
+                  <TouchableOpacity
+                    key={v.name}
+                    style={[s.chip, isSelected && s.chipOn]}
+                    onPress={() => chooseVillage(idx)}
+                    activeOpacity={0.85}
+                  >
+                    <HiOutlineBuildingOffice2
+                      size={15}
+                      color={isSelected ? '#FFFFFF' : '#64748B'}
+                    />
+                    <Text style={[s.chipText, isSelected && s.chipTextOn]}>{v.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {source !== 'none' && hasCoords && (
               <View style={s.locCard}>
                 <View style={s.locHeaderRow}>
-                  <Text style={s.locTitle}>📍 SELECTED LOCATION</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <HiOutlineMapPin size={16} color="#166534" />
+                    <Text style={s.locTitle}>SELECTED LOCATION</Text>
+                  </View>
                   <View style={s.coordBadge}>
                     <Text style={s.coordBadgeText}>
                       {source === 'live' ? 'Live GPS Fix' : 'Village Area'}
@@ -518,10 +579,16 @@ export function ConflictReportFormScreen({
 
             <View style={s.navRow}>
               <TouchableOpacity style={s.navBack} onPress={() => setStep(1)} activeOpacity={0.85}>
-                <Text style={s.outlineBtnText}>Back</Text>
+                <View style={s.btnContentRow}>
+                  <HiChevronLeft size={16} color="#475569" />
+                  <Text style={s.outlineBtnText}>Back</Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity style={s.navNext} onPress={goNextFromLocation} activeOpacity={0.85}>
-                <Text style={s.primaryBtnText}>Continue to Details ›</Text>
+                <View style={s.btnContentRow}>
+                  <Text style={s.primaryBtnText}>Continue to Details</Text>
+                  <HiChevronRight size={18} color="#FFFFFF" />
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -535,48 +602,60 @@ export function ConflictReportFormScreen({
 
             <Text style={s.sectionHeaderLabel}>When did this happen?</Text>
             <View style={s.chipWrap}>
-              {WHEN_OPTIONS.map((w) => (
-                <TouchableOpacity
-                  key={w.key}
-                  style={[s.chip, whenKey === w.key && s.chipOn]}
-                  onPress={() => setWhenKey(w.key)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={[s.chipText, whenKey === w.key && s.chipTextOn]}>{w.label}</Text>
-                </TouchableOpacity>
-              ))}
+              {WHEN_OPTIONS.map((w) => {
+                const isSelected = whenKey === w.key;
+                return (
+                  <TouchableOpacity
+                    key={w.key}
+                    style={[s.chip, isSelected && s.chipOn]}
+                    onPress={() => setWhenKey(w.key)}
+                    activeOpacity={0.85}
+                  >
+                    <TbClock size={15} color={isSelected ? '#FFFFFF' : '#64748B'} />
+                    <Text style={[s.chipText, isSelected && s.chipTextOn]}>{w.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <Text style={s.sectionHeaderLabel}>Estimated Number of Animals:</Text>
             <View style={s.stepperRow}>
               <TouchableOpacity
-                style={s.stepperBtn}
+                style={[s.stepperBtn, animalsUnknown && s.stepperBtnDisabled]}
                 onPress={() => {
                   setAnimalsUnknown(false);
                   setAnimalCount((c) => Math.max(1, c - 1));
                 }}
+                disabled={animalsUnknown}
                 activeOpacity={0.7}
               >
-                <Text style={s.stepperBtnText}>−</Text>
+                <HiMinus size={18} color={animalsUnknown ? '#CBD5E1' : '#15803D'} />
               </TouchableOpacity>
               <View style={s.stepperValueBox}>
-                <Text style={s.stepperValue}>{animalsUnknown ? '?' : animalCount}</Text>
+                <Text style={[s.stepperValue, animalsUnknown && { color: '#94A3B8' }]}>
+                  {animalsUnknown ? '?' : animalCount}
+                </Text>
               </View>
               <TouchableOpacity
-                style={s.stepperBtn}
+                style={[s.stepperBtn, animalsUnknown && s.stepperBtnDisabled]}
                 onPress={() => {
                   setAnimalsUnknown(false);
                   setAnimalCount((c) => c + 1);
                 }}
+                disabled={animalsUnknown}
                 activeOpacity={0.7}
               >
-                <Text style={s.stepperBtnText}>+</Text>
+                <HiPlus size={18} color={animalsUnknown ? '#CBD5E1' : '#15803D'} />
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.chip, animalsUnknown && s.chipOn, { marginLeft: 14 }]}
+                style={[s.chip, animalsUnknown && s.chipOn, { marginLeft: 'auto' }]}
                 onPress={() => setAnimalsUnknown(!animalsUnknown)}
                 activeOpacity={0.7}
               >
+                <HiOutlineQuestionMarkCircle
+                  size={16}
+                  color={animalsUnknown ? '#FFFFFF' : '#64748B'}
+                />
                 <Text style={[s.chipText, animalsUnknown && s.chipTextOn]}>Unknown Count</Text>
               </TouchableOpacity>
             </View>
@@ -588,8 +667,18 @@ export function ConflictReportFormScreen({
                 onPress={() => setImmediateRisk(true)}
                 activeOpacity={0.8}
               >
-                <Text style={[s.choiceText, immediateRisk && { color: PALETTE.danger }]}>
-                  🚨 Yes, High Risk / Urgent
+                <TbAlertTriangle
+                  size={19}
+                  color={immediateRisk ? '#DC2626' : '#94A3B8'}
+                />
+                <Text
+                  style={[
+                    s.choiceText,
+                    immediateRisk ? s.choiceTextDanger : s.choiceTextMuted,
+                  ]}
+                  numberOfLines={1}
+                >
+                  Yes, High Risk / Urgent
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -597,8 +686,18 @@ export function ConflictReportFormScreen({
                 onPress={() => setImmediateRisk(false)}
                 activeOpacity={0.8}
               >
-                <Text style={[s.choiceText, !immediateRisk && { color: PALETTE.forest }]}>
-                  🛡️ No, Stable Situation
+                <TbShieldCheck
+                  size={19}
+                  color={!immediateRisk ? '#15803D' : '#94A3B8'}
+                />
+                <Text
+                  style={[
+                    s.choiceText,
+                    !immediateRisk ? s.choiceTextOk : s.choiceTextMuted,
+                  ]}
+                  numberOfLines={1}
+                >
+                  No, Stable Situation
                 </Text>
               </TouchableOpacity>
             </View>
@@ -609,7 +708,7 @@ export function ConflictReportFormScreen({
               value={description}
               onChangeText={setDescription}
               placeholder="e.g. Bull elephant broke through garden fence, destroyed banana trees and is heading toward the canal."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#94A3B8"
               multiline={true}
               numberOfLines={4}
             />
@@ -622,7 +721,8 @@ export function ConflictReportFormScreen({
                 disabled={photoBusy}
                 activeOpacity={0.85}
               >
-                <Text style={s.photoBtnText}>📷 Live Camera Viewfinder</Text>
+                <HiOutlineCamera size={18} color="#15803D" />
+                <Text style={s.photoBtnText}>Live Camera</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.photoBtn}
@@ -630,10 +730,13 @@ export function ConflictReportFormScreen({
                 disabled={photoBusy}
                 activeOpacity={0.85}
               >
-                <Text style={s.photoBtnText}>📁 Upload from Device</Text>
+                <HiOutlinePhoto size={18} color="#15803D" />
+                <Text style={s.photoBtnText}>Upload from Device</Text>
               </TouchableOpacity>
             </View>
-            {photoBusy ? <ActivityIndicator size="small" color={PALETTE.forest} style={{ marginTop: 8 }} /> : null}
+            {photoBusy ? (
+              <ActivityIndicator size="small" color={PALETTE.forest} style={{ marginTop: 8 }} />
+            ) : null}
             {photoError ? <Text style={s.errorText}>{photoError}</Text> : null}
             {photos.length > 0 && (
               <View style={s.photoRow}>
@@ -656,10 +759,16 @@ export function ConflictReportFormScreen({
 
             <View style={s.navRow}>
               <TouchableOpacity style={s.navBack} onPress={() => setStep(2)} activeOpacity={0.85}>
-                <Text style={s.outlineBtnText}>Back</Text>
+                <View style={s.btnContentRow}>
+                  <HiChevronLeft size={16} color="#475569" />
+                  <Text style={s.outlineBtnText}>Back</Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity style={s.navNext} onPress={goNextFromDetails} activeOpacity={0.85}>
-                <Text style={s.primaryBtnText}>Review Report ›</Text>
+                <View style={s.btnContentRow}>
+                  <Text style={s.primaryBtnText}>Review Report</Text>
+                  <HiChevronRight size={18} color="#FFFFFF" />
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -674,7 +783,7 @@ export function ConflictReportFormScreen({
             <View style={s.reviewCard}>
               <ReviewRow
                 label="Conflict Type"
-                value={`${CONFLICT_TYPE_META[type].icon} ${CONFLICT_TYPE_META[type].label}`}
+                value={`${CONFLICT_TYPE_META[type].label}`}
                 onEdit={() => setStep(1)}
               />
               <ReviewRow
@@ -694,7 +803,7 @@ export function ConflictReportFormScreen({
               />
               <ReviewRow
                 label="Urgency Assessment"
-                value={immediateRisk ? '🚨 High Risk / Immediate Threat' : '🛡️ Standard Priority / Stable'}
+                value={immediateRisk ? 'High Risk / Immediate Threat' : 'Standard Priority / Stable'}
                 onEdit={() => setStep(3)}
               />
               <ReviewRow label="Description Narrative" value={description.trim()} onEdit={() => setStep(3)} />
@@ -720,7 +829,7 @@ export function ConflictReportFormScreen({
             {!isOnline && (
               <View style={s.warnBox}>
                 <Text style={s.warnText}>
-                  📴 Offline Mode: This report will be queued securely on this device and synced as soon as internet connectivity returns.
+                  Offline Mode: This report will be queued securely on this device and synced as soon as internet connectivity returns.
                 </Text>
               </View>
             )}
@@ -736,12 +845,18 @@ export function ConflictReportFormScreen({
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={s.primaryBtnText}>✓ Submit Conflict Report</Text>
+                <View style={s.btnContentRow}>
+                  <HiOutlineCheck size={20} color="#FFFFFF" />
+                  <Text style={s.primaryBtnText}>Submit Conflict Report</Text>
+                </View>
               )}
             </TouchableOpacity>
             
             <TouchableOpacity style={s.outlineBtn} onPress={() => setStep(3)} activeOpacity={0.85}>
-              <Text style={s.outlineBtnText}>Back to Edit Details</Text>
+              <View style={s.btnContentRow}>
+                <HiChevronLeft size={16} color="#475569" />
+                <Text style={s.outlineBtnText}>Back to Edit Details</Text>
+              </View>
             </TouchableOpacity>
           </View>
         )}
@@ -761,7 +876,7 @@ function ReviewRow({
 }) {
   return (
     <View style={s.reviewRow}>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, paddingRight: 8 }}>
         <Text style={s.reviewLabel}>{label}</Text>
         <Text style={s.reviewValue}>{value}</Text>
       </View>
@@ -820,12 +935,14 @@ const s = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  progressDotActive: { backgroundColor: '#15803D' },
-  progressDotDone: { backgroundColor: '#0F172A' },
+  progressDotActive: { backgroundColor: '#15803D', borderColor: '#15803D' },
+  progressDotDone: { backgroundColor: '#0F172A', borderColor: '#0F172A' },
   progressDotText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
   progressLabel: { fontSize: 11, color: '#64748B', marginTop: 6, fontWeight: '600' },
   progressLabelActive: { color: '#15803D', fontWeight: '800' },
@@ -860,7 +977,7 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     color: '#475569',
-    marginTop: 14,
+    marginTop: 16,
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -921,8 +1038,7 @@ const s = StyleSheet.create({
     elevation: 2,
   },
   liveLocationBtnActive: { backgroundColor: '#166534' },
-  btnContentRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  btnIcon: { fontSize: 16 },
+  btnContentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   liveLocationBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
 
   locCard: {
@@ -937,28 +1053,32 @@ const s = StyleSheet.create({
   locTitle: { fontSize: 11, fontWeight: '800', color: '#166534', letterSpacing: 0.5 },
   coordBadge: { backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   coordBadgeText: { fontSize: 10, fontWeight: '800', color: '#166534' },
-  locName: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginTop: 6 },
+  locName: { fontSize: 15, fontWeight: '800', color: '#0F172A', marginTop: 6 },
   locCoords: { fontSize: 12, color: '#64748B', marginTop: 3 },
 
   input: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 14,
     color: '#0F172A',
   },
-  textArea: { minHeight: 90, textAlignVertical: 'top' },
+  textArea: {
+    minHeight: 100,
+    lineHeight: 20,
+    textAlignVertical: 'top',
+  },
   twoCols: { flexDirection: 'row', gap: 10 },
 
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 999,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
@@ -966,58 +1086,85 @@ const s = StyleSheet.create({
     gap: 6,
   },
   chipOn: { backgroundColor: '#15803D', borderColor: '#15803D' },
-  chipIcon: { fontSize: 12 },
   chipText: { fontSize: 13, fontWeight: '700', color: '#334155' },
   chipTextOn: { color: '#FFFFFF' },
 
-  stepperRow: { flexDirection: 'row', alignItems: 'center' },
-  stepperBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#F1F5F9',
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 8,
     borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  stepperBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
     borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  stepperBtnText: { fontSize: 22, fontWeight: '800', color: '#15803D', lineHeight: 26 },
+  stepperBtnDisabled: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+    opacity: 0.6,
+  },
   stepperValueBox: {
-    minWidth: 50,
-    height: 42,
+    minWidth: 46,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepperValue: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '900',
     color: '#0F172A',
   },
 
   choice: {
     flex: 1,
-    paddingVertical: 14,
+    minHeight: 52,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
   },
   choiceDanger: { borderColor: '#EF4444', backgroundColor: '#FEF2F2' },
   choiceOk: { borderColor: '#15803D', backgroundColor: '#F0FDF4' },
-  choiceText: { fontWeight: '800', fontSize: 13, color: '#475569' },
+  choiceText: { fontWeight: '800', fontSize: 12.5 },
+  choiceTextMuted: { color: '#64748B' },
+  choiceTextDanger: { color: '#DC2626' },
+  choiceTextOk: { color: '#15803D' },
 
   photoBtn: {
     flex: 1,
+    minHeight: 48,
     paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#15803D',
+    borderColor: '#86EFAC',
     borderStyle: 'dashed',
     backgroundColor: '#F0FDF4',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
   },
   photoBtnText: { fontWeight: '800', color: '#15803D', fontSize: 12 },
   photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
@@ -1041,6 +1188,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
@@ -1048,11 +1196,12 @@ const s = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  primaryBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   outlineBtn: {
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 10,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
@@ -1066,6 +1215,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
     backgroundColor: '#FFFFFF',
@@ -1075,6 +1225,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#15803D',
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
@@ -1112,7 +1263,7 @@ const s = StyleSheet.create({
   reviewLabel: { fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 },
   reviewValue: { fontSize: 14, color: '#0F172A', fontWeight: '700', marginTop: 3, lineHeight: 19 },
   reviewEditBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
     backgroundColor: '#DCFCE7',
@@ -1145,7 +1296,6 @@ const s = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  successCheckText: { color: '#FFFFFF', fontSize: 36, fontWeight: '900' },
   successTitle: { fontSize: 20, fontWeight: '900', color: '#0F172A', marginTop: 16 },
   successText: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 6, lineHeight: 19 },
   refBox: {
@@ -1170,5 +1320,7 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   nextTitle: { fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 8 },
-  nextItem: { fontSize: 13, color: '#334155', marginTop: 4, lineHeight: 18 },
+  nextItemRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 6 },
+  nextDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#15803D', marginTop: 6, marginRight: 8 },
+  nextItem: { fontSize: 13, color: '#334155', lineHeight: 18, flex: 1 },
 });
