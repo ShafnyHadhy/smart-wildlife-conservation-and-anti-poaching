@@ -6,6 +6,7 @@ import {
   RespondToAlertDTO,
   SimulatePingDTO,
   SimulatePingResponse,
+  RiskZone,
   AlertFilterOptions,
 } from '../types';
 
@@ -32,6 +33,10 @@ export const webAlertService = {
 
   async fetchAnimals(): Promise<WildlifeAnimal[]> {
     return apiClient.get<WildlifeAnimal[]>('/animals');
+  },
+
+  async fetchRiskZones(): Promise<RiskZone[]> {
+    return apiClient.get<RiskZone[]>('/risk-zones');
   },
 
   async simulatePing(animalId: string, dto: SimulatePingDTO): Promise<SimulatePingResponse> {
