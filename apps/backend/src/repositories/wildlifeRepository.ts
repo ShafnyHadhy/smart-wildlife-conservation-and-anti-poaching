@@ -35,8 +35,14 @@ function mapRowToAnimal(row: any): WildlifeAnimal {
         : 100,
       isActive: row.collar_is_active !== undefined ? Boolean(row.collar_is_active) : Boolean(row.is_active),
       lastTransmissionAt: row.last_transmission_at ? new Date(row.last_transmission_at).toISOString() : undefined,
-      createdAt: row.collar_created_at ? new Date(row.collar_created_at).toISOString() : animal.createdAt,
-      updatedAt: row.collar_updated_at ? new Date(row.collar_updated_at).toISOString() : animal.updatedAt,
+    };
+  }
+
+  if (row.last_latitude !== null && row.last_latitude !== undefined && row.last_longitude !== null && row.last_longitude !== undefined) {
+    animal.lastKnownLocation = {
+      latitude: parseFloat(row.last_latitude),
+      longitude: parseFloat(row.last_longitude),
+      recordedAt: row.last_recorded_at ? new Date(row.last_recorded_at).toISOString() : animal.updatedAt,
     };
   }
 
@@ -136,9 +142,19 @@ export class WildlifeRepository {
         c.is_active AS collar_is_active,
         c.last_transmission_at,
         c.created_at AS collar_created_at,
-        c.updated_at AS collar_updated_at
+        c.updated_at AS collar_updated_at,
+        loc.latitude AS last_latitude,
+        loc.longitude AS last_longitude,
+        loc.recorded_at AS last_recorded_at
       FROM wildlife_animals a
       LEFT JOIN tracking_collars c ON c.animal_id = a.id
+      LEFT JOIN LATERAL (
+        SELECT latitude, longitude, recorded_at 
+        FROM location_records 
+        WHERE animal_id = a.id 
+        ORDER BY recorded_at DESC 
+        LIMIT 1
+      ) loc ON true
       ORDER BY a.name ASC
     `;
     const res = await query(sql);
@@ -156,9 +172,19 @@ export class WildlifeRepository {
         c.is_active AS collar_is_active,
         c.last_transmission_at,
         c.created_at AS collar_created_at,
-        c.updated_at AS collar_updated_at
+        c.updated_at AS collar_updated_at,
+        loc.latitude AS last_latitude,
+        loc.longitude AS last_longitude,
+        loc.recorded_at AS last_recorded_at
       FROM wildlife_animals a
       LEFT JOIN tracking_collars c ON c.animal_id = a.id
+      LEFT JOIN LATERAL (
+        SELECT latitude, longitude, recorded_at 
+        FROM location_records 
+        WHERE animal_id = a.id 
+        ORDER BY recorded_at DESC 
+        LIMIT 1
+      ) loc ON true
       WHERE a.id = $1
     `;
     const res = await query(sql, [id]);
