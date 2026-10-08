@@ -35,6 +35,8 @@ function mapRowToAnimal(row: any): WildlifeAnimal {
         : 100,
       isActive: row.collar_is_active !== undefined ? Boolean(row.collar_is_active) : Boolean(row.is_active),
       lastTransmissionAt: row.last_transmission_at ? new Date(row.last_transmission_at).toISOString() : undefined,
+      createdAt: row.collar_created_at ? new Date(row.collar_created_at).toISOString() : animal.createdAt,
+      updatedAt: row.collar_updated_at ? new Date(row.collar_updated_at).toISOString() : animal.updatedAt,
     };
   }
 
