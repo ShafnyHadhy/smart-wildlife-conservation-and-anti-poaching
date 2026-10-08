@@ -5,23 +5,26 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 // Lightweight React Native mock for pure unit tests
 vi.mock('react-native', () => {
   return {
-    View: ({ children, testID, ...props }: any) =>
-      React.createElement('div', { 'data-testid': testID, ...props }, children),
-    Text: ({ children, ...props }: any) =>
-      React.createElement('span', props, children),
-    TextInput: ({ value, onChangeText, placeholder, ...props }: any) =>
+    View: ({ children, testID, id, style, className }: any) =>
+      React.createElement('div', { 'data-testid': testID, id, style, className }, children),
+    Text: ({ children, testID, id, style, className }: any) =>
+      React.createElement('span', { 'data-testid': testID, id, style, className }, children),
+    TextInput: ({ value, onChangeText, placeholder, testID, id, style, disabled }: any) =>
       React.createElement('input', {
         value,
         onChange: (e: any) => onChangeText?.(e.target.value),
         placeholder,
-        ...props,
+        'data-testid': testID,
+        id,
+        style,
+        disabled,
       }),
-    TouchableOpacity: ({ children, onPress, ...props }: any) =>
-      React.createElement('button', { onClick: onPress, type: 'button', ...props }, children),
-    ScrollView: ({ children, ...props }: any) =>
-      React.createElement('div', props, children),
-    SafeAreaView: ({ children, ...props }: any) =>
-      React.createElement('div', props, children),
+    TouchableOpacity: ({ children, onPress, testID, id, disabled, style }: any) =>
+      React.createElement('button', { onClick: onPress, type: 'button', 'data-testid': testID, id, disabled, style }, children),
+    ScrollView: ({ children, testID, id, style }: any) =>
+      React.createElement('div', { 'data-testid': testID, id, style }, children),
+    SafeAreaView: ({ children, testID, id, style }: any) =>
+      React.createElement('div', { 'data-testid': testID, id, style }, children),
     StatusBar: () => null,
     StyleSheet: {
       create: (styles: any) => styles,
