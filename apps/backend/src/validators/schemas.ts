@@ -79,6 +79,13 @@ export const createAnimalLocationSchema = z.object({
   recordedAt: isoDateString,
 });
 
+// POST /api/animals/:id/simulate-ping
+export const simulatePingSchema = z.object({
+  latitude: coordinateSchema.shape.latitude,
+  longitude: coordinateSchema.shape.longitude,
+  recordedAt: isoDateString.optional(),
+});
+
 // POST /api/alerts/:id/respond
 export const createAlertResponseSchema = z.object({
   responderId: uuidSchema,

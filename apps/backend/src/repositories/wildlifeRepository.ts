@@ -12,7 +12,7 @@ import {
 } from '@wildlife/shared';
 
 function mapRowToAnimal(row: any): WildlifeAnimal {
-  return {
+  const animal: WildlifeAnimal = {
     id: row.id,
     name: row.name,
     species: row.species,
@@ -23,6 +23,32 @@ function mapRowToAnimal(row: any): WildlifeAnimal {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
+
+  if (row.collar_id) {
+    animal.activeCollar = {
+      id: row.collar_id,
+      animalId: row.id,
+      collarCode: row.collar_code,
+      model: row.collar_model || row.model || 'GPS-COLLAR-V2',
+      batteryPercentage: row.battery_percentage !== undefined && row.battery_percentage !== null
+        ? Number(row.battery_percentage)
+        : 100,
+      isActive: row.collar_is_active !== undefined ? Boolean(row.collar_is_active) : Boolean(row.is_active),
+      lastTransmissionAt: row.last_transmission_at ? new Date(row.last_transmission_at).toISOString() : undefined,
+      createdAt: row.collar_created_at ? new Date(row.collar_created_at).toISOString() : animal.createdAt,
+      updatedAt: row.collar_updated_at ? new Date(row.collar_updated_at).toISOString() : animal.updatedAt,
+    };
+  }
+
+  if (row.last_latitude !== null && row.last_latitude !== undefined && row.last_longitude !== null && row.last_longitude !== undefined) {
+    animal.lastKnownLocation = {
+      latitude: parseFloat(row.last_latitude),
+      longitude: parseFloat(row.last_longitude),
+      recordedAt: row.last_recorded_at ? new Date(row.last_recorded_at).toISOString() : animal.updatedAt,
+    };
+  }
+
+  return animal;
 }
 
 function mapRowToCollar(row: any): TrackingCollar {
@@ -108,12 +134,62 @@ function mapRowToResponse(row: any): AlertResponse {
 
 export class WildlifeRepository {
   async findAllAnimals(): Promise<WildlifeAnimal[]> {
-    const res = await query('SELECT * FROM wildlife_animals ORDER BY name ASC');
+    const sql = `
+      SELECT 
+        a.*,
+        c.id AS collar_id,
+        c.collar_code,
+        c.model AS collar_model,
+        c.battery_percentage,
+        c.is_active AS collar_is_active,
+        c.last_transmission_at,
+        c.created_at AS collar_created_at,
+        c.updated_at AS collar_updated_at,
+        loc.latitude AS last_latitude,
+        loc.longitude AS last_longitude,
+        loc.recorded_at AS last_recorded_at
+      FROM wildlife_animals a
+      LEFT JOIN tracking_collars c ON c.animal_id = a.id
+      LEFT JOIN LATERAL (
+        SELECT latitude, longitude, recorded_at 
+        FROM location_records 
+        WHERE animal_id = a.id 
+        ORDER BY recorded_at DESC 
+        LIMIT 1
+      ) loc ON true
+      ORDER BY a.name ASC
+    `;
+    const res = await query(sql);
     return res.rows.map(mapRowToAnimal);
   }
 
   async findAnimalById(id: string): Promise<WildlifeAnimal | null> {
-    const res = await query('SELECT * FROM wildlife_animals WHERE id = $1', [id]);
+    const sql = `
+      SELECT 
+        a.*,
+        c.id AS collar_id,
+        c.collar_code,
+        c.model AS collar_model,
+        c.battery_percentage,
+        c.is_active AS collar_is_active,
+        c.last_transmission_at,
+        c.created_at AS collar_created_at,
+        c.updated_at AS collar_updated_at,
+        loc.latitude AS last_latitude,
+        loc.longitude AS last_longitude,
+        loc.recorded_at AS last_recorded_at
+      FROM wildlife_animals a
+      LEFT JOIN tracking_collars c ON c.animal_id = a.id
+      LEFT JOIN LATERAL (
+        SELECT latitude, longitude, recorded_at 
+        FROM location_records 
+        WHERE animal_id = a.id 
+        ORDER BY recorded_at DESC 
+        LIMIT 1
+      ) loc ON true
+      WHERE a.id = $1
+    `;
+    const res = await query(sql, [id]);
     return res.rows[0] ? mapRowToAnimal(res.rows[0]) : null;
   }
 
@@ -274,6 +350,62 @@ export class WildlifeRepository {
       'UPDATE wildlife_risk_alerts SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [status, alertId]
     );
+  }
+
+  async createAlert(data: {
+    animalId: string;
+    riskZoneId: string;
+    locationRecordId?: string;
+    severity: RiskLevel;
+    status?: AlertStatus;
+    generatedAt?: string | Date;
+    notes?: string;
+  }): Promise<WildlifeRiskAlert> {
+    const generatedAt = data.generatedAt
+      ? typeof data.generatedAt === 'string'
+        ? new Date(data.generatedAt)
+        : data.generatedAt
+      : new Date();
+    const status = data.status || AlertStatus.ACTIVE;
+
+    const sql = `
+      INSERT INTO wildlife_risk_alerts (animal_id, risk_zone_id, location_record_id, severity, status, generated_at, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
+    const res = await query(sql, [
+      data.animalId,
+      data.riskZoneId,
+      data.locationRecordId || null,
+      data.severity,
+      status,
+      generatedAt,
+      data.notes || null,
+    ]);
+
+    const created = await this.findAlertById(res.rows[0].id);
+    return created || mapRowToAlert(res.rows[0]);
+  }
+
+  async findActiveAlertForAnimalAndZone(
+    animalId: string,
+    riskZoneId: string
+  ): Promise<WildlifeRiskAlert | null> {
+    const sql = `
+      SELECT a.*, w.name AS animal_name, w.species AS animal_species, rz.name AS zone_name,
+             lr.latitude, lr.longitude
+      FROM wildlife_risk_alerts a
+      JOIN wildlife_animals w ON a.animal_id = w.id
+      JOIN risk_zones rz ON a.risk_zone_id = rz.id
+      LEFT JOIN location_records lr ON a.location_record_id = lr.id
+      WHERE a.animal_id = $1
+        AND a.risk_zone_id = $2
+        AND a.status IN ('ACTIVE', 'ACKNOWLEDGED', 'RESPONDING')
+      ORDER BY a.generated_at DESC
+      LIMIT 1
+    `;
+    const res = await query(sql, [animalId, riskZoneId]);
+    return res.rows[0] ? mapRowToAlert(res.rows[0]) : null;
   }
 }
 
