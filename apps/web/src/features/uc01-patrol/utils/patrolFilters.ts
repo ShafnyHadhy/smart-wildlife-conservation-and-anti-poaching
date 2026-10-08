@@ -36,10 +36,11 @@ export interface RouteOption {
  * Patrols with no parkId are excluded. Patrols with parkId but no parkName
  * fall back to a short ID representation.
  */
-export function deriveParkOptions(patrols: Patrol[]): ParkOption[] {
+export function deriveParkOptions(patrols: Patrol[] | undefined | null): ParkOption[] {
+  const safePatrols = Array.isArray(patrols) ? patrols : [];
   const seen = new Map<string, string>();
-  for (const p of patrols) {
-    if (!p.parkId) continue;
+  for (const p of safePatrols) {
+    if (!p || !p.parkId) continue;
     if (!seen.has(p.parkId)) {
       seen.set(p.parkId, p.parkName || `Park ${p.parkId.slice(0, 6)}`);
     }
@@ -52,10 +53,11 @@ export function deriveParkOptions(patrols: Patrol[]): ParkOption[] {
  * Patrols with no rangerId are excluded. Patrols with rangerId but no rangerName
  * fall back to a short ID representation.
  */
-export function deriveRangerOptions(patrols: Patrol[]): RangerOption[] {
+export function deriveRangerOptions(patrols: Patrol[] | undefined | null): RangerOption[] {
+  const safePatrols = Array.isArray(patrols) ? patrols : [];
   const seen = new Map<string, string>();
-  for (const p of patrols) {
-    if (!p.rangerId) continue;
+  for (const p of safePatrols) {
+    if (!p || !p.rangerId) continue;
     if (!seen.has(p.rangerId)) {
       seen.set(p.rangerId, p.rangerName || `Ranger ${p.rangerId.slice(0, 6)}`);
     }
@@ -68,10 +70,11 @@ export function deriveRangerOptions(patrols: Patrol[]): RangerOption[] {
  * Patrols with no patrolRouteId are excluded. Patrols with routeId but no routeName
  * fall back to a short ID representation.
  */
-export function deriveRouteOptions(patrols: Patrol[]): RouteOption[] {
+export function deriveRouteOptions(patrols: Patrol[] | undefined | null): RouteOption[] {
+  const safePatrols = Array.isArray(patrols) ? patrols : [];
   const seen = new Map<string, string>();
-  for (const p of patrols) {
-    if (!p.patrolRouteId) continue;
+  for (const p of safePatrols) {
+    if (!p || !p.patrolRouteId) continue;
     if (!seen.has(p.patrolRouteId)) {
       seen.set(p.patrolRouteId, p.routeName || `Route ${p.patrolRouteId.slice(0, 6)}`);
     }
@@ -84,8 +87,13 @@ export function deriveRouteOptions(patrols: Patrol[]): RouteOption[] {
  * Each filter with value 'ALL' is treated as "no restriction".
  * All active filters are combined with AND logic.
  */
-export function applyPatrolFilters(patrols: Patrol[], filters: PatrolFilterState): Patrol[] {
-  return patrols.filter((p) => {
+export function applyPatrolFilters(
+  patrols: Patrol[] | undefined | null,
+  filters: PatrolFilterState
+): Patrol[] {
+  const safePatrols = Array.isArray(patrols) ? patrols : [];
+  return safePatrols.filter((p) => {
+    if (!p) return false;
     if (filters.status !== 'ALL' && p.status !== filters.status) return false;
     if (filters.parkId !== 'ALL' && p.parkId !== filters.parkId) return false;
     if (filters.rangerId !== 'ALL' && p.rangerId !== filters.rangerId) return false;

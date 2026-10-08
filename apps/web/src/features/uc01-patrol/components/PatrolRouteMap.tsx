@@ -20,35 +20,63 @@ export function PatrolRouteMap({ patrol, route, className = '' }: PatrolRouteMap
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
-  // Extract planned checkpoints with valid coordinates
-  const plannedCheckpoints = (route?.waypoints || []).filter(
-    (wp) =>
-      typeof wp.latitude === 'number' &&
-      typeof wp.longitude === 'number' &&
-      !Number.isNaN(wp.latitude) &&
-      !Number.isNaN(wp.longitude) &&
-      Number.isFinite(wp.latitude) &&
-      Number.isFinite(wp.longitude) &&
-      !(wp.latitude === 0 && wp.longitude === 0)
-  );
+  // Extract planned checkpoints with valid coordinates (safe against numeric strings or nulls)
+  const plannedCheckpoints = (route?.waypoints || [])
+    .map((wp) => {
+      const lat =
+        typeof wp.latitude === 'number'
+          ? wp.latitude
+          : typeof wp.latitude === 'string'
+          ? parseFloat(wp.latitude)
+          : NaN;
+      const lng =
+        typeof wp.longitude === 'number'
+          ? wp.longitude
+          : typeof wp.longitude === 'string'
+          ? parseFloat(wp.longitude)
+          : NaN;
+      return { ...wp, latitude: lat, longitude: lng };
+    })
+    .filter(
+      (wp) =>
+        Number.isFinite(wp.latitude) &&
+        Number.isFinite(wp.longitude) &&
+        !Number.isNaN(wp.latitude) &&
+        !Number.isNaN(wp.longitude) &&
+        !(wp.latitude === 0 && wp.longitude === 0)
+    );
 
   // Extract recorded waypoints
   const recordedWaypoints = patrol.waypoints || [];
 
   // Evaluate ranger location
   const locationInfo = getRangerLocationInfo(recordedWaypoints);
+  const latestWp = locationInfo.latestWaypoint;
+  const rangerLat = latestWp
+    ? typeof latestWp.latitude === 'number'
+      ? latestWp.latitude
+      : typeof latestWp.latitude === 'string'
+      ? parseFloat(latestWp.latitude)
+      : NaN
+    : NaN;
+  const rangerLng = latestWp
+    ? typeof latestWp.longitude === 'number'
+      ? latestWp.longitude
+      : typeof latestWp.longitude === 'string'
+      ? parseFloat(latestWp.longitude)
+      : NaN
+    : NaN;
+
   const isRangerLocationUsable =
     patrol.status !== PatrolStatus.PLANNED &&
     patrol.status !== PatrolStatus.CANCELLED &&
     locationInfo.status !== 'Unavailable' &&
-    locationInfo.latestWaypoint !== null &&
-    typeof locationInfo.latestWaypoint.latitude === 'number' &&
-    typeof locationInfo.latestWaypoint.longitude === 'number' &&
-    !Number.isNaN(locationInfo.latestWaypoint.latitude) &&
-    !Number.isNaN(locationInfo.latestWaypoint.longitude) &&
-    Number.isFinite(locationInfo.latestWaypoint.latitude) &&
-    Number.isFinite(locationInfo.latestWaypoint.longitude) &&
-    !(locationInfo.latestWaypoint.latitude === 0 && locationInfo.latestWaypoint.longitude === 0);
+    latestWp !== null &&
+    Number.isFinite(rangerLat) &&
+    Number.isFinite(rangerLng) &&
+    !Number.isNaN(rangerLat) &&
+    !Number.isNaN(rangerLng) &&
+    !(rangerLat === 0 && rangerLng === 0);
 
   const hasAnyCoordinates = plannedCheckpoints.length > 0 || isRangerLocationUsable;
 
@@ -182,7 +210,7 @@ export function PatrolRouteMap({ patrol, route, className = '' }: PatrolRouteMap
         const popupContent = `
           <div style="font-family: inherit; font-size: 12px; line-height: 1.4; min-width: 170px;">
             <div style="font-weight: bold; color: #1C2A1E; font-size: 13px; margin-bottom: 2px;">
-              ${patrol.rangerName || 'Assigned Ranger'}
+              ${patrol.rangerName || patrol.rangerId || 'Not available'}
             </div>
             <div style="margin-bottom: 6px;">
               <span style="display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 9999px; ${

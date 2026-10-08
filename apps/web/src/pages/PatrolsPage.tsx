@@ -54,9 +54,13 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
         webPatrolService.fetchPatrolRoutes(),
       ]);
 
+      const safePatrols = Array.isArray(patrolsRes) ? patrolsRes : [];
+      const safeRoutes = Array.isArray(routesRes) ? routesRes : [];
+
       // Enrich active/completed patrols with detailed waypoints if not already present
       const enrichedPatrols = await Promise.all(
-        patrolsRes.map(async (patrol) => {
+        safePatrols.map(async (patrol) => {
+          if (!patrol || !patrol.id) return patrol;
           if (patrol.waypoints && patrol.waypoints.length > 0) {
             return patrol;
           }
@@ -72,7 +76,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
             return {
               ...patrol,
               ...detail,
-              waypoints: detail.waypoints || [],
+              waypoints: detail?.waypoints || [],
             };
           } catch {
             return patrol;
@@ -80,8 +84,8 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
         })
       );
 
-      setPatrols(enrichedPatrols);
-      setRoutes(routesRes);
+      setPatrols(enrichedPatrols.filter((p): p is Patrol => Boolean(p && p.id)));
+      setRoutes(safeRoutes);
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -125,7 +129,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
       header: 'Patrol Code',
       accessor: (p) => (
         <span className="font-bold text-[#1C2A1E]">
-          {p.patrolCode || p.id.slice(0, 8)}
+          {p.patrolCode || (p.id ? p.id.slice(0, 8) : 'Not available')}
         </span>
       ),
     },
@@ -133,7 +137,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
       header: 'Assigned Ranger',
       accessor: (p) => (
         <span className="text-stone-700">
-          {p.rangerName || p.rangerId?.slice(0, 8) || 'Assigned Ranger'}
+          {p.rangerName || p.rangerId || 'Not available'}
         </span>
       ),
     },
@@ -141,17 +145,27 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
       header: 'Route Corridor',
       accessor: (p) => (
         <span className="text-stone-600">
-          {p.routeName || 'Coastal Patrol'}
+          {p.routeName || routes.find((r) => r.id === p.patrolRouteId)?.name || 'Not available'}
         </span>
       ),
     },
     {
       header: 'Start Time',
-      accessor: (p) => (
-        <span className="text-stone-500 text-xs">
-          {p.startTime ? new Date(p.startTime).toLocaleTimeString() : 'Scheduled'}
-        </span>
-      ),
+      accessor: (p) => {
+        if (!p.startTime) {
+          return (
+            <span className="text-stone-500 text-xs">
+              {p.status === PatrolStatus.PLANNED ? 'Scheduled' : 'Not available'}
+            </span>
+          );
+        }
+        const d = new Date(p.startTime);
+        return (
+          <span className="text-stone-500 text-xs">
+            {!Number.isNaN(d.getTime()) ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Not available'}
+          </span>
+        );
+      },
     },
     {
       header: 'Progress',
@@ -293,7 +307,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
           if (evalResult.needsAttention) {
             return (
               <div className="flex flex-col gap-1 items-start">
-                <StatusBadge status={p.status} size="sm" />
+                <StatusBadge status={p.status || PatrolStatus.ACTIVE} size="sm" />
                 <span
                   className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300"
                   title={evalResult.reasons.join(', ')}
@@ -307,7 +321,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
 
           return (
             <div className="flex flex-col gap-1 items-start">
-              <StatusBadge status={p.status} size="sm" />
+              <StatusBadge status={p.status || PatrolStatus.ACTIVE} size="sm" />
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
                 On Track
@@ -316,7 +330,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
           );
         }
 
-        return <StatusBadge status={p.status} size="sm" />;
+        return <StatusBadge status={p.status || PatrolStatus.PLANNED} size="sm" />;
       },
     },
     {

@@ -135,9 +135,9 @@ export function evaluatePatrolAttention(
   const locInfo = getRangerLocationInfo(patrol.waypoints, nowMs);
   const locationLabel = formatRangerLocationLabel(locInfo, patrol.status);
 
-  const patrolCode = patrol.patrolCode || patrol.id.slice(0, 8);
-  const rangerName = patrol.rangerName || patrol.rangerId?.slice(0, 8) || 'Assigned Ranger';
-  const routeName = patrol.routeName || route?.name || 'Corridor Route';
+  const patrolCode = patrol.patrolCode || (patrol.id ? patrol.id.slice(0, 8) : 'Not available');
+  const rangerName = patrol.rangerName || patrol.rangerId || 'Not available';
+  const routeName = patrol.routeName || route?.name || 'Not available';
 
   // Only ACTIVE patrols require active operational attention
   if (patrol.status !== PatrolStatus.ACTIVE) {

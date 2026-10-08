@@ -219,14 +219,19 @@ export function PatrolDetailsView({
     });
   };
 
-  const startDisplay = formatDateTime(patrol.startTime) || 'Scheduled';
-  const endDisplay = formatDateTime(patrol.endTime) || (
-    patrol.status === PatrolStatus.COMPLETED
-      ? 'Completed'
+  const startDisplay =
+    formatDateTime(patrol.startTime) ||
+    (patrol.status === PatrolStatus.PLANNED ? 'Scheduled' : 'Not available');
+
+  const endDisplay =
+    formatDateTime(patrol.endTime) ||
+    (patrol.status === PatrolStatus.COMPLETED
+      ? 'Not available'
       : patrol.status === PatrolStatus.ACTIVE
       ? 'In Progress'
-      : 'Not Started'
-  );
+      : patrol.status === PatrolStatus.PLANNED
+      ? 'Scheduled'
+      : 'Not available');
 
   return (
     <div data-testid="patrol-details-view" className="space-y-6">
@@ -246,7 +251,7 @@ export function PatrolDetailsView({
           <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
             Lifecycle Status:
           </span>
-          <StatusBadge status={patrol.status} size="md" />
+          <StatusBadge status={patrol.status || PatrolStatus.PLANNED} size="md" />
         </div>
       </div>
 
@@ -261,14 +266,14 @@ export function PatrolDetailsView({
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-2xl font-extrabold text-[#1C2A1E] tracking-tight font-mono">
-                    {patrol.patrolCode || patrol.id}
+                    {patrol.patrolCode || patrol.id || 'Not available'}
                   </h2>
                   <span className="px-2 py-0.5 text-xs font-bold bg-[#3E8E41]/15 text-[#2E6B31] border border-[#3E8E41]/40 rounded">
                     UC01 DETAILS
                   </span>
                 </div>
                 <p className="text-xs text-[#A76D40] font-semibold mt-0.5">
-                  Assigned Route: {patrol.routeName || currentRoute?.name || 'Pre-Approved Corridor'}
+                  Assigned Route: {patrol.routeName || currentRoute?.name || 'Not available'}
                 </p>
               </div>
             </div>
@@ -276,7 +281,7 @@ export function PatrolDetailsView({
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-stone-500">
-              Patrol ID: <span className="font-mono font-bold text-stone-700">{patrol.id}</span>
+              Patrol ID: <span className="font-mono font-bold text-stone-700">{patrol.id || 'Not available'}</span>
             </span>
           </div>
         </div>
@@ -291,7 +296,7 @@ export function PatrolDetailsView({
               <Shield className="w-4 h-4 text-[#3E8E41]" />
               <span>Patrol Information</span>
             </h3>
-            <StatusBadge status={patrol.status} size="sm" />
+            <StatusBadge status={patrol.status || PatrolStatus.PLANNED} size="sm" />
           </div>
 
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -300,7 +305,7 @@ export function PatrolDetailsView({
                 Patrol Identifier
               </dt>
               <dd className="mt-1 font-bold text-stone-900 font-mono text-sm">
-                {patrol.patrolCode || patrol.id}
+                {patrol.patrolCode || patrol.id || 'Not available'}
               </dd>
             </div>
 
@@ -309,7 +314,7 @@ export function PatrolDetailsView({
                 Sanctuary / Park
               </dt>
               <dd className="mt-1 font-bold text-stone-900 text-sm">
-                {patrol.parkName || currentRoute?.parkName || patrol.parkId || 'Designated Park'}
+                {patrol.parkName || currentRoute?.parkName || patrol.parkId || 'Not available'}
               </dd>
             </div>
 
@@ -319,7 +324,7 @@ export function PatrolDetailsView({
                 <span>Assigned Ranger</span>
               </dt>
               <dd className="mt-1 font-bold text-stone-900 text-sm">
-                {patrol.rangerName || patrol.rangerId || 'Assigned Ranger'}
+                {patrol.rangerName || patrol.rangerId || 'Not available'}
               </dd>
             </div>
 
@@ -328,8 +333,8 @@ export function PatrolDetailsView({
                 <RouteIcon className="w-3 h-3 text-[#3E8E41]" />
                 <span>Route Corridor</span>
               </dt>
-              <dd className="mt-1 font-bold text-stone-900 text-sm truncate" title={patrol.routeName || currentRoute?.name}>
-                {patrol.routeName || currentRoute?.name || 'Coastal Corridor'}
+              <dd className="mt-1 font-bold text-stone-900 text-sm truncate" title={patrol.routeName || currentRoute?.name || 'Not available'}>
+                {patrol.routeName || currentRoute?.name || 'Not available'}
               </dd>
             </div>
 
@@ -354,10 +359,15 @@ export function PatrolDetailsView({
             </div>
           </dl>
 
-          {patrol.notes && (
+          {patrol.notes ? (
             <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs">
               <span className="font-bold text-stone-700 block mb-0.5">Patrol Notes:</span>
               <p className="text-stone-600 italic">{patrol.notes}</p>
+            </div>
+          ) : (
+            <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+              <span className="font-bold text-stone-700 block mb-0.5">Patrol Notes:</span>
+              <p className="text-stone-400 italic">Not available</p>
             </div>
           )}
         </div>
@@ -570,7 +580,9 @@ export function PatrolDetailsView({
                 Standard Met
               </span>
               <span className="text-xs font-bold text-[#2E6B31] mt-1 block">
-                {coverage >= UNDER_PATROLLED_COVERAGE_THRESHOLD
+                {plannedCount === 0
+                  ? 'No Route Data'
+                  : coverage >= UNDER_PATROLLED_COVERAGE_THRESHOLD
                   ? '≥ 70% Standard Met'
                   : 'Requires Supervisory Attention'}
               </span>
@@ -591,9 +603,9 @@ export function PatrolDetailsView({
               <span>Route &amp; Waypoint Information</span>
             </h3>
             <p className="text-xs text-stone-500 mt-0.5">
-              Corridor: <strong className="text-stone-800">{currentRoute?.name || patrol.routeName || 'Designated Route'}</strong>
+              Corridor: <strong className="text-stone-800">{currentRoute?.name || patrol.routeName || 'Not available'}</strong>
               {currentRoute?.code && ` (${currentRoute.code})`}
-              {currentRoute?.estimatedDurationMinutes && ` • Est. Duration: ${currentRoute.estimatedDurationMinutes} mins`}
+              {currentRoute?.estimatedDurationMinutes ? ` • Est. Duration: ${currentRoute.estimatedDurationMinutes} mins` : ''}
             </p>
           </div>
 
@@ -639,7 +651,7 @@ export function PatrolDetailsView({
                         </span>
                       </td>
                       <td className="py-2.5 px-3 font-mono text-stone-700">
-                        {formatCoordinates(cp.latitude, cp.longitude) || '—'}
+                        {formatCoordinates(cp.latitude, cp.longitude) || 'Not available'}
                       </td>
                       <td className="py-2.5 px-3">
                         {visited ? (
@@ -655,7 +667,7 @@ export function PatrolDetailsView({
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-stone-500 italic">
-                        {cp.notes || '—'}
+                        {cp.notes || 'Not available'}
                       </td>
                     </tr>
                   );
