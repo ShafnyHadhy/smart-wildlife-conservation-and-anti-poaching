@@ -316,4 +316,46 @@ describe('UC04: ConflictService Unit Tests', () => {
       expect(stats.livestockAttackCount).toBe(1);
     });
   });
+
+  describe('Damage Assessment & Village Compensation Triage', () => {
+    it('passes damageData and compensation status to repository updateStatus', async () => {
+      const mockUpdated = {
+        id: 'rep-01',
+        status: ConflictStatus.RESPONDING,
+        triageNotes: 'Crop survey team dispatched to Kittulkote.',
+        mitigationAction: 'Agricultural Crop Compensation Survey & Assessment',
+        estimatedDamageLkr: 85000,
+        cropTypeLost: 'Paddy (Rice)',
+        compensationStatus: 'APPROVED',
+      };
+      vi.mocked(conflictRepository.updateStatus).mockResolvedValue(mockUpdated as any);
+
+      const result = await service.updateStatus(
+        'rep-01',
+        ConflictStatus.RESPONDING,
+        'Crop survey team dispatched to Kittulkote.',
+        'Agricultural Crop Compensation Survey & Assessment',
+        {
+          estimatedDamageLkr: 85000,
+          cropTypeLost: 'Paddy (Rice)',
+          compensationStatus: 'APPROVED',
+        }
+      );
+
+      expect(conflictRepository.updateStatus).toHaveBeenCalledWith(
+        'rep-01',
+        ConflictStatus.RESPONDING,
+        'Crop survey team dispatched to Kittulkote.',
+        'Agricultural Crop Compensation Survey & Assessment',
+        {
+          estimatedDamageLkr: 85000,
+          cropTypeLost: 'Paddy (Rice)',
+          compensationStatus: 'APPROVED',
+        }
+      );
+      expect(result.estimatedDamageLkr).toBe(85000);
+      expect(result.cropTypeLost).toBe('Paddy (Rice)');
+      expect(result.compensationStatus).toBe('APPROVED');
+    });
+  });
 });

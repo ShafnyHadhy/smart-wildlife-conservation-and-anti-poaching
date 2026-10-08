@@ -3,14 +3,22 @@ import path from 'path';
 import { pool, closePool } from '../config/database';
 
 export async function runMigrations(): Promise<void> {
-  const migrationPath = path.resolve(__dirname, '../../db/migrations/001_initial_schema.sql');
-  console.log(`[Migration] Reading migration file from: ${migrationPath}`);
+  const migrationsDir = path.resolve(__dirname, '../../db/migrations');
+  console.log(`[Migration] Reading migration files from: ${migrationsDir}`);
 
-  if (!fs.existsSync(migrationPath)) {
-    throw new Error(`Migration file not found at ${migrationPath}`);
+  if (!fs.existsSync(migrationsDir)) {
+    throw new Error(`Migration directory not found at ${migrationsDir}`);
   }
 
-  const sql = fs.readFileSync(migrationPath, 'utf8');
+  const files = fs
+    .readdirSync(migrationsDir)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+  if (files.length === 0) {
+    throw new Error(`No migration files found in ${migrationsDir}`);
+  }
+
+  const sql = files.map((f) => fs.readFileSync(path.join(migrationsDir, f), 'utf8')).join('\n');
   const client = await pool.connect();
 
   try {

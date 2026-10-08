@@ -8,15 +8,33 @@ export function createApp(): Application {
   const app = express();
 
   // Middleware
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:8081',
+    'http://localhost:8082',
+    'http://localhost:19006',
+    config.corsOrigin,
+  ];
+
   app.use(
     cors({
-      origin: [
-        'http://localhost:5173',
-        'http://localhost:8081',
-      ],
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+
+        if (
+          allowedOrigins.includes(origin) ||
+          /^http:\/\/localhost:\d+$/.test(origin) ||
+          /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+        ) {
+          return callback(null, true);
+        }
+
+        return callback(null, true);
+      },
       credentials: true,
     })
   );
+
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 

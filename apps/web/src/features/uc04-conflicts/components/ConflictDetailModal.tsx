@@ -24,7 +24,12 @@ interface ConflictDetailModalProps {
     id: string,
     status: ConflictStatus,
     triageNotes?: string,
-    mitigationAction?: string
+    mitigationAction?: string,
+    damageData?: {
+      estimatedDamageLkr?: number;
+      cropTypeLost?: string;
+      compensationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
+    }
   ) => Promise<void>;
 }
 
@@ -52,6 +57,13 @@ export function ConflictDetailModal({
     report.mitigationAction || MITIGATION_PRESETS[0]
   );
   const [triageNotes, setTriageNotes] = useState<string>(report.triageNotes || '');
+  const [estimatedDamageLkr, setEstimatedDamageLkr] = useState<string>(
+    report.estimatedDamageLkr !== undefined ? report.estimatedDamageLkr.toString() : ''
+  );
+  const [cropTypeLost, setCropTypeLost] = useState<string>(report.cropTypeLost || '');
+  const [compensationStatus, setCompensationStatus] = useState<
+    'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'DISBURSED'
+  >(report.compensationStatus || 'PENDING_REVIEW');
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -64,7 +76,18 @@ export function ConflictDetailModal({
   const handleSave = async () => {
     try {
       setSaving(true);
-      await onUpdateStatus(report.id, selectedStatus, triageNotes, mitigationAction);
+      const parsedLkr = estimatedDamageLkr.trim() ? parseFloat(estimatedDamageLkr) : undefined;
+      await onUpdateStatus(
+        report.id,
+        selectedStatus,
+        triageNotes,
+        mitigationAction,
+        {
+          estimatedDamageLkr: !isNaN(parsedLkr as number) ? parsedLkr : undefined,
+          cropTypeLost: cropTypeLost.trim() || undefined,
+          compensationStatus,
+        }
+      );
       onClose();
     } finally {
       setSaving(false);
@@ -180,6 +203,83 @@ export function ConflictDetailModal({
             </span>
             <div className="p-4 bg-white border border-stone-200 rounded-xl text-stone-800 leading-relaxed font-medium">
               {report.description}
+            </div>
+          </div>
+
+          {/* Damage Assessment & Compensation Form (UC04) */}
+          <div className="p-4 bg-[#FAF7EE] border border-[#D1B370]/70 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🌾</span>
+                <h4 className="font-extrabold text-[#1C2A1E] text-xs uppercase tracking-wider">
+                  Damage Assessment & Village Compensation
+                </h4>
+              </div>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                  compensationStatus === 'APPROVED' || compensationStatus === 'DISBURSED'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : compensationStatus === 'REJECTED'
+                    ? 'bg-red-100 text-red-800 border-red-300'
+                    : 'bg-amber-100 text-amber-800 border-amber-300'
+                }`}
+              >
+                {compensationStatus.replace('_', ' ')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Estimated Damage LKR */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-stone-600 block">
+                  Est. Damage (LKR):
+                </label>
+                <input
+                  type="number"
+                  value={estimatedDamageLkr}
+                  onChange={(e) => setEstimatedDamageLkr(e.target.value)}
+                  placeholder="e.g. 75000"
+                  className="w-full bg-white text-xs p-2 rounded-xl border border-stone-300 font-semibold focus:outline-none focus:ring-2 focus:ring-[#3E8E41]/30 text-stone-800"
+                />
+              </div>
+
+              {/* Crop Type Lost */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-stone-600 block">
+                  Crop Type Lost:
+                </label>
+                <select
+                  value={cropTypeLost}
+                  onChange={(e) => setCropTypeLost(e.target.value)}
+                  className="w-full bg-white text-xs p-2 rounded-xl border border-stone-300 font-semibold focus:outline-none focus:ring-2 focus:ring-[#3E8E41]/30 text-stone-800 cursor-pointer"
+                >
+                  <option value="">None / Not Applicable</option>
+                  <option value="Paddy (Rice)">Paddy (Rice)</option>
+                  <option value="Banana / Plantain">Banana / Plantain</option>
+                  <option value="Sugarcane">Sugarcane</option>
+                  <option value="Coconut">Coconut</option>
+                  <option value="Vegetables / Home Garden">Vegetables / Home Garden</option>
+                  <option value="Fencing / Farm Shed">Fencing / Farm Shed</option>
+                  <option value="Domestic Livestock">Domestic Livestock</option>
+                </select>
+              </div>
+
+              {/* Compensation Review Status */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-stone-600 block">
+                  Compensation Review:
+                </label>
+                <select
+                  value={compensationStatus}
+                  onChange={(e) => setCompensationStatus(e.target.value as any)}
+                  className="w-full bg-white text-xs p-2 rounded-xl border border-stone-300 font-semibold focus:outline-none focus:ring-2 focus:ring-[#3E8E41]/30 text-stone-800 cursor-pointer"
+                >
+                  <option value="PENDING_REVIEW">Pending Review</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="DISBURSED">Disbursed</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+              </div>
             </div>
           </div>
 
