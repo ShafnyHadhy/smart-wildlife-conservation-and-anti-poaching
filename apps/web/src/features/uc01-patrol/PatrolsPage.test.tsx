@@ -733,4 +733,182 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
     expect(screen.getByRole('columnheader', { name: /Status \/ Evaluation/i })).toBeInTheDocument();
     expect(screen.getAllByText('Under-patrolled').length).toBeGreaterThan(0);
   });
+
+  it('16. Displays Overview Statistics Cards for Active Patrols, Completed Today, Average Coverage, and Under-Patrolled (UC01 Task 8)', async () => {
+    const todayIso = new Date().toISOString();
+    const yesterdayIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue([
+      {
+        id: 'stat-active-1',
+        patrolCode: 'PAT-STAT-ACT-1',
+        parkId: 'park-1',
+        rangerId: 'ranger-1',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.ACTIVE,
+        startTime: todayIso,
+        coverageScore: 0,
+        createdAt: todayIso,
+        updatedAt: todayIso,
+      },
+      {
+        id: 'stat-active-2',
+        patrolCode: 'PAT-STAT-ACT-2',
+        parkId: 'park-1',
+        rangerId: 'ranger-2',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.ACTIVE,
+        startTime: todayIso,
+        coverageScore: 0,
+        createdAt: todayIso,
+        updatedAt: todayIso,
+      },
+      {
+        id: 'stat-comp-today',
+        patrolCode: 'PAT-STAT-CMP-TODAY',
+        parkId: 'park-1',
+        rangerId: 'ranger-3',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.COMPLETED,
+        startTime: todayIso,
+        endTime: todayIso,
+        coverageScore: 0,
+        createdAt: todayIso,
+        updatedAt: todayIso,
+      },
+      {
+        id: 'stat-comp-yesterday',
+        patrolCode: 'PAT-STAT-CMP-YEST',
+        parkId: 'park-1',
+        rangerId: 'ranger-4',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.COMPLETED,
+        startTime: yesterdayIso,
+        endTime: yesterdayIso,
+        coverageScore: 0,
+        createdAt: yesterdayIso,
+        updatedAt: yesterdayIso,
+      },
+      {
+        id: 'stat-planned',
+        patrolCode: 'PAT-STAT-PLAN',
+        parkId: 'park-1',
+        rangerId: 'ranger-5',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.PLANNED,
+        startTime: todayIso,
+        coverageScore: 0,
+        createdAt: todayIso,
+        updatedAt: todayIso,
+      },
+    ]);
+
+    vi.mocked(webPatrolService.fetchPatrolRoutes).mockResolvedValue([
+      {
+        id: 'route-1',
+        parkId: 'park-1',
+        name: 'Yala Block 1 Coastal Route',
+        code: 'YALA-RT-01',
+        description: 'Coastal patrol route',
+        estimatedDurationMinutes: 240,
+        routeType: 'FOOT_PATROL',
+        isActive: true,
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+        waypoints: Array.from({ length: 10 }, (_, i) => ({
+          id: `cp-${i + 1}`,
+          patrolRouteId: 'route-1',
+          latitude: 6.37 + i * 0.01,
+          longitude: 81.51 + i * 0.01,
+          sequenceOrder: i + 1,
+          locationType: 'GPS' as any,
+          recordedAt: '2026-10-01T00:00:00.000Z',
+        })),
+      },
+    ]);
+
+    // stat-active-1: visits 8 of 10 = 80% coverage (Good)
+    // stat-active-2: visits 4 of 10 = 40% coverage (Under-patrolled)
+    vi.mocked(webPatrolService.fetchPatrolById).mockImplementation(async (id: string) => {
+      if (id === 'stat-active-1') {
+        return {
+          id,
+          patrolCode: 'PAT-STAT-ACT-1',
+          parkId: 'park-1',
+          rangerId: 'ranger-1',
+          patrolRouteId: 'route-1',
+          status: PatrolStatus.ACTIVE,
+          startTime: todayIso,
+          coverageScore: 0,
+          createdAt: todayIso,
+          updatedAt: todayIso,
+          waypoints: Array.from({ length: 8 }, (_, i) => ({
+            id: `wp-a1-${i}`,
+            patrolId: id,
+            latitude: 6.37 + i * 0.01,
+            longitude: 81.51 + i * 0.01,
+            sequenceOrder: i + 1,
+            locationType: 'GPS' as any,
+            recordedAt: todayIso,
+          })),
+        } as any;
+      }
+      if (id === 'stat-active-2') {
+        return {
+          id,
+          patrolCode: 'PAT-STAT-ACT-2',
+          parkId: 'park-1',
+          rangerId: 'ranger-2',
+          patrolRouteId: 'route-1',
+          status: PatrolStatus.ACTIVE,
+          startTime: todayIso,
+          coverageScore: 0,
+          createdAt: todayIso,
+          updatedAt: todayIso,
+          waypoints: Array.from({ length: 4 }, (_, i) => ({
+            id: `wp-a2-${i}`,
+            patrolId: id,
+            latitude: 6.37 + i * 0.01,
+            longitude: 81.51 + i * 0.01,
+            sequenceOrder: i + 1,
+            locationType: 'GPS' as any,
+            recordedAt: todayIso,
+          })),
+        } as any;
+      }
+      return {
+        id,
+        patrolCode: id,
+        parkId: 'park-1',
+        rangerId: 'ranger-x',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.COMPLETED,
+        startTime: todayIso,
+        waypoints: [],
+      } as any;
+    });
+
+    render(<PatrolsPage />);
+
+    // Verify all 4 Stat card titles exist
+    await waitFor(() => {
+      expect(screen.getByText('Active Patrols')).toBeInTheDocument();
+      expect(screen.getByText('Completed Today')).toBeInTheDocument();
+      expect(screen.getByText('Average Coverage')).toBeInTheDocument();
+      expect(screen.getAllByText('Under-Patrolled').length).toBeGreaterThan(0);
+    });
+
+    // Active Patrols = 2
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('rangers in the field')).toBeInTheDocument();
+
+    // Completed Today and Under-Patrolled counts (both are 1)
+    expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('shifts finished today')).toBeInTheDocument();
+    expect(screen.getByText('requiring attention')).toBeInTheDocument();
+
+    // Average Coverage: (80% + 40%) / 2 = 60%
+    expect(screen.getByText('60%')).toBeInTheDocument();
+    expect(screen.getByText('across designated routes')).toBeInTheDocument();
+  });
 });

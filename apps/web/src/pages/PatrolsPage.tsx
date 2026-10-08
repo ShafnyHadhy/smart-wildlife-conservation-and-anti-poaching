@@ -3,7 +3,7 @@ import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
-import { Compass, Info, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2 } from 'lucide-react';
+import { Compass, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2 } from 'lucide-react';
 import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
 import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
 import {
@@ -18,8 +18,12 @@ import {
   formatCoordinates,
   evaluatePatrolAttention,
   getUnderPatrolledSummary,
+  calculatePatrolStatistics,
 } from '../features/uc01-patrol/utils';
-import { UnderPatrolledOverviewCard } from '../features/uc01-patrol/components';
+import {
+  UnderPatrolledOverviewCard,
+  PatrolOverviewStats,
+} from '../features/uc01-patrol/components';
 
 const STATUS_FILTERS: readonly (PatrolStatus | 'ALL')[] = [
   'ALL',
@@ -93,6 +97,7 @@ export function PatrolsPage() {
   });
 
   const underPatrolledSummary = getUnderPatrolledSummary(patrols, routes);
+  const overviewStats = calculatePatrolStatistics(patrols, routes);
 
   const columns: Column<Patrol>[] = [
     {
@@ -331,19 +336,6 @@ export function PatrolsPage() {
         </div>
       </div>
 
-      {/* Feature Architecture Note */}
-      <div className="p-4 bg-[#FAF7EE] border border-[#D1B370]/70 rounded-xl flex items-start gap-3 shadow-xs">
-        <Info className="w-5 h-5 text-[#3E8E41] shrink-0 mt-0.5" />
-        <div className="text-xs text-stone-700 leading-relaxed font-medium">
-          <strong className="text-[#1C2A1E]">Team Member 1 Feature Workspace:</strong> Full patrol coverage calculation,
-          under-patrolled boundary detection, and the interactive map component belong in{' '}
-          <code className="bg-[#F5F5DC] px-1.5 py-0.5 rounded border border-[#D1B370]/60 font-mono text-[#A76D40]">
-            apps/web/src/features/uc01-patrol/
-          </code>
-          .
-        </div>
-      </div>
-
       {/* Data Table */}
       {loading ? (
         <LoadingState message="Fetching current patrols and routes..." />
@@ -375,7 +367,10 @@ export function PatrolsPage() {
             />
           ) : (
             <>
-              {/* Under-Patrolled & Operational Attention Overview */}
+              {/* Overview Statistics (UC01 Task 8) */}
+              <PatrolOverviewStats stats={overviewStats} />
+
+              {/* Under-Patrolled & Operational Attention Overview (UC01 Task 7) */}
               <UnderPatrolledOverviewCard summary={underPatrolledSummary} />
 
               <DataTable
