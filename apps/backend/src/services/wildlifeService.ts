@@ -1,5 +1,6 @@
 import { wildlifeRepository } from '../repositories/wildlifeRepository';
 import { userRepository } from '../repositories/userRepository';
+import { parkRepository } from '../repositories/parkRepository';
 import {
   WildlifeAnimal,
   LocationRecord,
@@ -8,8 +9,19 @@ import {
   AlertResponse,
   AlertStatus,
   ResponseStatus,
+  RiskLevel,
+  PolygonPoint,
+  isPointInPolygon,
+  calculateHaversineDistanceKm,
 } from '@wildlife/shared';
 import { NotFoundError, BadRequestError } from '../errors/AppError';
+
+const RISK_LEVEL_ORDER: Record<RiskLevel, number> = {
+  [RiskLevel.LOW]: 1,
+  [RiskLevel.MEDIUM]: 2,
+  [RiskLevel.HIGH]: 3,
+  [RiskLevel.CRITICAL]: 4,
+};
 
 export class WildlifeService {
   async getAnimals(): Promise<WildlifeAnimal[]> {
@@ -36,7 +48,7 @@ export class WildlifeService {
     latitude: number;
     longitude: number;
     recordedAt: string;
-  }): Promise<LocationRecord> {
+  }): Promise<LocationRecord & { generatedAlert?: WildlifeRiskAlert }> {
     const animal = await wildlifeRepository.findAnimalById(data.animalId);
     if (!animal) {
       throw new NotFoundError('WildlifeAnimal', data.animalId);
@@ -53,7 +65,7 @@ export class WildlifeService {
       );
     }
 
-    return wildlifeRepository.createLocationRecord({
+    const record = await wildlifeRepository.createLocationRecord({
       animalId: data.animalId,
       collarId: data.collarId,
       latitude: data.latitude,
@@ -62,6 +74,112 @@ export class WildlifeService {
       isSimulated: true,
     });
 
+    // 1. Determine animal's park based on proximity
+    let parkId: string | undefined;
+    try {
+      const parks = await parkRepository.findAll();
+      if (parks.length > 0) {
+        let closestPark = parks[0];
+        let minDistance = calculateHaversineDistanceKm(
+          data.latitude,
+          data.longitude,
+          closestPark.latitude,
+          closestPark.longitude
+        );
+
+        for (let i = 1; i < parks.length; i++) {
+          const dist = calculateHaversineDistanceKm(
+            data.latitude,
+            data.longitude,
+            parks[i].latitude,
+            parks[i].longitude
+          );
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestPark = parks[i];
+          }
+        }
+        parkId = closestPark.id;
+      }
+    } catch {
+      // Park determination fallback
+    }
+
+    // 2. Retrieve relevant active risk zones (prefer matching park, fallback to all active)
+    let riskZones: RiskZone[] = [];
+    try {
+      if (parkId) {
+        riskZones = await wildlifeRepository.findAllRiskZones(parkId);
+      }
+      if (riskZones.length === 0) {
+        riskZones = await wildlifeRepository.findAllRiskZones();
+      }
+    } catch {
+      riskZones = [];
+    }
+
+    // 3. Evaluate point against each risk-zone polygon
+    const point: PolygonPoint = {
+      latitude: data.latitude,
+      longitude: data.longitude,
+    };
+
+    const matchingZones: RiskZone[] = [];
+    for (const zone of riskZones) {
+      try {
+        let coords: PolygonPoint[] = zone.boundaryCoordinates;
+        if (typeof coords === 'string') {
+          coords = JSON.parse(coords);
+        }
+        if (Array.isArray(coords) && coords.length >= 3) {
+          if (isPointInPolygon(point, coords)) {
+            matchingZones.push(zone);
+          }
+        }
+      } catch {
+        // Malformed polygon geometry must not crash ingestion
+      }
+    }
+
+    // 4. If outside all relevant zones, return location record without alert
+    if (matchingZones.length === 0) {
+      return record;
+    }
+
+    // 5. If inside multiple zones, select the highest-risk zone (LOW < MEDIUM < HIGH < CRITICAL)
+    matchingZones.sort((a, b) => {
+      const weightA = RISK_LEVEL_ORDER[a.riskLevel] || 0;
+      const weightB = RISK_LEVEL_ORDER[b.riskLevel] || 0;
+      if (weightB !== weightA) {
+        return weightB - weightA;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    const selectedZone = matchingZones[0];
+
+    // 6. Check duplicate active alert protection (ACTIVE, ACKNOWLEDGED, or RESPONDING)
+    const existingActiveAlert = await wildlifeRepository.findActiveAlertForAnimalAndZone(
+      data.animalId,
+      selectedZone.id
+    );
+
+    let generatedAlert: WildlifeRiskAlert | undefined;
+    if (!existingActiveAlert) {
+      generatedAlert = await wildlifeRepository.createAlert({
+        animalId: data.animalId,
+        riskZoneId: selectedZone.id,
+        locationRecordId: record.id,
+        severity: selectedZone.riskLevel,
+        status: AlertStatus.ACTIVE,
+        generatedAt: data.recordedAt || new Date().toISOString(),
+        notes: `Automated geofence breach: ${animal.name} (${animal.species}) detected inside ${selectedZone.name} (${selectedZone.riskLevel} risk)`,
+      });
+    }
+
+    return {
+      ...record,
+      generatedAlert,
+    };
   }
 
   async getRiskZones(parkId?: string): Promise<RiskZone[]> {
