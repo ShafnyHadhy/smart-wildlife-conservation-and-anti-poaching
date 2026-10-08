@@ -481,7 +481,7 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
     await waitFor(() => {
       expect(screen.getByRole('columnheader', { name: /Coverage/i })).toBeInTheDocument();
       expect(screen.getByText('PAT-2026-GOOD')).toBeInTheDocument();
-      expect(screen.getByText('PAT-2026-UNDER')).toBeInTheDocument();
+      expect(screen.getAllByText('PAT-2026-UNDER').length).toBeGreaterThan(0);
       expect(screen.getByText('PAT-2026-PLAN')).toBeInTheDocument();
       expect(screen.getByText('PAT-2026-NODATA')).toBeInTheDocument();
     });
@@ -495,7 +495,7 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
 
     // Verify classification badges
     expect(screen.getByText('Good Coverage')).toBeInTheDocument();
-    expect(screen.getByText('Under-patrolled')).toBeInTheDocument();
+    expect(screen.getAllByText('Under-patrolled').length).toBeGreaterThan(0);
     expect(screen.getByText('No Coverage Data')).toBeInTheDocument();
 
     // Verify Planned patrol row does not display "Under-patrolled"
@@ -632,8 +632,8 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('columnheader', { name: /Location Status/i })).toBeInTheDocument();
-      expect(screen.getByText('PAT-2026-CUR')).toBeInTheDocument();
-      expect(screen.getByText('PAT-2026-STL')).toBeInTheDocument();
+      expect(screen.getAllByText('PAT-2026-CUR').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('PAT-2026-STL').length).toBeGreaterThan(0);
       expect(screen.getByText('PAT-2026-PLN-LOC')).toBeInTheDocument();
       expect(screen.getByText('PAT-2026-CMP-EMP')).toBeInTheDocument();
     });
@@ -650,5 +650,87 @@ describe('UC01: Web PatrolsPage & Patrol Service Connection', () => {
 
     // Verify Unavailable status for planned patrol and completed patrol without GPS breadcrumbs
     expect(screen.getAllByText('Location unavailable').length).toBe(2);
+  });
+
+  it('15. Renders Under-Patrolled Overview Card and Status/Evaluation indicator (UC01 Task 7)', async () => {
+    // 1 active patrol under-patrolled (< 70% coverage)
+    // 1 healthy active patrol (100% coverage, on track)
+    vi.mocked(webPatrolService.fetchPatrols).mockResolvedValue([
+      {
+        id: 'patrol-att-1',
+        patrolCode: 'PAT-2026-ATT-001',
+        parkId: 'park-1',
+        rangerId: 'ranger-1',
+        patrolRouteId: 'route-1',
+        status: PatrolStatus.ACTIVE,
+        startTime: '2026-10-07T09:00:00.000Z',
+        coverageScore: 0,
+        createdAt: '2026-10-07T09:00:00.000Z',
+        updatedAt: '2026-10-07T09:00:00.000Z',
+        rangerName: 'Saman Kumara',
+        routeName: 'Yala Block 1 Coastal Route',
+      },
+    ]);
+
+    vi.mocked(webPatrolService.fetchPatrolRoutes).mockResolvedValue([
+      {
+        id: 'route-1',
+        parkId: 'park-1',
+        name: 'Yala Block 1 Coastal Route',
+        code: 'YALA-RT-01',
+        description: 'Coastal patrol route',
+        estimatedDurationMinutes: 240,
+        routeType: 'FOOT_PATROL',
+        isActive: true,
+        createdAt: '2026-10-01T00:00:00.000Z',
+        updatedAt: '2026-10-01T00:00:00.000Z',
+        waypoints: Array.from({ length: 10 }, (_, i) => ({
+          id: `cp-${i + 1}`,
+          patrolRouteId: 'route-1',
+          latitude: 6.37 + i * 0.01,
+          longitude: 81.51 + i * 0.01,
+          sequenceOrder: i + 1,
+          locationType: 'GPS' as any,
+          recordedAt: '2026-10-01T00:00:00.000Z',
+        })),
+      },
+    ]);
+
+    // Visited 4 of 10 checkpoints = 40% (< 70% threshold)
+    vi.mocked(webPatrolService.fetchPatrolById).mockResolvedValue({
+      id: 'patrol-att-1',
+      patrolCode: 'PAT-2026-ATT-001',
+      parkId: 'park-1',
+      rangerId: 'ranger-1',
+      patrolRouteId: 'route-1',
+      status: PatrolStatus.ACTIVE,
+      startTime: '2026-10-07T09:00:00.000Z',
+      coverageScore: 0,
+      createdAt: '2026-10-07T09:00:00.000Z',
+      updatedAt: '2026-10-07T09:00:00.000Z',
+      waypoints: Array.from({ length: 4 }, (_, i) => ({
+        id: `wp-${i}`,
+        patrolId: 'patrol-att-1',
+        latitude: 6.37 + i * 0.01,
+        longitude: 81.51 + i * 0.01,
+        sequenceOrder: i + 1,
+        locationType: 'GPS' as any,
+        recordedAt: new Date().toISOString(),
+      })),
+    } as any);
+
+    render(<PatrolsPage />);
+
+    // Verify Under-Patrolled Overview card is displayed
+    await waitFor(() => {
+      expect(screen.getByText('Under-Patrolled & Operational Attention')).toBeInTheDocument();
+      expect(screen.getByText('1 Patrol')).toBeInTheDocument();
+      expect(screen.getAllByText('PAT-2026-ATT-001').length).toBeGreaterThan(0);
+      expect(screen.getByText('Low Coverage (40%)')).toBeInTheDocument();
+    });
+
+    // Verify Status / Evaluation column header and badge
+    expect(screen.getByRole('columnheader', { name: /Status \/ Evaluation/i })).toBeInTheDocument();
+    expect(screen.getAllByText('Under-patrolled').length).toBeGreaterThan(0);
   });
 });

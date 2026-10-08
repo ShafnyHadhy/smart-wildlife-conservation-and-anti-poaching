@@ -3,7 +3,7 @@ import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
-import { Compass, Info, AlertTriangle, MapPin, Clock, WifiOff } from 'lucide-react';
+import { Compass, Info, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2 } from 'lucide-react';
 import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
 import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
 import {
@@ -16,7 +16,10 @@ import {
   getRangerLocationInfo,
   formatRangerLocationLabel,
   formatCoordinates,
+  evaluatePatrolAttention,
+  getUnderPatrolledSummary,
 } from '../features/uc01-patrol/utils';
+import { UnderPatrolledOverviewCard } from '../features/uc01-patrol/components';
 
 const STATUS_FILTERS: readonly (PatrolStatus | 'ALL')[] = [
   'ALL',
@@ -88,6 +91,8 @@ export function PatrolsPage() {
     if (filter === 'ALL') return true;
     return p.status === filter;
   });
+
+  const underPatrolledSummary = getUnderPatrolledSummary(patrols, routes);
 
   const columns: Column<Patrol>[] = [
     {
@@ -253,8 +258,40 @@ export function PatrolsPage() {
       },
     },
     {
-      header: 'Status',
-      accessor: (p) => <StatusBadge status={p.status} size="sm" />,
+      header: 'Status / Evaluation',
+      accessor: (p) => {
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const evalResult = evaluatePatrolAttention(p, route);
+
+        if (p.status === PatrolStatus.ACTIVE) {
+          if (evalResult.needsAttention) {
+            return (
+              <div className="flex flex-col gap-1 items-start">
+                <StatusBadge status={p.status} size="sm" />
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300"
+                  title={evalResult.reasons.join(', ')}
+                >
+                  <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                  {evalResult.isUnderPatrolled ? 'Under-patrolled' : 'Needs Attention'}
+                </span>
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex flex-col gap-1 items-start">
+              <StatusBadge status={p.status} size="sm" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                On Track
+              </span>
+            </div>
+          );
+        }
+
+        return <StatusBadge status={p.status} size="sm" />;
+      },
     },
   ];
 
@@ -337,12 +374,17 @@ export function PatrolsPage() {
               }}
             />
           ) : (
-            <DataTable
-              columns={columns}
-              data={filteredPatrols}
-              keyExtractor={(p) => p.id}
-              emptyMessage="No patrols match the selected filter."
-            />
+            <>
+              {/* Under-Patrolled & Operational Attention Overview */}
+              <UnderPatrolledOverviewCard summary={underPatrolledSummary} />
+
+              <DataTable
+                columns={columns}
+                data={filteredPatrols}
+                keyExtractor={(p) => p.id}
+                emptyMessage="No patrols match the selected filter."
+              />
+            </>
           )}
 
           {/* Available Route Corridors Overview */}
