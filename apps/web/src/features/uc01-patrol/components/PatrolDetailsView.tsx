@@ -18,6 +18,7 @@ import { StatusBadge } from '../../../components/common/StatusBadge';
 import { LoadingState } from '../../../components/common/LoadingState';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { webPatrolService } from '../services/patrolService';
+import { PatrolRouteMap } from './PatrolRouteMap';
 import {
   calculatePatrolProgress,
   formatProgress,
@@ -578,7 +579,10 @@ export function PatrolDetailsView({
         </div>
       </div>
 
-      {/* 5. Route & Waypoint Information Table */}
+      {/* 5. Route Map Visualization */}
+      <PatrolRouteMap patrol={patrol} route={currentRoute} />
+
+      {/* 6. Route & Waypoint Information Table */}
       <div className="p-5 bg-white border border-[#D1B370]/60 rounded-2xl shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-3">
           <div>
