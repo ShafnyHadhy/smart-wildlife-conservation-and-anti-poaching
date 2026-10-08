@@ -12,7 +12,7 @@ import {
 } from '@wildlife/shared';
 
 function mapRowToAnimal(row: any): WildlifeAnimal {
-  return {
+  const animal: WildlifeAnimal = {
     id: row.id,
     name: row.name,
     species: row.species,
@@ -23,6 +23,24 @@ function mapRowToAnimal(row: any): WildlifeAnimal {
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
+
+  if (row.collar_id) {
+    animal.activeCollar = {
+      id: row.collar_id,
+      animalId: row.id,
+      collarCode: row.collar_code,
+      model: row.collar_model || row.model || 'GPS-COLLAR-V2',
+      batteryPercentage: row.battery_percentage !== undefined && row.battery_percentage !== null
+        ? Number(row.battery_percentage)
+        : 100,
+      isActive: row.collar_is_active !== undefined ? Boolean(row.collar_is_active) : Boolean(row.is_active),
+      lastTransmissionAt: row.last_transmission_at ? new Date(row.last_transmission_at).toISOString() : undefined,
+      createdAt: row.collar_created_at ? new Date(row.collar_created_at).toISOString() : animal.createdAt,
+      updatedAt: row.collar_updated_at ? new Date(row.collar_updated_at).toISOString() : animal.updatedAt,
+    };
+  }
+
+  return animal;
 }
 
 function mapRowToCollar(row: any): TrackingCollar {
@@ -108,12 +126,42 @@ function mapRowToResponse(row: any): AlertResponse {
 
 export class WildlifeRepository {
   async findAllAnimals(): Promise<WildlifeAnimal[]> {
-    const res = await query('SELECT * FROM wildlife_animals ORDER BY name ASC');
+    const sql = `
+      SELECT 
+        a.*,
+        c.id AS collar_id,
+        c.collar_code,
+        c.model AS collar_model,
+        c.battery_percentage,
+        c.is_active AS collar_is_active,
+        c.last_transmission_at,
+        c.created_at AS collar_created_at,
+        c.updated_at AS collar_updated_at
+      FROM wildlife_animals a
+      LEFT JOIN tracking_collars c ON c.animal_id = a.id
+      ORDER BY a.name ASC
+    `;
+    const res = await query(sql);
     return res.rows.map(mapRowToAnimal);
   }
 
   async findAnimalById(id: string): Promise<WildlifeAnimal | null> {
-    const res = await query('SELECT * FROM wildlife_animals WHERE id = $1', [id]);
+    const sql = `
+      SELECT 
+        a.*,
+        c.id AS collar_id,
+        c.collar_code,
+        c.model AS collar_model,
+        c.battery_percentage,
+        c.is_active AS collar_is_active,
+        c.last_transmission_at,
+        c.created_at AS collar_created_at,
+        c.updated_at AS collar_updated_at
+      FROM wildlife_animals a
+      LEFT JOIN tracking_collars c ON c.animal_id = a.id
+      WHERE a.id = $1
+    `;
+    const res = await query(sql, [id]);
     return res.rows[0] ? mapRowToAnimal(res.rows[0]) : null;
   }
 
