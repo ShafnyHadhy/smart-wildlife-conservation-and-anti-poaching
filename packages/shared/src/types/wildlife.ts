@@ -26,6 +26,11 @@ export interface WildlifeAnimal {
   updatedAt: string;
   // Enriched relationship
   activeCollar?: TrackingCollar;
+  lastKnownLocation?: {
+    latitude: number;
+    longitude: number;
+    recordedAt: string;
+  };
 }
 
 export interface LocationRecord {
