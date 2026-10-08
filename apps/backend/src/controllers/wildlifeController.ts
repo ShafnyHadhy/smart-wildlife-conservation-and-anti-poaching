@@ -39,6 +39,15 @@ export async function postAnimalLocation(req: Request, res: Response, next: Next
   }
 }
 
+export async function simulatePing(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await wildlifeService.simulatePing(req.params.id, req.body);
+    sendSuccess(res, result, 201);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getRiskZones(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const zones = await wildlifeService.getRiskZones(req.query.parkId as string);
