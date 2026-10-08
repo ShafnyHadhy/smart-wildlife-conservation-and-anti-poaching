@@ -30,14 +30,20 @@ import {
   UnderPatrolledOverviewCard,
   PatrolOverviewStats,
   PatrolFilterBar,
+  PatrolDetailsView,
 } from '../features/uc01-patrol/components';
 
-export function PatrolsPage() {
+export interface PatrolsPageProps {
+  initialPatrolId?: string;
+}
+
+export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
   const [patrols, setPatrols] = useState<Patrol[]>([]);
   const [routes, setRoutes] = useState<PatrolRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<PatrolFilterState>(DEFAULT_PATROL_FILTERS);
+  const [selectedPatrolId, setSelectedPatrolId] = useState<string | null>(initialPatrolId || null);
 
   const loadPatrolsData = useCallback(async () => {
     try {
@@ -313,7 +319,34 @@ export function PatrolsPage() {
         return <StatusBadge status={p.status} size="sm" />;
       },
     },
+    {
+      header: 'Actions',
+      accessor: (p) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedPatrolId(p.id);
+          }}
+          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#2E6B31]
+            bg-[#3E8E41]/10 hover:bg-[#3E8E41]/20 border border-[#3E8E41]/30 rounded-lg transition-colors"
+          aria-label={`View Details for ${p.patrolCode || p.id}`}
+        >
+          View Details
+        </button>
+      ),
+    },
   ];
+
+  if (selectedPatrolId) {
+    return (
+      <PatrolDetailsView
+        patrolId={selectedPatrolId}
+        onBack={() => setSelectedPatrolId(null)}
+        initialPatrol={patrols.find((p) => p.id === selectedPatrolId)}
+        routes={routes}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -406,6 +439,7 @@ export function PatrolsPage() {
                   columns={columns}
                   data={filteredPatrols}
                   keyExtractor={(p) => p.id}
+                  onRowClick={(p) => setSelectedPatrolId(p.id)}
                   emptyMessage="No patrols match the selected filter."
                 />
               )}

@@ -1434,4 +1434,68 @@ describe('UC01 Task 9: Patrol Monitoring Filters — PatrolsPage integration', (
       expect(screen.getByText('All monitored patrols are currently on track.')).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // UC01 Task 10: Patrol Details Integration
+  // -------------------------------------------------------------------------
+  describe('25. Patrol Details View (UC01 Task 10)', () => {
+    it('opens Patrol Details view when clicking View Details action button in table', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      // Click "View Details" button for the first patrol
+      const viewDetailsButtons = screen.getAllByRole('button', { name: /view details/i });
+      expect(viewDetailsButtons.length).toBeGreaterThan(0);
+      fireEvent.click(viewDetailsButtons[0]);
+
+      // Details view is opened
+      await waitFor(() => {
+        expect(screen.getByTestId('patrol-details-view')).toBeInTheDocument();
+        expect(screen.getByTestId('back-to-patrols-btn')).toBeInTheDocument();
+        expect(screen.getByText('UC01 DETAILS')).toBeInTheDocument();
+      });
+    });
+
+    it('returns to patrols list when Back to Patrols is clicked and preserves filter', async () => {
+      render(<PatrolsPage />);
+      await waitFor(() => expect(screen.getByText('PAT-2026-YAL-001')).toBeInTheDocument());
+
+      // Apply Completed filter first
+      fireEvent.click(screen.getByRole('button', { name: 'Completed' }));
+      expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+
+      // Open details for the completed patrol
+      const viewDetailsBtn = screen.getByRole('button', { name: /view details for pat-2026-yal-002/i });
+      fireEvent.click(viewDetailsBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('patrol-details-view')).toBeInTheDocument();
+      });
+
+      // Click Back to Patrols
+      const backBtn = screen.getByTestId('back-to-patrols-btn');
+      fireEvent.click(backBtn);
+
+      // Returned to list
+      await waitFor(() => {
+        expect(screen.queryByTestId('patrol-details-view')).not.toBeInTheDocument();
+        expect(screen.getByRole('table')).toBeInTheDocument();
+      });
+
+      // The Completed filter is still active
+      expect(screen.getByText('PAT-2026-YAL-002')).toBeInTheDocument();
+      expect(screen.queryByText('PAT-2026-WIL-001')).not.toBeInTheDocument();
+    });
+
+    it('opens Patrol Details directly when initialPatrolId is provided', async () => {
+      vi.mocked(webPatrolService.fetchPatrolById).mockResolvedValue(basePatrols[0] as any);
+      render(<PatrolsPage initialPatrolId="patrol-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('patrol-details-view')).toBeInTheDocument();
+        expect(screen.getByTestId('back-to-patrols-btn')).toBeInTheDocument();
+      });
+    });
+  });
 });
+
