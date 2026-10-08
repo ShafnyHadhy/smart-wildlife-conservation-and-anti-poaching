@@ -120,7 +120,28 @@ export class PatrolRepository {
     }
     sql += ' ORDER BY pr.name ASC';
     const res = await query(sql, params);
-    return res.rows.map(mapRowToRoute);
+    const routes = res.rows.map(mapRowToRoute);
+
+    // Fetch planned route checkpoints for all routes efficiently
+    const wpRes = await query(
+      'SELECT * FROM waypoints WHERE patrol_route_id IS NOT NULL AND patrol_id IS NULL ORDER BY sequence_order ASC'
+    );
+    const wpMap = new Map<string, Waypoint[]>();
+    for (const row of wpRes.rows) {
+      const wp = mapRowToWaypoint(row);
+      if (wp.patrolRouteId) {
+        if (!wpMap.has(wp.patrolRouteId)) {
+          wpMap.set(wp.patrolRouteId, []);
+        }
+        wpMap.get(wp.patrolRouteId)!.push(wp);
+      }
+    }
+
+    for (const route of routes) {
+      route.waypoints = wpMap.get(route.id) || [];
+    }
+
+    return routes;
   }
 
   async findRouteById(id: string): Promise<PatrolRoute | null> {
@@ -131,7 +152,18 @@ export class PatrolRepository {
       WHERE pr.id = $1
     `;
     const res = await query(sql, [id]);
-    return res.rows[0] ? mapRowToRoute(res.rows[0]) : null;
+    if (!res.rows[0]) return null;
+    const route = mapRowToRoute(res.rows[0]);
+    route.waypoints = await this.findWaypointsByRouteId(id);
+    return route;
+  }
+
+  async findWaypointsByRouteId(routeId: string): Promise<Waypoint[]> {
+    const res = await query(
+      'SELECT * FROM waypoints WHERE patrol_route_id = $1 AND patrol_id IS NULL ORDER BY sequence_order ASC',
+      [routeId]
+    );
+    return res.rows.map(mapRowToWaypoint);
   }
 
   async findRoutesByPark(parkId: string): Promise<PatrolRoute[]> {

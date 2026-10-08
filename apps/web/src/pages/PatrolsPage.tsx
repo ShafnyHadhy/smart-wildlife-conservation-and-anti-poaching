@@ -9,7 +9,11 @@ import { webPatrolService } from '../features/uc01-patrol/services/patrolService
 import {
   calculatePatrolProgress,
   formatProgress,
-} from '../features/uc01-patrol/utils/patrolProgress';
+  calculatePatrolCoverage,
+  classifyPatrolCoverage,
+  formatCoverage,
+  UNDER_PATROLLED_COVERAGE_THRESHOLD,
+} from '../features/uc01-patrol/utils';
 
 const STATUS_FILTERS: readonly (PatrolStatus | 'ALL')[] = [
   'ALL',
@@ -118,7 +122,8 @@ export function PatrolsPage() {
     {
       header: 'Progress',
       accessor: (p) => {
-        const progress = calculatePatrolProgress(p);
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const progress = calculatePatrolProgress(p, route?.waypoints?.length || undefined);
         return (
           <div className="flex items-center gap-2">
             <div className="w-16 bg-stone-200 rounded-full h-1.5 overflow-hidden">
@@ -136,6 +141,52 @@ export function PatrolsPage() {
             <span className="font-bold text-stone-800 text-xs font-mono">
               {formatProgress(progress)}
             </span>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Coverage',
+      accessor: (p) => {
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const plannedCheckpoints = route?.waypoints;
+        const coverage = calculatePatrolCoverage(p, plannedCheckpoints);
+        const classification = classifyPatrolCoverage(p, plannedCheckpoints);
+        const isGood = classification === 'Good Coverage';
+        const isUnder = classification === 'Under-patrolled';
+
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <div className="w-16 bg-stone-200 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    coverage >= UNDER_PATROLLED_COVERAGE_THRESHOLD
+                      ? 'bg-emerald-600'
+                      : coverage > 0
+                      ? 'bg-amber-500'
+                      : 'bg-stone-300'
+                  }`}
+                  style={{ width: `${coverage}%` }}
+                />
+              </div>
+              <span className="font-bold text-stone-800 text-xs font-mono">
+                {formatCoverage(coverage)}
+              </span>
+            </div>
+            {p.status === PatrolStatus.ACTIVE || p.status === PatrolStatus.COMPLETED ? (
+              <span
+                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded w-fit ${
+                  isGood
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : isUnder
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-stone-100 text-stone-600 border border-stone-200'
+                }`}
+              >
+                {classification}
+              </span>
+            ) : null}
           </div>
         );
       },
