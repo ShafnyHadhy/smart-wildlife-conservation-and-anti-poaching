@@ -181,10 +181,18 @@ function openWebcamCaptureWeb(): Promise<string | null> {
     header.style.borderBottom = '1px solid #334155';
 
     const title = document.createElement('span');
-    title.innerText = '📷 Live Camera Viewfinder';
+    title.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align: middle; margin-right: 8px;">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+        <circle cx="12" cy="13" r="4"></circle>
+      </svg>
+      <span>Live Camera Viewfinder</span>
+    `;
     title.style.color = '#F8FAFC';
     title.style.fontWeight = '700';
     title.style.fontSize = '16px';
+    title.style.display = 'flex';
+    title.style.alignItems = 'center';
     header.appendChild(title);
 
     const closeBtn = document.createElement('button');
@@ -249,7 +257,13 @@ function openWebcamCaptureWeb(): Promise<string | null> {
     cancelBtn.style.fontSize = '14px';
 
     const snapBtn = document.createElement('button');
-    snapBtn.innerText = '📸 Capture Photo';
+    snapBtn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align: middle; margin-right: 8px;">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+        <circle cx="12" cy="13" r="4"></circle>
+      </svg>
+      <span>Capture Photo</span>
+    `;
     snapBtn.style.padding = '12px 24px';
     snapBtn.style.borderRadius = '9999px';
     snapBtn.style.border = 'none';
@@ -258,6 +272,9 @@ function openWebcamCaptureWeb(): Promise<string | null> {
     snapBtn.style.cursor = 'pointer';
     snapBtn.style.fontWeight = '700';
     snapBtn.style.fontSize = '15px';
+    snapBtn.style.display = 'flex';
+    snapBtn.style.alignItems = 'center';
+    snapBtn.style.justifyContent = 'center';
     snapBtn.style.boxShadow = '0 4px 12px rgba(22, 163, 74, 0.4)';
 
     controls.appendChild(cancelBtn);
