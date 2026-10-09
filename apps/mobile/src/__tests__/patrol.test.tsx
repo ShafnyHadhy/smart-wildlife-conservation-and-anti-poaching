@@ -224,10 +224,65 @@ describe('UC01: Mobile Ranger Patrol Feature', () => {
       });
 
       fireEvent.click(screen.getByText('Start Patrol Now'));
+      fireEvent.click(screen.getByText('Confirm Start'));
 
       await waitFor(() => {
         expect(startSpy).toHaveBeenCalledWith('patrol-101');
+        expect(onUpdated).toHaveBeenCalledWith(activePatrol);
+        expect(screen.getByText('Record Waypoint')).toBeDefined();
       });
+    });
+
+    it('keeps a planned patrol unchanged and displays an error when startup fails', async () => {
+      vi.spyOn(patrolMobileService, 'getPatrolRouteById').mockResolvedValue(mockRoute);
+      vi.spyOn(patrolMobileService, 'startPatrol').mockRejectedValue(
+        new Error('Your Ranger session has expired. Sign in online again.')
+      );
+      const onUpdated = vi.fn();
+
+      render(
+        <ActivePatrolScreen
+          patrol={mockPatrol}
+          isOnline
+          onBack={vi.fn()}
+          onPatrolUpdated={onUpdated}
+        />
+      );
+
+      fireEvent.click(await screen.findByText('Start Patrol Now'));
+      fireEvent.click(screen.getByText('Confirm Start'));
+
+      const errorBanner = await screen.findByRole('alert');
+      expect(errorBanner.textContent).toContain('Your Ranger session has expired.');
+      expect(screen.getByText('Start Patrol Now')).toBeDefined();
+      expect(onUpdated).not.toHaveBeenCalled();
+    });
+
+    it('prevents duplicate start requests while one is in flight', async () => {
+      vi.spyOn(patrolMobileService, 'getPatrolRouteById').mockResolvedValue(mockRoute);
+      const activePatrol = { ...mockPatrol, status: PatrolStatus.ACTIVE };
+      let resolveStart!: (patrol: Patrol) => void;
+      const startup = new Promise<Patrol>((resolve) => {
+        resolveStart = resolve;
+      });
+      const startSpy = vi.spyOn(patrolMobileService, 'startPatrol').mockReturnValue(startup);
+
+      render(
+        <ActivePatrolScreen
+          patrol={mockPatrol}
+          isOnline
+          onBack={vi.fn()}
+        />
+      );
+
+      fireEvent.click(await screen.findByText('Start Patrol Now'));
+      const confirmButton = screen.getByText('Confirm Start');
+      fireEvent.click(confirmButton);
+      fireEvent.click(confirmButton);
+
+      expect(startSpy).toHaveBeenCalledTimes(1);
+      resolveStart(activePatrol);
+      await waitFor(() => expect(screen.getByText('Record Waypoint')).toBeDefined());
     });
 
     it('displays Record Waypoint and Complete Patrol actions for an ACTIVE patrol', async () => {

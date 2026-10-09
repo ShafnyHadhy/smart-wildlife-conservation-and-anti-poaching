@@ -48,11 +48,14 @@ export function ActivePatrolScreen({
   const [waypointNote, setWaypointNote] = useState<string>('');
   const [showNoteInput, setShowNoteInput] = useState<boolean>(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [showStartConfirmation, setShowStartConfirmation] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
 
   const timerRef = useRef<any>(null);
   const reloadPatrolRef = useRef<() => Promise<void>>(async () => undefined);
+  const startInFlightRef = useRef(false);
   const completionInFlightRef = useRef(false);
 
   // Sync latest patrol details from backend
@@ -163,29 +166,30 @@ export function ActivePatrolScreen({
 
   // Handler: Start Patrol
   const handleStartPatrol = () => {
-    Alert.alert(
-      'Start Patrol',
-      `Begin active patrol for ${patrol.patrolCode}? Server start time will be stamped.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Start Patrol',
-          onPress: async () => {
-            setActionLoading(true);
-            try {
-              const updated = await patrolMobileService.startPatrol(patrol.id);
-              setPatrol(updated);
-              if (onPatrolUpdated) onPatrolUpdated(updated);
-              Alert.alert('Patrol Started', 'Patrol is now ACTIVE. GPS tracking is live.');
-            } catch (err: any) {
-              Alert.alert('Start Error', err?.message || 'Could not start patrol.');
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    if (actionLoading || startInFlightRef.current) return;
+    setStartError(null);
+    setShowStartConfirmation(true);
+  };
+
+  const confirmStartPatrol = async () => {
+    if (startInFlightRef.current || actionLoading) return;
+    startInFlightRef.current = true;
+    setShowStartConfirmation(false);
+    setStartError(null);
+    setActionLoading(true);
+    try {
+      const updated = await patrolMobileService.startPatrol(patrol.id);
+      if (updated.status !== PatrolStatus.ACTIVE) {
+        throw new Error('The server did not confirm patrol startup. Refresh the patrol and try again.');
+      }
+      setPatrol(updated);
+      if (onPatrolUpdated) onPatrolUpdated(updated);
+    } catch (err: unknown) {
+      setStartError(err instanceof Error ? err.message : 'Could not start patrol.');
+    } finally {
+      startInFlightRef.current = false;
+      setActionLoading(false);
+    }
   };
 
   // Handler: Record Waypoint
@@ -390,6 +394,57 @@ export function ActivePatrolScreen({
                 </>
               )}
             </TouchableOpacity>
+          )}
+
+          {showStartConfirmation && patrol.status === PatrolStatus.PLANNED && (
+            <View
+              style={{
+                padding: 14,
+                marginTop: 12,
+                borderRadius: 12,
+                backgroundColor: '#F0FDF4',
+                borderWidth: 1,
+                borderColor: '#86EFAC',
+              }}
+              accessibilityRole="alert"
+            >
+              <Text style={{ color: '#14532D', fontWeight: '600', marginBottom: 10 }}>
+                Start patrol {patrol.patrolCode}? The server will record the start time.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => setShowStartConfirmation(false)}
+                  disabled={actionLoading}
+                  accessibilityRole="button"
+                >
+                  <Text style={{ color: '#44403C', padding: 8 }}>Not Yet</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => void confirmStartPatrol()}
+                  disabled={actionLoading || !isOnline}
+                  accessibilityRole="button"
+                >
+                  <Text style={{ color: '#166534', fontWeight: '700', padding: 8 }}>
+                    {actionLoading ? 'Starting…' : 'Confirm Start'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {startError && patrol.status === PatrolStatus.PLANNED && (
+            <View
+              style={{
+                padding: 12,
+                marginTop: 12,
+                borderRadius: 10,
+                backgroundColor: '#FEF2F2',
+                borderWidth: 1,
+                borderColor: '#FCA5A5',
+              }}
+              accessibilityRole="alert"
+            >
+              <Text style={{ color: '#991B1B' }}>{startError}</Text>
+            </View>
           )}
 
           {patrol.status === PatrolStatus.ACTIVE && (

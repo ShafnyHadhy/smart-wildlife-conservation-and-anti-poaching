@@ -134,7 +134,23 @@ export class PatrolMobileService {
    * Starts a PLANNED patrol, transitioning status to ACTIVE.
    */
   async startPatrol(id: string): Promise<Patrol> {
-    const updated = await mobileApiClient.startPatrol(id);
+    if (!mobileApiClient.getAuthToken()) {
+      throw new Error('Your Ranger session is not authenticated. Sign in online again before starting this patrol.');
+    }
+
+    let updated: Patrol;
+    try {
+      updated = await mobileApiClient.startPatrol(id);
+    } catch (error) {
+      if (error instanceof MobileApiError && error.status === 401) {
+        mobileApiClient.setAuthToken(null);
+        throw new Error('Your Ranger session has expired. Sign in online again before starting this patrol.');
+      }
+      throw error;
+    }
+    if (updated.id !== id || updated.status !== 'ACTIVE') {
+      throw new Error('The server did not confirm patrol startup. Refresh the patrol and try again.');
+    }
     await this.cacheUpdatedPatrol(updated);
     return updated;
   }

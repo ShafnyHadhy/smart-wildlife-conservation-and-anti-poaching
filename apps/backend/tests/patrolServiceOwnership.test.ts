@@ -54,6 +54,13 @@ describe('PatrolService Ranger ownership', () => {
     expect(patrolRepository.startPatrol).toHaveBeenCalledWith('patrol-1', ranger.id);
   });
 
+  it('rejects starting a patrol that is not in PLANNED status', async () => {
+    vi.mocked(patrolRepository.startPatrol).mockResolvedValue(null);
+    vi.mocked(patrolRepository.findById).mockResolvedValue(patrol(PatrolStatus.ACTIVE));
+
+    await expect(service.startPatrol('patrol-1', ranger)).rejects.toBeInstanceOf(BadRequestError);
+  });
+
   it('allows the assigned Ranger to start a planned patrol using the guarded repository update', async () => {
     const activePatrol = patrol(PatrolStatus.ACTIVE);
     vi.mocked(patrolRepository.startPatrol).mockResolvedValue(activePatrol);
