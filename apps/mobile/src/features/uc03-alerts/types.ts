@@ -5,6 +5,9 @@ import {
   AlertStatus,
   ResponseStatus,
   CreateAlertResponseDTO,
+  RiskZone,
+  PolygonPoint,
+  WildlifeAnimal,
 } from '@wildlife/shared';
 
 export interface AlertFilterOptions {
@@ -14,4 +17,11 @@ export interface AlertFilterOptions {
 }
 
 export { RiskLevel, AlertStatus, ResponseStatus };
-export type { WildlifeRiskAlert, AlertResponse, CreateAlertResponseDTO };
+export type {
+  WildlifeRiskAlert,
+  AlertResponse,
+  CreateAlertResponseDTO,
+  RiskZone,
+  PolygonPoint,
+  WildlifeAnimal,
+};

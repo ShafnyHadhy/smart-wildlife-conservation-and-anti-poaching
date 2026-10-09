@@ -7,9 +7,13 @@ import {
   CreateAlertResponseDTO,
   AlertStatus,
   ResponseStatus,
+  RiskZone,
+  WildlifeAnimal,
 } from '../types';
 
 const STORAGE_KEY_ALERTS_CACHE = 'wildlife_mobile_alerts_cache';
+const STORAGE_KEY_ZONES_CACHE = 'wildlife_mobile_risk_zones_cache';
+const STORAGE_KEY_ANIMALS_CACHE = 'wildlife_mobile_animals_cache';
 
 export const mobileAlertService = {
   /**
@@ -168,6 +172,62 @@ export const mobileAlertService = {
     } catch (err) {
       console.warn('[MobileAlertService] Error reading cached alerts:', err);
     }
+    return [];
+  },
+
+  /**
+   * Fetches risk zones with boundary coordinates for map geofence overlays.
+   */
+  async getRiskZones(isOnline = true): Promise<RiskZone[]> {
+    if (isOnline) {
+      try {
+        const zones = await mobileApiClient.get<RiskZone[]>('/risk-zones');
+        if (Array.isArray(zones)) {
+          try {
+            await persistentStorage.setItem(STORAGE_KEY_ZONES_CACHE, JSON.stringify(zones));
+          } catch (_err) {
+            // Ignore cache write errors
+          }
+          return zones;
+        }
+      } catch (err) {
+        console.warn('[MobileAlertService] Failed to fetch risk zones from server:', err);
+      }
+    }
+
+    try {
+      const raw = await persistentStorage.getItem(STORAGE_KEY_ZONES_CACHE);
+      if (raw) return JSON.parse(raw);
+    } catch (_err) {
+      // Ignore cache read errors
+    }
+    return [];
+  },
+
+  /**
+   * Fetches tracked wildlife fleet with latest telemetry locations.
+   */
+  async getAnimals(isOnline = true): Promise<WildlifeAnimal[]> {
+    if (isOnline) {
+      try {
+        const animals = await mobileApiClient.get<WildlifeAnimal[]>('/animals');
+        if (Array.isArray(animals)) {
+          try {
+            await persistentStorage.setItem(STORAGE_KEY_ANIMALS_CACHE, JSON.stringify(animals));
+          } catch (_err) {
+            // Ignore cache write errors
+          }
+          return animals;
+        }
+      } catch (err) {
+        console.warn('[MobileAlertService] Failed to fetch animals from server:', err);
+      }
+    }
+
+    try {
+      const raw = await persistentStorage.getItem(STORAGE_KEY_ANIMALS_CACHE);
+      if (raw) return JSON.parse(raw);
+    } catch (_err) {}
     return [];
   },
 };
