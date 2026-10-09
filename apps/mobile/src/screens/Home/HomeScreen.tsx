@@ -1,7 +1,23 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
-import { HiPlus, HiChevronRight, HiOutlineBookOpen } from 'react-icons/hi2';
-import { TbReportSearch, TbShieldCheck, TbSettings } from 'react-icons/tb';
+import {
+  HiPlus,
+  HiChevronRight,
+  HiOutlineBookOpen,
+  HiOutlineBellAlert,
+} from 'react-icons/hi2';
+import {
+  TbReportSearch,
+  TbShieldCheck,
+  TbSettings,
+  TbAlertTriangle,
+  TbCompass,
+} from 'react-icons/tb';
+import {
+  FcHighPriority,
+  FcDataBackup,
+} from 'react-icons/fc';
+import { GiElephant } from 'react-icons/gi';
 import { FiUser } from 'react-icons/fi';
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppCard } from '../../components/common/AppCard';
@@ -74,11 +90,14 @@ export function HomeScreen({
         {/* Offline status notification */}
         {!isOnline || pendingCount > 0 ? (
           <View style={styles.commOfflineStrip}>
-            <Text style={styles.commOfflineText}>
-              {pendingCount > 0
-                ? `⚡ ${pendingCount} offline report(s) queued on device.`
-                : 'Offline mode active. Observations stored locally.'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+              <FcDataBackup size={16} />
+              <Text style={styles.commOfflineText}>
+                {pendingCount > 0
+                  ? `${pendingCount} offline report(s) queued on device.`
+                  : 'Offline mode active. Observations stored locally.'}
+              </Text>
+            </View>
             {onSyncNow && isOnline && pendingCount > 0 ? (
               <TouchableOpacity onPress={onSyncNow} style={styles.commSyncBtn}>
                 <Text style={styles.commSyncBtnText}>Sync</Text>
@@ -328,7 +347,7 @@ export function HomeScreen({
               onPress={() => handleAction('Report Conflict', 'REPORTS')}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>🐘</Text>
+              <GiElephant size={28} color="#14532D" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>Report Conflict</Text>
               <Text style={styles.actionSubtitle}>UC04 • Elephant / Crop Loss</Text>
             </TouchableOpacity>
@@ -338,7 +357,7 @@ export function HomeScreen({
               onPress={() => handleAction('View Reports', 'REPORTS')}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>📋</Text>
+              <TbReportSearch size={28} color="#14532D" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>My Reports</Text>
               <Text style={styles.actionSubtitle}>Village Submissions Status</Text>
             </TouchableOpacity>
@@ -348,7 +367,7 @@ export function HomeScreen({
               onPress={() => handleAction('View Alerts', 'ALERTS')}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>⚠️</Text>
+              <HiOutlineBellAlert size={28} color="#EA580C" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>Risk Alerts</Text>
               <Text style={styles.actionSubtitle}>UC03 • Buffer Warnings</Text>
             </TouchableOpacity>
@@ -358,7 +377,7 @@ export function HomeScreen({
               onPress={() => handleAction('Field Safety Guide', 'MENU')}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>🛡️</Text>
+              <TbShieldCheck size={28} color="#16A34A" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>Safety Guide</Text>
               <Text style={styles.actionSubtitle}>Elephant Encounter SOPs</Text>
             </TouchableOpacity>
@@ -370,7 +389,7 @@ export function HomeScreen({
               onPress={() => handleAction('Report Incident', 'REPORTS')}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>🚨</Text>
+              <TbAlertTriangle size={28} color="#DC2626" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>Report Incident</Text>
               <Text style={styles.actionSubtitle}>UC02 • Poaching / Traps</Text>
             </TouchableOpacity>
@@ -380,7 +399,7 @@ export function HomeScreen({
               onPress={() => (onOpenConflictList ? onOpenConflictList() : handleAction('Conflict Triage', 'REPORTS'))}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>🛡️</Text>
+              <TbShieldCheck size={28} color="#16A34A" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>Conflict Triage</Text>
               <Text style={styles.actionSubtitle}>UC04 • Community Queue</Text>
             </TouchableOpacity>
@@ -390,7 +409,7 @@ export function HomeScreen({
               onPress={() => handleAction('View Alerts', 'ALERTS')}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>⚠</Text>
+              <HiOutlineBellAlert size={28} color="#EA580C" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>Risk Alerts</Text>
               <Text style={styles.actionSubtitle}>UC03 • Collar Geofence</Text>
             </TouchableOpacity>
@@ -400,7 +419,7 @@ export function HomeScreen({
               onPress={() => handleAction('Start Patrol')}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionIcon}>🗺</Text>
+              <TbCompass size={28} color="#0284C7" style={{ marginBottom: 6 }} />
               <Text style={styles.actionTitle}>Ranger Patrol</Text>
               <Text style={styles.actionSubtitle}>UC01 • GPS Tracking</Text>
             </TouchableOpacity>
