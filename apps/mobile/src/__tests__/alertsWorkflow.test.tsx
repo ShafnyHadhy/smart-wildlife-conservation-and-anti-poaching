@@ -9,6 +9,12 @@ vi.mock('react-native', () => {
       OS: 'web',
       select: (obj: any) => obj.web || obj.default,
     },
+    useWindowDimensions: () => ({ width: 375, height: 812, scale: 1, fontScale: 1 }),
+    Dimensions: {
+      get: () => ({ width: 375, height: 812, scale: 1, fontScale: 1 }),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    },
     View: ({ children, testID, id, style, className }: any) =>
       React.createElement('div', { 'data-testid': testID, id, style, className }, children),
     Text: ({ children, testID, id, style, className }: any) =>
@@ -163,9 +169,11 @@ const mockResolvedAlert: WildlifeRiskAlert = {
   ],
 };
 
-describe('UC03-E: Mobile Wildlife Risk Alert & Responder Workflow', () => {
+describe('UC03-E & UC03-F: Mobile Wildlife Risk Alert & Responder Workflow', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(mobileAlertService, 'getRiskZones').mockResolvedValue([]);
+    vi.spyOn(mobileAlertService, 'getAnimals').mockResolvedValue([]);
   });
 
   // 1. Live alert loading
@@ -183,7 +191,7 @@ describe('UC03-E: Mobile Wildlife Risk Alert & Responder Workflow', () => {
     expect(screen.getByText(/Kittulkote Buffer Zone/i)).toBeDefined();
     expect(screen.getByText(/6.3550, 81.3350/i)).toBeDefined();
     expect(screen.getByText('HIGH')).toBeDefined();
-    expect(screen.getByText('ACTIVE')).toBeDefined();
+    expect(screen.getAllByText('ACTIVE').length).toBeGreaterThanOrEqual(1);
   });
 
   // 2. Status filtering
@@ -574,5 +582,118 @@ describe('UC03-E: Mobile Wildlife Risk Alert & Responder Workflow', () => {
       direct: true,
       result: { id: 'resp-done', status: ResponseStatus.INITIATED },
     });
+
+    await waitFor(() => {
+      expect(respondSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // 16. Map integration: renders risk-zone boundaries and selected animal marker
+  it('16. renders map with real backend risk-zone boundaries and animal marker', async () => {
+    const mockZone = {
+      id: 'zone-001',
+      name: 'Kittulkote Buffer Zone',
+      zoneType: 'BUFFER_ZONE',
+      riskLevel: RiskLevel.HIGH,
+      boundaryCoordinates: [
+        { latitude: 6.35, longitude: 81.33 },
+        { latitude: 6.36, longitude: 81.33 },
+        { latitude: 6.36, longitude: 81.34 },
+        { latitude: 6.35, longitude: 81.34 },
+      ],
+      description: 'Buffer zone around Kittulkote settlement',
+      createdAt: '2026-10-09T00:00:00Z',
+      updatedAt: '2026-10-09T00:00:00Z',
+    };
+
+    vi.spyOn(mobileApiClient, 'get').mockResolvedValue(mockActiveAlert);
+    vi.spyOn(offlineQueue, 'getPending').mockResolvedValue([]);
+    vi.spyOn(mobileAlertService, 'getRiskZones').mockResolvedValue([mockZone]);
+    vi.spyOn(mobileAlertService, 'getAnimals').mockResolvedValue([]);
+
+    render(
+      <AlertDetailScreen
+        alertId={mockActiveAlert.id}
+        onBack={vi.fn()}
+        isOnline={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/GPS LOCATION & GEOFENCE MAP/i)).toBeDefined();
+      expect(screen.getByText(/GPS • Active/i)).toBeDefined();
+      expect(screen.getAllByText(/Kittulkote Buffer Zone/i).length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // 17. Graceful degradation: handles missing coordinates without crashing
+  it('17. gracefully handles alert with missing location coordinates without crashing', async () => {
+    const alertWithoutLocation: WildlifeRiskAlert = {
+      ...mockActiveAlert,
+      id: 'alert-no-loc',
+      location: undefined,
+    };
+
+    vi.spyOn(mobileApiClient, 'get').mockResolvedValue(alertWithoutLocation);
+    vi.spyOn(offlineQueue, 'getPending').mockResolvedValue([]);
+
+    render(
+      <AlertDetailScreen
+        alertId="alert-no-loc"
+        onBack={vi.fn()}
+        isOnline={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Coordinates Pending Telemetry Lock/i)).toBeDefined();
+      expect(screen.getByText(/SPECIES IDENTIFICATION/i)).toBeDefined();
+    });
+  });
+
+  // 18. WildGuard branding and 2x2 data grid visual hierarchy on alert list
+  it('18. displays WildGuard brand badge and 2x2 data grid on AlertsScreen', async () => {
+    vi.spyOn(mobileApiClient, 'get').mockResolvedValue([mockActiveAlert]);
+
+    render(<AlertsScreen isOnline={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('WildGuard')).toBeDefined();
+      expect(screen.getByText(/1 active threat alert today/i)).toBeDefined();
+      expect(screen.getByText('RISK ZONE')).toBeDefined();
+      expect(screen.getByText('RISK TYPE')).toBeDefined();
+      expect(screen.getByText('RISK LEVEL')).toBeDefined();
+      expect(screen.getByText('STATUS')).toBeDefined();
+      expect(screen.getByTestId(`view-alert-${mockActiveAlert.id}`)).toBeDefined();
+    });
+  });
+
+  // 19. Action preset options with professional icons
+  it('19. displays structured action presets when responder opens action form', async () => {
+    vi.spyOn(mobileApiClient, 'get').mockResolvedValueOnce(mockActiveAlert);
+    vi.spyOn(offlineQueue, 'getPending').mockResolvedValueOnce([]);
+
+    render(
+      <AlertDetailScreen
+        alertId={mockActiveAlert.id}
+        onBack={vi.fn()}
+        isOnline={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Acknowledge Alert ›/i)).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText(/Acknowledge Alert ›/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Select Standard Field Action/i)).toBeDefined();
+      expect(screen.getByText(/Dispatched to Location/i)).toBeDefined();
+      expect(screen.getByText(/Investigating \/ Assessing Threat/i)).toBeDefined();
+      expect(screen.getByText(/Monitoring Movement/i)).toBeDefined();
+      expect(screen.getByTestId('confirm-action-button')).toBeDefined();
+    });
   });
 });
+
