@@ -1,4 +1,5 @@
 import { persistentStorage } from '../storage/persistentStorage';
+import { mobileApiClient } from './apiClient';
 
 export type UserRoleType = 'COMMUNITY_MEMBER' | 'RANGER' | 'PARK_MANAGER';
 
@@ -65,6 +66,7 @@ export class MobileAuthService {
       if (raw) {
         this.currentUser = JSON.parse(raw);
         this.isLoaded = true;
+        mobileApiClient.setAuthToken(this.currentUser?.token || null);
         return this.currentUser;
       }
     } catch (err) {
@@ -72,6 +74,7 @@ export class MobileAuthService {
     }
 
     this.isLoaded = true;
+    mobileApiClient.setAuthToken(null);
     return null;
   }
 
@@ -88,6 +91,7 @@ export class MobileAuthService {
 
     const authenticatedUser = matched.user;
     this.currentUser = authenticatedUser;
+    mobileApiClient.setAuthToken(authenticatedUser.token || null);
 
     try {
       await persistentStorage.setItem(
@@ -103,6 +107,7 @@ export class MobileAuthService {
 
   async logout(): Promise<void> {
     this.currentUser = null;
+    mobileApiClient.setAuthToken(null);
     try {
       await persistentStorage.removeItem(STORAGE_KEY_AUTH_USER);
     } catch (err) {

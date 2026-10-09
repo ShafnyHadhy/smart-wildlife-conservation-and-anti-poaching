@@ -4,7 +4,7 @@ import { sendSuccess, sendList } from '../utils/response';
 
 export async function getPatrols(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patrols = await patrolService.getPatrols(req.query as any);
+    const patrols = await patrolService.getPatrols(req.query as any, req.user);
     sendList(res, patrols);
   } catch (error) {
     next(error);
@@ -13,7 +13,7 @@ export async function getPatrols(req: Request, res: Response, next: NextFunction
 
 export async function getPatrolById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patrol = await patrolService.getPatrolById(req.params.id);
+    const patrol = await patrolService.getPatrolById(req.params.id, req.user);
     sendSuccess(res, patrol);
   } catch (error) {
     next(error);
@@ -49,7 +49,7 @@ export async function createPatrol(req: Request, res: Response, next: NextFuncti
 
 export async function startPatrol(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patrol = await patrolService.startPatrol(req.params.id);
+    const patrol = await patrolService.startPatrol(req.params.id, req.user);
     sendSuccess(res, patrol);
   } catch (error) {
     next(error);
@@ -58,8 +58,17 @@ export async function startPatrol(req: Request, res: Response, next: NextFunctio
 
 export async function completePatrol(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const patrol = await patrolService.completePatrol(req.params.id);
+    const patrol = await patrolService.completePatrol(req.params.id, req.user);
     sendSuccess(res, patrol);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function addWaypoint(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const waypoint = await patrolService.addWaypoint(req.params.id, req.body, req.user);
+    sendSuccess(res, waypoint, 201);
   } catch (error) {
     next(error);
   }

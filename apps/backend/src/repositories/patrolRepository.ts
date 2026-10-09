@@ -1,5 +1,12 @@
 import { query } from '../config/database';
-import { Patrol, PatrolRoute, Waypoint, PatrolStatus } from '@wildlife/shared';
+import {
+  Patrol,
+  PatrolRoute,
+  Waypoint,
+  PatrolStatus,
+  LocationType,
+  calculateHaversineDistanceKm,
+} from '@wildlife/shared';
 
 function mapRowToPatrol(row: any): Patrol {
   return {
@@ -235,6 +242,78 @@ export class PatrolRepository {
     const res = await query(sql, [id]);
     if (res.rows.length === 0) return null;
     return this.findById(id);
+  }
+
+  /**
+   * Records a GPS waypoint/breadcrumb for a patrol and dynamically recalculates coverage score.
+   */
+  async addWaypoint(
+    patrolId: string,
+    data: {
+      latitude: number;
+      longitude: number;
+      sequenceOrder?: number;
+      locationType?: LocationType;
+      recordedAt?: string;
+      notes?: string;
+    }
+  ): Promise<Waypoint> {
+    const patrolRes = await query('SELECT patrol_route_id FROM patrols WHERE id = $1', [patrolId]);
+    if (!patrolRes.rows[0]) {
+      throw new Error(`Patrol not found: ${patrolId}`);
+    }
+    const patrolRouteId = patrolRes.rows[0].patrol_route_id;
+
+    let seq = data.sequenceOrder;
+    if (seq === undefined || seq === null) {
+      const seqRes = await query(
+        'SELECT COALESCE(MAX(sequence_order), 0) + 1 AS next_seq FROM waypoints WHERE patrol_id = $1',
+        [patrolId]
+      );
+      seq = parseInt(seqRes.rows[0].next_seq, 10);
+    }
+
+    const insertSql = `
+      INSERT INTO waypoints (patrol_id, patrol_route_id, latitude, longitude, sequence_order, location_type, recorded_at, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `;
+    const recordedAt = data.recordedAt ? new Date(data.recordedAt) : new Date();
+    const insertRes = await query(insertSql, [
+      patrolId,
+      patrolRouteId,
+      data.latitude,
+      data.longitude,
+      seq,
+      data.locationType || LocationType.GPS,
+      recordedAt,
+      data.notes ?? null,
+    ]);
+
+    const createdWaypoint = mapRowToWaypoint(insertRes.rows[0]);
+
+    // Recalculate coverage score against planned route checkpoints
+    try {
+      const plannedCheckpoints = await this.findWaypointsByRouteId(patrolRouteId);
+      if (plannedCheckpoints.length > 0) {
+        const allPatrolWaypoints = await this.findWaypointsByPatrolId(patrolId);
+        const visitedCount = plannedCheckpoints.filter((cp) =>
+          allPatrolWaypoints.some((rw) =>
+            calculateHaversineDistanceKm(cp.latitude, cp.longitude, rw.latitude, rw.longitude) <= 0.2
+          )
+        ).length;
+
+        const coverageScore = Math.min(100, Math.round((visitedCount / plannedCheckpoints.length) * 100 * 100) / 100);
+        await query('UPDATE patrols SET coverage_score = $1, updated_at = NOW() WHERE id = $2', [
+          coverageScore,
+          patrolId,
+        ]);
+      }
+    } catch (_covErr) {
+      // Coverage calculation should not block waypoint recording
+    }
+
+    return createdWaypoint;
   }
 }
 

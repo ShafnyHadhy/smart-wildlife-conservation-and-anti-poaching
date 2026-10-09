@@ -7,6 +7,7 @@ import { HomeScreen } from '../screens/Home/HomeScreen';
 import { AlertsScreen } from '../screens/Alerts/AlertsScreen';
 import { ReportsScreen } from '../screens/Reports/ReportsScreen';
 import { MenuScreen } from '../screens/Menu/MenuScreen';
+import { PatrolScreen } from '../features/uc01-patrol/screens';
 import { AuthUser } from '../services/authService';
 
 interface AppNavigatorProps {
@@ -42,6 +43,10 @@ export function AppNavigator({
     setActiveTab('REPORTS');
   };
 
+  const handleOpenPatrol = () => {
+    setActiveTab('PATROL');
+  };
+
   const renderActiveScreen = () => {
     switch (activeTab) {
       case 'HOME':
@@ -55,9 +60,19 @@ export function AppNavigator({
             }}
             onOpenConflictForm={handleOpenConflictForm}
             onOpenConflictList={handleOpenConflictList}
+            onOpenPatrol={handleOpenPatrol}
             onToggleOnline={onToggleOnline}
             onSyncNow={onSyncNow}
             user={user}
+          />
+        );
+
+      case 'PATROL':
+        return (
+          <PatrolScreen
+            user={user}
+            isOnline={isOnline}
+            onGoHome={() => setActiveTab('HOME')}
           />
         );
 
@@ -110,6 +125,7 @@ export function AppNavigator({
             }}
             onOpenConflictForm={handleOpenConflictForm}
             onOpenConflictList={handleOpenConflictList}
+            onOpenPatrol={handleOpenPatrol}
             onToggleOnline={onToggleOnline}
             onSyncNow={onSyncNow}
             user={user}

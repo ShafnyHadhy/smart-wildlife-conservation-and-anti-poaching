@@ -16,6 +16,7 @@ interface HomeScreenProps {
   onNavigateTab: (tab: TabKey) => void;
   onOpenConflictForm?: () => void;
   onOpenConflictList?: () => void;
+  onOpenPatrol?: () => void;
   onToggleOnline?: () => void;
   onSyncNow?: () => void;
   user?: AuthUser;
@@ -27,6 +28,7 @@ export function HomeScreen({
   onNavigateTab,
   onOpenConflictForm,
   onOpenConflictList,
+  onOpenPatrol,
   onToggleOnline,
   onSyncNow,
   user,
@@ -397,7 +399,7 @@ export function HomeScreen({
 
             <TouchableOpacity
               style={styles.actionCard}
-              onPress={() => handleAction('Start Patrol')}
+              onPress={() => (onOpenPatrol ? onOpenPatrol() : handleAction('Start Patrol', 'PATROL'))}
               activeOpacity={0.8}
             >
               <Text style={styles.actionIcon}>🗺</Text>

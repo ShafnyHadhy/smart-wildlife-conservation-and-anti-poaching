@@ -77,6 +77,16 @@ export const createPatrolSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
 });
 
+// POST /api/patrols/:id/waypoints
+export const addWaypointSchema = z.object({
+  latitude: coordinateSchema.shape.latitude,
+  longitude: coordinateSchema.shape.longitude,
+  sequenceOrder: z.number().int().min(1).optional(),
+  locationType: z.enum(['GPS', 'MANUAL']).default('GPS'),
+  recordedAt: isoDateString.optional(),
+  notes: z.string().trim().max(500).optional(),
+});
+
 // Request bodies
 
 

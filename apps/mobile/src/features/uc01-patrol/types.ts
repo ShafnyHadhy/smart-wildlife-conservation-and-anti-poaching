@@ -12,4 +12,5 @@ export interface PatrolTrackingState {
   } | null;
 }
 
-export type { Patrol, PatrolRoute, Waypoint, PatrolStatus };
+export { PatrolStatus };
+export type { Patrol, PatrolRoute, Waypoint };
