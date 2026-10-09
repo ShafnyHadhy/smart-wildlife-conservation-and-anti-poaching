@@ -50,4 +50,18 @@ declare module 'react-native' {
   export const Alert: {
     alert(title: string, message?: string, buttons?: any[]): void;
   };
+
+  export interface ScaledSize {
+    width: number;
+    height: number;
+    scale?: number;
+    fontScale?: number;
+  }
+
+  export const Dimensions: {
+    get(dim: 'window' | 'screen'): ScaledSize;
+    addEventListener(type: 'change', handler: (dims: { window: ScaledSize; screen?: ScaledSize }) => void): { remove(): void };
+  };
+
+  export function useWindowDimensions(): ScaledSize;
 }
