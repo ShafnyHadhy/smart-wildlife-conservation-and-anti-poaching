@@ -8,7 +8,6 @@ interface ConflictFilterBarProps {
   onTypeChange: (type: ConflictType | 'ALL') => void;
   searchTerm: string;
   onSearchChange: (search: string) => void;
-  onOpenCreateModal?: () => void;
 }
 
 const STATUS_OPTIONS: { label: string; value: ConflictStatus | 'ALL' }[] = [
@@ -37,11 +36,10 @@ export function ConflictFilterBar({
   onTypeChange,
   searchTerm,
   onSearchChange,
-  onOpenCreateModal: _onOpenCreateModal,
 }: ConflictFilterBarProps) {
   return (
     <div className="bg-white p-4 rounded-2xl border border-[#D1B370]/60 shadow-xs space-y-4">
-      {/* Top Row: Search + Category + Action */}
+      {/* Top Row: Search + Category */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
