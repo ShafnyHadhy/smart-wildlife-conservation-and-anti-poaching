@@ -267,7 +267,6 @@ export function ConflictsPage() {
         onTypeChange={setTypeFilter}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
       />
 
       {/* Data Table */}
