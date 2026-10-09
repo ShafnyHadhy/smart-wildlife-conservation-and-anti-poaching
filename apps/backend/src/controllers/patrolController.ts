@@ -37,3 +37,12 @@ export async function getPatrolRouteById(req: Request, res: Response, next: Next
     next(error);
   }
 }
+
+export async function createPatrol(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patrol = await patrolService.createPatrol(req.body);
+    sendSuccess(res, patrol, 201);
+  } catch (error) {
+    next(error);
+  }
+}

@@ -177,6 +177,33 @@ export class PatrolRepository {
     );
     return res.rows.map(mapRowToWaypoint);
   }
+
+  async create(data: {
+    parkId: string;
+    rangerId: string;
+    patrolRouteId: string;
+    patrolCode: string;
+    startTime: string;
+    notes?: string;
+  }): Promise<Patrol> {
+    const sql = `
+      INSERT INTO patrols (park_id, ranger_id, patrol_route_id, patrol_code, start_time, status, notes)
+      VALUES ($1, $2, $3, $4, $5, 'PLANNED', $6)
+      RETURNING id
+    `;
+    const res = await query(sql, [
+      data.parkId,
+      data.rangerId,
+      data.patrolRouteId,
+      data.patrolCode,
+      data.startTime,
+      data.notes ?? null,
+    ]);
+    const id: string = res.rows[0].id;
+    const patrol = await this.findById(id);
+    if (!patrol) throw new Error(`Failed to retrieve patrol after creation: ${id}`);
+    return patrol;
+  }
 }
 
 export const patrolRepository = new PatrolRepository();

@@ -3,7 +3,7 @@ import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
-import { Compass, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2 } from 'lucide-react';
+import { Compass, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2, Plus } from 'lucide-react';
 import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
 import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
 import {
@@ -31,6 +31,7 @@ import {
   PatrolOverviewStats,
   PatrolFilterBar,
   PatrolDetailsView,
+  CreatePatrolModal,
 } from '../features/uc01-patrol/components';
 
 export interface PatrolsPageProps {
@@ -43,6 +44,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<PatrolFilterState>(DEFAULT_PATROL_FILTERS);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPatrolId, setSelectedPatrolId] = useState<string | null>(initialPatrolId || null);
 
   const loadPatrolsData = useCallback(async () => {
@@ -379,7 +381,31 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
             Tracking active ranger patrols, pre-approved corridors, and waypoint coverage.
           </p>
         </div>
+        {/* Create Patrol button — visible once data is loaded */}
+        {!loading && !error && (
+          <button
+            id="btn-create-patrol"
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white
+              bg-gradient-to-br from-[#3E8E41] to-[#2E6B31] rounded-xl
+              hover:from-[#2E6B31] hover:to-[#1C5520] shadow-md transition-all"
+            aria-label="Create new patrol assignment"
+          >
+            <Plus className="w-4 h-4" />
+            New Patrol
+          </button>
+        )}
       </div>
+
+      {/* Create Patrol Modal */}
+      {showCreateModal && (
+        <CreatePatrolModal
+          routes={routes}
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => { void loadPatrolsData(); }}
+        />
+      )}
 
       {/* Data Table */}
       {loading ? (
