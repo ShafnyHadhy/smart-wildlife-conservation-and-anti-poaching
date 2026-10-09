@@ -14,6 +14,8 @@ import {
   ShieldAlert,
   Copy,
   Check,
+  Camera,
+  Maximize2,
 } from 'lucide-react';
 
 interface ConflictDetailModalProps {
@@ -66,6 +68,7 @@ export function ConflictDetailModal({
   >(report.compensationStatus || 'PENDING_REVIEW');
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const handleCopyCoords = () => {
     navigator.clipboard.writeText(`${report.latitude}, ${report.longitude}`);
@@ -205,6 +208,35 @@ export function ConflictDetailModal({
               {report.description}
             </div>
           </div>
+
+          {/* Photographic Evidence Section */}
+          {report.photoUrls && report.photoUrls.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500 flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-[#3E8E41]" />
+                Photographic Evidence ({report.photoUrls.length})
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3.5 bg-[#FAF7EE] border border-[#D1B370]/50 rounded-2xl">
+                {report.photoUrls.map((url, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setPreviewImage(url)}
+                    className="group relative aspect-4/3 rounded-xl overflow-hidden border border-[#D1B370]/60 bg-stone-100 cursor-pointer shadow-xs hover:shadow-md transition-all"
+                  >
+                    <img
+                      src={url}
+                      alt={`Evidence ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                      <Maximize2 className="w-4 h-4" />
+                      <span>View Full Image</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Damage Assessment & Compensation Form (UC04) */}
           <div className="p-4 bg-[#FAF7EE] border border-[#D1B370]/70 rounded-2xl space-y-3">
@@ -379,6 +411,27 @@ export function ConflictDetailModal({
           </button>
         </div>
       </div>
+
+      {/* Fullscreen Photo Lightbox Modal */}
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-60 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-150"
+        >
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={previewImage}
+            alt="Conflict Evidence Preview"
+            className="max-w-full max-h-[85vh] rounded-2xl object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

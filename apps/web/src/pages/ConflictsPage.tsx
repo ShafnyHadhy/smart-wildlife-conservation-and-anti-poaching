@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
-import { MapPin, ShieldAlert, AlertTriangle, Eye, RefreshCw } from 'lucide-react';
+import { MapPin, ShieldAlert, AlertTriangle, Eye, RefreshCw, Camera } from 'lucide-react';
 import {
   ConflictReport,
   ConflictStatus,
@@ -143,6 +143,12 @@ export function ConflictsPage() {
             <span className="font-bold text-[#1C2A1E] block text-sm">
               {item.conflictType.replace(/_/g, ' ')}
             </span>
+            {item.photoUrls && item.photoUrls.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#15803D] bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                <Camera className="w-3 h-3 text-[#15803D]" />
+                {item.photoUrls.length} photo{item.photoUrls.length > 1 ? 's' : ''}
+              </span>
+            )}
             {item.potentialDuplicateOf && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded">
                 <AlertTriangle className="w-3 h-3 text-amber-600" />
