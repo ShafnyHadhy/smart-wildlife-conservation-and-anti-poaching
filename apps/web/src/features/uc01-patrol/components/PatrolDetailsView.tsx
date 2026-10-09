@@ -6,12 +6,14 @@ import {
   Clock,
   Compass,
   MapPin,
+  Play,
   Route as RouteIcon,
   Shield,
   User,
   WifiOff,
   AlertTriangle,
   ListChecks,
+  Loader2,
 } from 'lucide-react';
 import { Patrol, PatrolRoute, PatrolStatus, Waypoint } from '@wildlife/shared';
 import { StatusBadge } from '../../../components/common/StatusBadge';
@@ -51,6 +53,9 @@ export function PatrolDetailsView({
   const [route, setRoute] = useState<PatrolRoute | null>(null);
   const [loading, setLoading] = useState<boolean>(!initialPatrol || !initialPatrol.waypoints);
   const [error, setError] = useState<string | null>(null);
+  const [startingPatrol, setStartingPatrol] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [startSuccess, setStartSuccess] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -139,6 +144,30 @@ export function PatrolDetailsView({
       isMounted = false;
     };
   }, [patrolId, initialPatrol, routes]);
+
+  async function handleStartPatrol() {
+    if (!patrol) return;
+    if (!patrol.rangerId) {
+      setStartError('Cannot start patrol: no ranger is assigned.');
+      return;
+    }
+    setStartingPatrol(true);
+    setStartError(null);
+    setStartSuccess(false);
+    try {
+      const updated = await webPatrolService.startPatrol(patrol.id);
+      setPatrol(updated);
+      setStartSuccess(true);
+      // Clear the success flash after 3 s
+      setTimeout(() => setStartSuccess(false), 3000);
+    } catch (err: unknown) {
+      setStartError(
+        err instanceof Error ? err.message : 'Failed to start patrol. Please try again.'
+      );
+    } finally {
+      setStartingPatrol(false);
+    }
+  }
 
   // Loading state
   if (loading && !patrol) {
@@ -247,13 +276,59 @@ export function PatrolDetailsView({
           <span>Back to Patrols</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
-            Lifecycle Status:
-          </span>
-          <StatusBadge status={patrol.status || PatrolStatus.PLANNED} size="md" />
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-stone-500">
+              Lifecycle Status:
+            </span>
+            <StatusBadge status={patrol.status || PatrolStatus.PLANNED} size="md" />
+          </div>
+
+          {/* Start Patrol — only visible for PLANNED patrols */}
+          {patrol.status === PatrolStatus.PLANNED && (
+            <button
+              id="btn-start-patrol"
+              type="button"
+              onClick={() => { void handleStartPatrol(); }}
+              disabled={startingPatrol}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white
+                bg-gradient-to-br from-[#3E8E41] to-[#2E6B31] rounded-xl
+                hover:from-[#2E6B31] hover:to-[#1C5520] shadow-md transition-all disabled:opacity-60"
+              aria-label="Start this patrol"
+            >
+              {startingPatrol ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Starting…</>
+              ) : (
+                <><Play className="w-4 h-4" /> Start Patrol</>
+              )}
+            </button>
+          )}
+
+          {/* Success flash */}
+          {startSuccess && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700
+              bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-xl">
+              <CheckCircle2 className="w-4 h-4" /> Patrol started!
+            </span>
+          )}
         </div>
       </div>
+
+      {/* Start Patrol error banner */}
+      {startError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
+          <span>{startError}</span>
+          <button
+            type="button"
+            onClick={() => setStartError(null)}
+            className="ml-auto text-red-400 hover:text-red-600"
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Hero Header Card */}
       <div className="p-6 bg-white border border-[#D1B370]/60 rounded-2xl shadow-xs space-y-4">

@@ -204,6 +204,38 @@ export class PatrolRepository {
     if (!patrol) throw new Error(`Failed to retrieve patrol after creation: ${id}`);
     return patrol;
   }
+
+  /**
+   * Atomically transitions a patrol from PLANNED → ACTIVE and sets start_time to now.
+   * Returns null if no row was updated (patrol not in PLANNED status or does not exist).
+   */
+  async startPatrol(id: string): Promise<Patrol | null> {
+    const sql = `
+      UPDATE patrols
+      SET status = 'ACTIVE', start_time = NOW(), updated_at = NOW()
+      WHERE id = $1 AND status = 'PLANNED'
+      RETURNING id
+    `;
+    const res = await query(sql, [id]);
+    if (res.rows.length === 0) return null;
+    return this.findById(id);
+  }
+
+  /**
+   * Atomically transitions a patrol from ACTIVE → COMPLETED and sets end_time to now.
+   * Returns null if no row was updated (patrol not in ACTIVE status or does not exist).
+   */
+  async completePatrol(id: string): Promise<Patrol | null> {
+    const sql = `
+      UPDATE patrols
+      SET status = 'COMPLETED', end_time = NOW(), updated_at = NOW()
+      WHERE id = $1 AND status = 'ACTIVE'
+      RETURNING id
+    `;
+    const res = await query(sql, [id]);
+    if (res.rows.length === 0) return null;
+    return this.findById(id);
+  }
 }
 
 export const patrolRepository = new PatrolRepository();

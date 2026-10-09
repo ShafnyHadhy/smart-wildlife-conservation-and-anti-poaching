@@ -46,3 +46,21 @@ export async function createPatrol(req: Request, res: Response, next: NextFuncti
     next(error);
   }
 }
+
+export async function startPatrol(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patrol = await patrolService.startPatrol(req.params.id);
+    sendSuccess(res, patrol);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function completePatrol(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patrol = await patrolService.completePatrol(req.params.id);
+    sendSuccess(res, patrol);
+  } catch (error) {
+    next(error);
+  }
+}

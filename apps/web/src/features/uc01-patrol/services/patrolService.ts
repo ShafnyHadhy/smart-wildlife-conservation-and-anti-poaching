@@ -65,6 +65,14 @@ export const webPatrolService = {
   async createPatrol(dto: CreatePatrolDTO): Promise<Patrol> {
     return apiClient.post<Patrol>('/patrols', dto);
   },
+
+  /**
+   * Starts a PLANNED patrol — transitions status to ACTIVE and records start_time.
+   * Corresponds to PATCH /api/patrols/:id/start
+   */
+  async startPatrol(id: string): Promise<Patrol> {
+    return apiClient.patch<Patrol>(`/patrols/${encodeURIComponent(id)}/start`);
+  },
 };
 
 export const fetchPatrols = webPatrolService.fetchPatrols;
@@ -72,4 +80,6 @@ export const fetchPatrolById = webPatrolService.fetchPatrolById;
 export const fetchPatrolRoutes = webPatrolService.fetchPatrolRoutes;
 export const fetchPatrolRouteById = webPatrolService.fetchPatrolRouteById;
 export const createPatrol = webPatrolService.createPatrol;
+export const startPatrol = webPatrolService.startPatrol;
+
 

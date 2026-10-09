@@ -1,6 +1,6 @@
 import { patrolRepository } from '../repositories/patrolRepository';
 import { Patrol, PatrolRoute, PatrolStatus, CreatePatrolDTO } from '@wildlife/shared';
-import { NotFoundError, ConflictError } from '../errors/AppError';
+import { NotFoundError, ConflictError, BadRequestError } from '../errors/AppError';
 
 export class PatrolService {
   async getPatrols(filter?: {
@@ -43,6 +43,34 @@ export class PatrolService {
       );
     }
     return patrolRepository.create(dto);
+  }
+
+  async startPatrol(id: string): Promise<Patrol> {
+    const updated = await patrolRepository.startPatrol(id);
+    if (updated) return updated;
+
+    // Atomic update affected 0 rows — determine the reason
+    const existing = await patrolRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError('Patrol', id);
+    }
+    throw new BadRequestError(
+      `Patrol cannot be started because its current status is '${existing.status}'. Only PLANNED patrols can be started.`
+    );
+  }
+
+  async completePatrol(id: string): Promise<Patrol> {
+    const updated = await patrolRepository.completePatrol(id);
+    if (updated) return updated;
+
+    // Atomic update affected 0 rows — determine the reason
+    const existing = await patrolRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError('Patrol', id);
+    }
+    throw new BadRequestError(
+      `Patrol cannot be completed because its current status is '${existing.status}'. Only ACTIVE patrols can be completed.`
+    );
   }
 }
 
