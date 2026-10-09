@@ -237,7 +237,10 @@ export class MobileApiClient {
     try {
       const directResult = await this.post(`/alerts/${alertId}/respond`, data);
       return { direct: true, result: directResult };
-    } catch (err) {
+    } catch (err: any) {
+      if (err instanceof MobileApiError && err.status >= 400 && err.status < 500) {
+        throw err;
+      }
       console.warn('[MobileAPI] Direct submission failed. Enqueueing offline:', err);
       const queued = await offlineQueue.enqueue({
         clientMutationId,

@@ -10,6 +10,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@wildlife/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
       '@testing-library/react': path.resolve(__dirname, '../../node_modules/@testing-library/react'),
       'react': path.resolve(__dirname, '../../node_modules/react'),
       'react-dom': path.resolve(__dirname, '../../node_modules/react-dom'),

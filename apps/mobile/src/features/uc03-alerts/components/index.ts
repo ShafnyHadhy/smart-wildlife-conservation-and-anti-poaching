@@ -1,1 +1,1 @@
-export {};
+export { WildlifeAlertMap } from './WildlifeAlertMap';
