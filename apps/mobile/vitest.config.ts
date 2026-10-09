@@ -10,9 +10,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@testing-library/react': path.resolve(__dirname, '../web/node_modules/@testing-library/react'),
-      'react': path.resolve(__dirname, '../web/node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../web/node_modules/react-dom'),
+      '@testing-library/react': path.resolve(__dirname, '../../node_modules/@testing-library/react'),
+      'react': path.resolve(__dirname, '../../node_modules/react'),
+      'react-dom': path.resolve(__dirname, '../../node_modules/react-dom'),
     },
   },
 });
