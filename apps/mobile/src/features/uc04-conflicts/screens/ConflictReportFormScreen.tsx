@@ -1210,12 +1210,15 @@ const s = StyleSheet.create({
   photoRemoveText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
 
   primaryBtn: {
+    width: '100%',
+    alignSelf: 'stretch',
     backgroundColor: '#15803D',
     borderRadius: 12,
     paddingVertical: 14,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: 18,
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -1224,8 +1227,11 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   outlineBtn: {
+    width: '100%',
+    alignSelf: 'stretch',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -1234,6 +1240,12 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   outlineBtnText: { color: '#475569', fontSize: 14, fontWeight: '800' },
+  btnContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
 
   navRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   navBack: {
