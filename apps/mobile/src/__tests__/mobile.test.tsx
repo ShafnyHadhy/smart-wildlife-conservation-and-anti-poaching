@@ -42,6 +42,8 @@ vi.mock('react-native', () => {
       React.createElement('div', { 'data-testid': testID, id, style }, children),
     SafeAreaView: ({ children, testID, id, style }: any) =>
       React.createElement('div', { 'data-testid': testID, id, style }, children),
+    ActivityIndicator: ({ testID }: any) =>
+      React.createElement('div', { 'data-testid': testID || 'activity-indicator' }),
     StatusBar: () => null,
     StyleSheet: {
       create: (styles: any) => styles,
@@ -101,7 +103,7 @@ describe('Mobile Application Shell & Navigation', () => {
     // Navigate to ALERTS
     fireEvent.click(screen.getByText('Alerts'));
     expect(screen.getByText(/Wildlife Risk Alerts/i)).toBeDefined();
-    expect(screen.getByText(/Walagamba/i)).toBeDefined();
+    expect(screen.getByText(/GPS Collar Geofence Tracking/i)).toBeDefined();
 
     // Navigate to REPORTS
     fireEvent.click(screen.getByText('Reports'));
