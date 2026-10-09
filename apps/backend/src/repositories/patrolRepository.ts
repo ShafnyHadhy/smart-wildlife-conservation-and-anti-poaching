@@ -177,6 +177,65 @@ export class PatrolRepository {
     );
     return res.rows.map(mapRowToWaypoint);
   }
+
+  async create(data: {
+    parkId: string;
+    rangerId: string;
+    patrolRouteId: string;
+    patrolCode: string;
+    startTime: string;
+    notes?: string;
+  }): Promise<Patrol> {
+    const sql = `
+      INSERT INTO patrols (park_id, ranger_id, patrol_route_id, patrol_code, start_time, status, notes)
+      VALUES ($1, $2, $3, $4, $5, 'PLANNED', $6)
+      RETURNING id
+    `;
+    const res = await query(sql, [
+      data.parkId,
+      data.rangerId,
+      data.patrolRouteId,
+      data.patrolCode,
+      data.startTime,
+      data.notes ?? null,
+    ]);
+    const id: string = res.rows[0].id;
+    const patrol = await this.findById(id);
+    if (!patrol) throw new Error(`Failed to retrieve patrol after creation: ${id}`);
+    return patrol;
+  }
+
+  /**
+   * Atomically transitions a patrol from PLANNED → ACTIVE and sets start_time to now.
+   * Returns null if no row was updated (patrol not in PLANNED status or does not exist).
+   */
+  async startPatrol(id: string): Promise<Patrol | null> {
+    const sql = `
+      UPDATE patrols
+      SET status = 'ACTIVE', start_time = NOW(), updated_at = NOW()
+      WHERE id = $1 AND status = 'PLANNED'
+      RETURNING id
+    `;
+    const res = await query(sql, [id]);
+    if (res.rows.length === 0) return null;
+    return this.findById(id);
+  }
+
+  /**
+   * Atomically transitions a patrol from ACTIVE → COMPLETED and sets end_time to now.
+   * Returns null if no row was updated (patrol not in ACTIVE status or does not exist).
+   */
+  async completePatrol(id: string): Promise<Patrol | null> {
+    const sql = `
+      UPDATE patrols
+      SET status = 'COMPLETED', end_time = NOW(), updated_at = NOW()
+      WHERE id = $1 AND status = 'ACTIVE'
+      RETURNING id
+    `;
+    const res = await query(sql, [id]);
+    if (res.rows.length === 0) return null;
+    return this.findById(id);
+  }
 }
 
 export const patrolRepository = new PatrolRepository();

@@ -67,6 +67,16 @@ export const conflictFilterSchema = z.object({
   search: z.string().optional(),
 });
 
+// POST /api/patrols
+export const createPatrolSchema = z.object({
+  parkId: uuidSchema,
+  rangerId: uuidSchema,
+  patrolRouteId: uuidSchema,
+  patrolCode: z.string().trim().min(2, 'Patrol code must be at least 2 characters').max(50),
+  startTime: isoDateString,
+  notes: z.string().trim().max(1000).optional(),
+});
+
 // Request bodies
 
 
