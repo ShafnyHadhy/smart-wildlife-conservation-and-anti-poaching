@@ -1,5 +1,5 @@
 import { ConflictStatus, ConflictType } from '../types';
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 
 interface ConflictFilterBarProps {
   statusFilter: ConflictStatus | 'ALL';
@@ -8,7 +8,6 @@ interface ConflictFilterBarProps {
   onTypeChange: (type: ConflictType | 'ALL') => void;
   searchTerm: string;
   onSearchChange: (search: string) => void;
-  onOpenCreateModal?: () => void;
 }
 
 const STATUS_OPTIONS: { label: string; value: ConflictStatus | 'ALL' }[] = [
@@ -37,11 +36,10 @@ export function ConflictFilterBar({
   onTypeChange,
   searchTerm,
   onSearchChange,
-  onOpenCreateModal: _onOpenCreateModal,
 }: ConflictFilterBarProps) {
   return (
     <div className="bg-white p-4 rounded-2xl border border-[#D1B370]/60 shadow-xs space-y-4">
-      {/* Top Row: Search + Category + Action */}
+      {/* Top Row: Search + Category */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
@@ -55,7 +53,7 @@ export function ConflictFilterBar({
           />
         </div>
 
-        {/* Category Dropdown & Action Button */}
+        {/* Category Dropdown */}
         <div className="flex items-center gap-2">
           <div className="relative">
             <select
@@ -71,17 +69,6 @@ export function ConflictFilterBar({
             </select>
             <Filter className="w-3.5 h-3.5 text-stone-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
-
-          {onOpenCreateModal && (
-            <button
-              type="button"
-              onClick={onOpenCreateModal}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[#3E8E41] hover:bg-[#14532D] text-white text-xs font-bold rounded-xl transition-colors shadow-xs shrink-0 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Log Conflict</span>
-            </button>
-          )}
         </div>
       </div>
 
