@@ -4,6 +4,7 @@ import {
   getAnimalById,
   getAnimalLocations,
   postAnimalLocation,
+  simulatePing,
   getRiskZones,
   getRiskZoneById,
   getAlerts,
@@ -15,6 +16,7 @@ import {
   idParamSchema,
   alertFilterSchema,
   createAnimalLocationSchema,
+  simulatePingSchema,
   createAlertResponseSchema,
 } from '../validators/schemas';
 
@@ -25,6 +27,12 @@ router.get('/animals', getAnimals);
 router.get('/animals/:id', validateParams(idParamSchema), getAnimalById);
 router.get('/animals/:id/locations', validateParams(idParamSchema), getAnimalLocations);
 router.post('/animal-locations', validateBody(createAnimalLocationSchema), postAnimalLocation);
+router.post(
+  '/animals/:id/simulate-ping',
+  validateParams(idParamSchema),
+  validateBody(simulatePingSchema),
+  simulatePing
+);
 
 // Risk Zones
 router.get('/risk-zones', getRiskZones);
