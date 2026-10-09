@@ -81,6 +81,8 @@ export function AppNavigator({
           <AlertsScreen
             user={user}
             onReportConflict={handleOpenConflictForm}
+            isOnline={isOnline}
+            onSyncNow={onSyncNow}
           />
         );
 
