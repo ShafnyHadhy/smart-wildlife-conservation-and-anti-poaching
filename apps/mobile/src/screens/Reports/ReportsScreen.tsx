@@ -11,6 +11,9 @@ import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
 import { AppCard } from '../../components/common/AppCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { FcHighPriority, FcOpenedFolder, FcDataBackup, FcTodoList } from 'react-icons/fc';
+import { GiWheat } from 'react-icons/gi';
+import { TbShieldCheck } from 'react-icons/tb';
 
 import { CreateIncidentScreen } from '../../features/uc02-incidents/screens';
 
@@ -171,7 +174,9 @@ export function ReportsScreen({
               onPress={() => setActiveView('conflict_list')}
             >
               <View style={styles.simpleRow}>
-                <Text style={styles.simpleRowIcon}>🛡️</Text>
+                <View style={[styles.simpleRowIconBox, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1 }]}>
+                  <TbShieldCheck size={22} color="#D97706" />
+                </View>
 
                 <View style={styles.simpleRowText}>
                   <View style={styles.badgeHeadingRow}>
@@ -218,7 +223,7 @@ export function ReportsScreen({
                   },
                 ]}
               >
-                <Text style={styles.reportIcon}>🚨</Text>
+                <FcHighPriority size={24} />
               </View>
 
               <View style={styles.reportTextColumn}>
@@ -256,13 +261,13 @@ export function ReportsScreen({
               style={[
                 styles.iconBadge,
                 {
-                  backgroundColor: '#FFFBEB',
-                  borderColor: '#D1B370',
+                  backgroundColor: '#ECFDF5',
+                  borderColor: '#86EFAC',
                   borderWidth: 1,
                 },
               ]}
             >
-              <Text style={styles.reportIcon}>🌾</Text>
+              <GiWheat size={24} color="#15803D" />
             </View>
 
             <View style={styles.reportTextColumn}>
@@ -304,7 +309,9 @@ export function ReportsScreen({
             }}
           >
             <View style={styles.simpleRow}>
-              <Text style={styles.simpleRowIcon}>📂</Text>
+              <View style={[styles.simpleRowIconBox, { backgroundColor: '#FEF9C3', borderColor: '#FDE047', borderWidth: 1 }]}>
+                <FcOpenedFolder size={22} />
+              </View>
 
               <View style={styles.simpleRowText}>
                 <Text style={styles.simpleRowTitle}>
@@ -327,7 +334,9 @@ export function ReportsScreen({
             }}
           >
             <View style={styles.simpleRow}>
-              <Text style={styles.simpleRowIcon}>📋</Text>
+              <View style={[styles.simpleRowIconBox, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', borderWidth: 1 }]}>
+                <FcTodoList size={22} />
+              </View>
 
               <View style={styles.simpleRowText}>
                 <Text style={styles.simpleRowTitle}>
@@ -352,7 +361,9 @@ export function ReportsScreen({
           }}
         >
           <View style={styles.simpleRow}>
-            <Text style={styles.simpleRowIcon}>💾</Text>
+            <View style={[styles.simpleRowIconBox, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', borderWidth: 1 }]}>
+              <FcDataBackup size={22} />
+            </View>
 
             <View style={styles.simpleRowText}>
               <Text style={styles.simpleRowTitle}>
@@ -482,6 +493,15 @@ const styles = StyleSheet.create({
   simpleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+
+  simpleRowIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
 
   simpleRowIcon: {

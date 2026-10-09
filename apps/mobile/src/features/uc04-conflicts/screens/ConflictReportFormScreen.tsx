@@ -32,6 +32,14 @@ import {
   TbClock,
   TbCamera,
 } from 'react-icons/tb';
+import {
+  GiElephant,
+  GiWheat,
+  GiTigerHead,
+  GiCow,
+  GiDamagedHouse,
+} from 'react-icons/gi';
+import { FcHighPriority } from 'react-icons/fc';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { ConflictType, CreateConflictReportDTO } from '../types';
 import { mobileConflictService } from '../services/conflictService';
@@ -44,6 +52,24 @@ import {
   referenceCode,
 } from '../utils/conflictMeta';
 import { MapLink } from '../components/ConflictParts';
+
+export function renderConflictCategoryIcon(type: ConflictType, size: number = 26) {
+  switch (type) {
+    case ConflictType.ELEPHANT_HUMAN_CONFLICT:
+      return <GiElephant size={size} color="#334155" />;
+    case ConflictType.CROP_DAMAGE:
+      return <GiWheat size={size} color="#16A34A" />;
+    case ConflictType.ANIMAL_INTRUSION:
+      return <GiTigerHead size={size} color="#D97706" />;
+    case ConflictType.LIVESTOCK_ATTACK:
+      return <GiCow size={size} color="#DC2626" />;
+    case ConflictType.PROPERTY_DAMAGE:
+      return <GiDamagedHouse size={size} color="#7C3AED" />;
+    case ConflictType.OTHER:
+    default:
+      return <FcHighPriority size={size} />;
+  }
+}
 
 interface Props {
   isOnline?: boolean;
@@ -466,7 +492,7 @@ export function ConflictReportFormScreen({
                   activeOpacity={0.85}
                 >
                   <View style={[s.typeIconBox, selected && s.typeIconBoxOn]}>
-                    <Text style={s.typeIcon}>{meta.icon}</Text>
+                    {renderConflictCategoryIcon(t, 26)}
                   </View>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={[s.typeTitle, selected && { color: PALETTE.forest }]}>

@@ -9,6 +9,21 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
+import {
+  HiOutlineMapPin,
+  HiOutlineUser,
+  HiUser,
+  HiStar,
+  HiChevronRight,
+  HiOutlineInformationCircle,
+  HiBolt,
+} from 'react-icons/hi2';
+import {
+  FcDataBackup,
+  FcHighPriority,
+} from 'react-icons/fc';
+import { GiWheat } from 'react-icons/gi';
+import { TbShieldCheck } from 'react-icons/tb';
 import { ScreenContainer } from '../../../components/layout/ScreenContainer';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { AppCard } from '../../../components/common/AppCard';
@@ -214,7 +229,10 @@ export function ConflictListScreen({
             <AppCard variant="highlight" style={styles.detailOfflineBanner}>
               <View style={styles.detailOfflineRow}>
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.detailOfflineTitle}>💾 Offline Queued Report</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <FcDataBackup size={16} />
+                    <Text style={styles.detailOfflineTitle}>Offline Queued Report</Text>
+                  </View>
                   <Text style={styles.detailOfflineDesc}>
                     This conflict report is stored on your device. Once network connection is active, tap Sync to transmit to central command.
                   </Text>
@@ -301,9 +319,12 @@ export function ConflictListScreen({
             </View>
 
             <View style={styles.statusExplainerBox}>
-              <Text style={styles.statusExplainerText}>
-                ℹ️ {getStatusExplanation()}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                <HiOutlineInformationCircle size={16} color="#A76D40" style={{ marginTop: 1, flexShrink: 0 }} />
+                <Text style={[styles.statusExplainerText, { flex: 1 }]}>
+                  {getStatusExplanation()}
+                </Text>
+              </View>
             </View>
           </AppCard>
 
@@ -361,7 +382,10 @@ export function ConflictListScreen({
 
             {(selectedReport.cropTypeLost || selectedReport.estimatedDamageLkr) && (
               <View style={styles.damageBox}>
-                <Text style={styles.damageTitle}>🌾 Crop Damage Assessment</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <GiWheat size={16} color="#D97706" />
+                  <Text style={styles.damageTitle}>Crop Damage Assessment</Text>
+                </View>
                 {selectedReport.cropTypeLost ? (
                   <Text style={styles.damageItem}>
                     Crop Affected: <Text style={styles.boldSpan}>{selectedReport.cropTypeLost}</Text>
@@ -379,7 +403,10 @@ export function ConflictListScreen({
           {/* COMMUNITY MEMBER: Live Ranger Updates View */}
           {isCommunityMember && (
             <AppCard variant="highlight" style={styles.communityActionCard}>
-              <Text style={styles.sectionSubtitle}>🛡️ Ranger Response & Field Action</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                <TbShieldCheck size={18} color="#16A34A" />
+                <Text style={styles.sectionSubtitle}>Ranger Response & Field Action</Text>
+              </View>
               <View style={styles.actionDetailItem}>
                 <Text style={styles.metaLabel}>DEPLOYED MITIGATION ACTION</Text>
                 <Text style={styles.metaValueHighlight}>
@@ -395,9 +422,12 @@ export function ConflictListScreen({
               </View>
 
               <View style={styles.safetyNoticeBox}>
-                <Text style={styles.safetyNoticeText}>
-                  ⚠️ For immediate life-threatening elephant encounters, dial Hotline: 1990 or 047-2220140.
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                  <FcHighPriority size={16} style={{ marginTop: 1, flexShrink: 0 }} />
+                  <Text style={[styles.safetyNoticeText, { flex: 1 }]}>
+                    For immediate life-threatening elephant encounters, dial Hotline: 1990 or 047-2220140.
+                  </Text>
+                </View>
               </View>
             </AppCard>
           )}
@@ -405,7 +435,10 @@ export function ConflictListScreen({
           {/* RANGER: Action Control Desk */}
           {!isCommunityMember && (
             <AppCard variant="elevated" style={styles.rangerActionCard}>
-              <Text style={styles.sectionSubtitle}>⚡ Ranger Triage & Response Controls</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <HiBolt size={18} color="#D97706" />
+                <Text style={styles.sectionSubtitle}>Ranger Triage & Response Controls</Text>
+              </View>
               <Text style={styles.rangerActionHint}>
                 Update status to notify the community member and dispatch field resources.
               </Text>
@@ -556,9 +589,12 @@ export function ConflictListScreen({
           <AppCard variant="highlight" style={styles.queueCard}>
             <View style={styles.queueRow}>
               <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.queueText}>
-                  ⚠️ {pendingCount} offline conflict report(s) queued on device.
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <FcHighPriority size={16} />
+                  <Text style={styles.queueText}>
+                    {pendingCount} offline conflict report(s) queued on device.
+                  </Text>
+                </View>
                 <Text style={{ fontSize: 11, color: '#A76D40', marginTop: 2, fontWeight: '600' }}>
                   Awaiting network transmission to central command.
                 </Text>
@@ -602,15 +638,18 @@ export function ConflictListScreen({
                 ]}
                 onPress={() => setStatusFilter('PENDING_SYNC')}
               >
-                <Text
-                  style={[
-                    styles.filterPillText,
-                    styles.filterPillOfflineText,
-                    statusFilter === 'PENDING_SYNC' && styles.filterPillOfflineTextActive,
-                  ]}
-                >
-                  💾 Pending Sync ({pendingCount})
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <FcDataBackup size={14} />
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      styles.filterPillOfflineText,
+                      statusFilter === 'PENDING_SYNC' && styles.filterPillOfflineTextActive,
+                    ]}
+                  >
+                    Pending Sync ({pendingCount})
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
 
@@ -656,9 +695,16 @@ export function ConflictListScreen({
               style={[styles.myReportsToggle, filterMyReportsOnly && styles.myReportsToggleActive]}
               onPress={() => setFilterMyReportsOnly(!filterMyReportsOnly)}
             >
-              <Text style={[styles.myReportsToggleText, filterMyReportsOnly && styles.myReportsToggleTextActive]}>
-                {filterMyReportsOnly ? '⭐ Showing My Reports Only' : '👤 Filter My Reports'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {filterMyReportsOnly ? (
+                  <HiStar size={14} color="#D97706" />
+                ) : (
+                  <HiUser size={14} color="#A76D40" />
+                )}
+                <Text style={[styles.myReportsToggleText, filterMyReportsOnly && styles.myReportsToggleTextActive]}>
+                  {filterMyReportsOnly ? 'Showing My Reports Only' : 'Filter My Reports'}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
         </View>
@@ -720,9 +766,12 @@ export function ConflictListScreen({
 
                 {item.isPendingSync ? (
                   <View style={styles.offlineItemTag}>
-                    <Text style={styles.offlineItemTagText}>
-                      💾 Stored in local offline queue • Tap to review
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <FcDataBackup size={13} />
+                      <Text style={styles.offlineItemTagText}>
+                        Stored in local offline queue • Tap to review
+                      </Text>
+                    </View>
                   </View>
                 ) : null}
 
@@ -731,28 +780,40 @@ export function ConflictListScreen({
                 </Text>
 
                 <View style={styles.metaRow}>
-                  <Text style={styles.metaText}>
-                    📍 {Number(item.latitude).toFixed(3)}, {Number(item.longitude).toFixed(3)}
-                  </Text>
-                  <Text style={styles.metaText}>
-                    👤 {item.reporterName || 'Villager'} ({item.villageName || 'Buffer'})
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <HiOutlineMapPin size={13} color="#DC2626" />
+                    <Text style={styles.metaText}>
+                      {Number(item.latitude).toFixed(3)}, {Number(item.longitude).toFixed(3)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <HiOutlineUser size={13} color="#6B7280" />
+                    <Text style={styles.metaText}>
+                      {item.reporterName || 'Villager'} ({item.villageName || 'Buffer'})
+                    </Text>
+                  </View>
                 </View>
 
                 {item.mitigationAction ? (
                   <View style={styles.actionSnippetRow}>
-                    <Text style={styles.actionSnippetText}>
-                      🛡️ Action: {item.mitigationAction}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <TbShieldCheck size={14} color="#3E8E41" />
+                      <Text style={styles.actionSnippetText}>
+                        Action: {item.mitigationAction}
+                      </Text>
+                    </View>
                   </View>
                 ) : null}
 
                 <View style={styles.tapPromptRow}>
-                  <Text style={styles.tapPromptText}>
-                    {isRanger
-                      ? '👉 Tap to triage & take ranger action ›'
-                      : '👉 Tap to view live status & ranger response ›'}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={styles.tapPromptText}>
+                      {isRanger
+                        ? 'Tap to triage & take ranger action'
+                        : 'Tap to view live status & ranger response'}
+                    </Text>
+                    <HiChevronRight size={13} color="#A76D40" />
+                  </View>
                 </View>
               </AppCard>
             </TouchableOpacity>
