@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   ScrollView,
+  Image,
 } from 'react-native';
 import {
   HiOutlineMapPin,
@@ -17,6 +18,9 @@ import {
   HiChevronRight,
   HiOutlineInformationCircle,
   HiBolt,
+  HiOutlinePhoto,
+  HiMagnifyingGlassPlus,
+  HiXMark,
 } from 'react-icons/hi2';
 import {
   FcDataBackup,
@@ -71,6 +75,7 @@ export function ConflictListScreen({
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<EnrichedConflictReport | null>(null);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<ConflictStatus | 'ALL' | 'PENDING_SYNC'>(initialFilter);
@@ -111,6 +116,9 @@ export function ConflictListScreen({
         updatedAt: op.createdAt,
         reporterName: op.payload.reporterName || user?.fullName || 'Local Villager',
         locationName: op.payload.locationName,
+        photoUrls: op.payload.photoUrls || [],
+        cropTypeLost: op.payload.cropTypeLost,
+        estimatedDamageLkr: op.payload.estimatedDamageLkr,
         isPendingSync: true,
       }));
 
@@ -261,7 +269,7 @@ export function ConflictListScreen({
             <View style={styles.stepperHeader}>
               <Text style={styles.stepperTitle}>Live Triage Pipeline</Text>
               {selectedReport.isPendingSync ? (
-                <StatusBadge status="PENDING SYNC" size="small" variant="warning" />
+                <StatusBadge status="PENDING SYNC" size="small" />
               ) : (
                 <StatusBadge status={selectedReport.status} size="small" />
               )}
@@ -396,6 +404,33 @@ export function ConflictListScreen({
                     Estimated Loss: <Text style={styles.boldSpan}>LKR {Number(selectedReport.estimatedDamageLkr).toLocaleString()}</Text>
                   </Text>
                 ) : null}
+              </View>
+            )}
+
+            {/* Photographic Evidence Gallery */}
+            {selectedReport.photoUrls && selectedReport.photoUrls.length > 0 && (
+              <View style={styles.photoSection}>
+                <View style={styles.photoHeaderRow}>
+                  <HiOutlinePhoto size={16} color="#3E8E41" />
+                  <Text style={styles.photoSectionTitle}>
+                    ATTACHED PHOTOS ({selectedReport.photoUrls.length})
+                  </Text>
+                </View>
+                <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
+                  {selectedReport.photoUrls.map((uri, idx) => (
+                    <TouchableOpacity
+                      key={`${idx}`}
+                      onPress={() => setPreviewPhotoUrl(uri)}
+                      activeOpacity={0.85}
+                      style={styles.photoThumbWrap}
+                    >
+                      <Image source={{ uri }} style={styles.photoThumb} resizeMode="cover" />
+                      <View style={styles.photoZoomBadge}>
+                        <HiMagnifyingGlassPlus size={12} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             )}
           </AppCard>
@@ -563,6 +598,24 @@ export function ConflictListScreen({
 
           <View style={{ height: 32 }} />
         </ScreenContainer>
+
+        {/* Fullscreen Photo Lightbox Overlay */}
+        {previewPhotoUrl && (
+          <View style={styles.lightboxBackdrop}>
+            <TouchableOpacity
+              style={styles.lightboxCloseBtn}
+              onPress={() => setPreviewPhotoUrl(null)}
+              activeOpacity={0.8}
+            >
+              <HiXMark size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Image
+              source={{ uri: previewPhotoUrl }}
+              style={styles.lightboxImage}
+              resizeMode="contain"
+            />
+          </View>
+        )}
       </View>
     );
   }
@@ -611,7 +664,7 @@ export function ConflictListScreen({
                   </Text>
                 </TouchableOpacity>
               ) : (
-                <StatusBadge status="PENDING SYNC" size="small" variant="warning" />
+                <StatusBadge status="PENDING SYNC" size="small" />
               )}
             </View>
           </AppCard>
@@ -758,7 +811,7 @@ export function ConflictListScreen({
                     </Text>
                   </View>
                   {item.isPendingSync ? (
-                    <StatusBadge status="PENDING SYNC" size="small" variant="warning" />
+                    <StatusBadge status="PENDING SYNC" size="small" />
                   ) : (
                     <StatusBadge status={item.status} size="small" />
                   )}
@@ -793,6 +846,25 @@ export function ConflictListScreen({
                     </Text>
                   </View>
                 </View>
+
+                {item.photoUrls && item.photoUrls.length > 0 ? (
+                  <View style={styles.cardPhotoPreviewRow}>
+                    {item.photoUrls.slice(0, 3).map((url, idx) => (
+                      <Image
+                        key={idx}
+                        source={{ uri: url }}
+                        style={styles.cardPhotoThumb}
+                        resizeMode="cover"
+                      />
+                    ))}
+                    <View style={styles.cardPhotoBadge}>
+                      <HiOutlinePhoto size={12} color="#3E8E41" />
+                      <Text style={styles.cardPhotoBadgeText}>
+                        {item.photoUrls.length} photo{item.photoUrls.length > 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
 
                 {item.mitigationAction ? (
                   <View style={styles.actionSnippetRow}>
@@ -1362,5 +1434,104 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  photoSection: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  photoHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  photoSectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#3E8E41',
+    letterSpacing: 0.5,
+  },
+  photoScroll: {
+    flexDirection: 'row',
+  },
+  photoThumbWrap: {
+    width: 90,
+    height: 90,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginRight: 8,
+    borderWidth: 1.5,
+    borderColor: '#D1B370',
+    backgroundColor: '#FAF7EE',
+    position: 'relative',
+  },
+  photoThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  photoZoomBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    padding: 3,
+  },
+  lightboxBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  lightboxCloseBtn: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 20,
+    padding: 8,
+  },
+  lightboxImage: {
+    width: '100%',
+    height: '80%',
+  },
+  cardPhotoPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  cardPhotoThumb: {
+    width: 38,
+    height: 38,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D1B370',
+    backgroundColor: '#FAF7EE',
+  },
+  cardPhotoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FAF7EE',
+    borderWidth: 1,
+    borderColor: '#D1B370',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  cardPhotoBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#3E8E41',
   },
 });
