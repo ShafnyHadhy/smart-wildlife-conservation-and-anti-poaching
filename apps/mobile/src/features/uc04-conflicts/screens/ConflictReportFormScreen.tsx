@@ -32,6 +32,14 @@ import {
   TbClock,
   TbCamera,
 } from 'react-icons/tb';
+import {
+  GiElephant,
+  GiWheat,
+  GiTigerHead,
+  GiCow,
+  GiDamagedHouse,
+} from 'react-icons/gi';
+import { FcHighPriority } from 'react-icons/fc';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { ConflictType, CreateConflictReportDTO } from '../types';
 import { mobileConflictService } from '../services/conflictService';
@@ -44,6 +52,24 @@ import {
   referenceCode,
 } from '../utils/conflictMeta';
 import { MapLink } from '../components/ConflictParts';
+
+export function renderConflictCategoryIcon(type: ConflictType, size: number = 26) {
+  switch (type) {
+    case ConflictType.ELEPHANT_HUMAN_CONFLICT:
+      return <GiElephant size={size} color="#334155" />;
+    case ConflictType.CROP_DAMAGE:
+      return <GiWheat size={size} color="#16A34A" />;
+    case ConflictType.ANIMAL_INTRUSION:
+      return <GiTigerHead size={size} color="#D97706" />;
+    case ConflictType.LIVESTOCK_ATTACK:
+      return <GiCow size={size} color="#DC2626" />;
+    case ConflictType.PROPERTY_DAMAGE:
+      return <GiDamagedHouse size={size} color="#7C3AED" />;
+    case ConflictType.OTHER:
+    default:
+      return <FcHighPriority size={size} />;
+  }
+}
 
 interface Props {
   isOnline?: boolean;
@@ -466,7 +492,7 @@ export function ConflictReportFormScreen({
                   activeOpacity={0.85}
                 >
                   <View style={[s.typeIconBox, selected && s.typeIconBoxOn]}>
-                    <Text style={s.typeIcon}>{meta.icon}</Text>
+                    {renderConflictCategoryIcon(t, 26)}
                   </View>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={[s.typeTitle, selected && { color: PALETTE.forest }]}>
@@ -1184,12 +1210,15 @@ const s = StyleSheet.create({
   photoRemoveText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
 
   primaryBtn: {
+    width: '100%',
+    alignSelf: 'stretch',
     backgroundColor: '#15803D',
     borderRadius: 12,
     paddingVertical: 14,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: 18,
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -1198,8 +1227,11 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
   outlineBtn: {
+    width: '100%',
+    alignSelf: 'stretch',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -1208,6 +1240,12 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   outlineBtnText: { color: '#475569', fontSize: 14, fontWeight: '800' },
+  btnContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
 
   navRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   navBack: {
