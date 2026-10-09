@@ -38,12 +38,12 @@ export const PRESET_USERS: Record<string, { password: string; user: AuthUser }> 
     user: {
       id: 'aaaa0002-0000-0000-0000-000000000002',
       email: 'ranger@gmail.com',
-      fullName: 'Saman Perera',
+      fullName: 'Kasun Bandara',
       role: 'RANGER',
       phoneNumber: '+94 77 223 3445',
-      badgeNumber: 'RN-101 (R-YAL-002)',
+      badgeNumber: 'RN-101',
       parkName: 'Yala National Park',
-      initials: 'SP',
+      initials: 'KB',
       subtitle: 'Ranger • Yala National Park',
       token: 'jwt-auth-token-ranger-patrol-unit',
     },
@@ -51,6 +51,10 @@ export const PRESET_USERS: Record<string, { password: string; user: AuthUser }> 
 };
 
 const STORAGE_KEY_AUTH_USER = 'wildlife_mobile_auth_user';
+
+function isSignedAccessToken(token: string): boolean {
+  return /^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
+}
 
 export class MobileAuthService {
   private currentUser: AuthUser | null = null;
@@ -64,7 +68,13 @@ export class MobileAuthService {
     try {
       const raw = await persistentStorage.getItem(STORAGE_KEY_AUTH_USER);
       if (raw) {
-        this.currentUser = JSON.parse(raw);
+        const storedUser = JSON.parse(raw) as AuthUser;
+        if (storedUser.token && !isSignedAccessToken(storedUser.token)) {
+          console.warn('[AuthService] Discarding a legacy unsigned session; sign in again to continue patrol actions.');
+          storedUser.token = undefined;
+          await persistentStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(storedUser));
+        }
+        this.currentUser = storedUser;
         this.isLoaded = true;
         mobileApiClient.setAuthToken(this.currentUser?.token || null);
         return this.currentUser;
@@ -82,6 +92,55 @@ export class MobileAuthService {
     const email = (emailInput || '').trim().toLowerCase();
     const password = (passwordInput || '').trim();
 
+    // 1. Attempt live authentication with backend to retrieve authoritative database user
+    try {
+      const authRes = await mobileApiClient.post<{ user: any; token: string }>('/auth/login', {
+        email,
+        password,
+      });
+      if (authRes && authRes.user) {
+        const u = authRes.user;
+        const initials = u.fullName
+          ? u.fullName
+              .split(' ')
+              .map((part: string) => part[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase()
+          : 'RN';
+
+        const liveUser: AuthUser = {
+          id: u.id,
+          email: u.email,
+          fullName: u.fullName,
+          role: u.role,
+          phoneNumber: u.phoneNumber,
+          villageName: u.villageName,
+          badgeNumber: u.badgeNumber,
+          parkName: u.parkName,
+          initials,
+          subtitle:
+            u.role === 'RANGER'
+              ? `Ranger • ${u.parkName || 'National Park'}`
+              : `Community Member • ${u.villageName || 'Local Sector'}`,
+          token: authRes.token || u.token,
+        };
+
+        this.currentUser = liveUser;
+        mobileApiClient.setAuthToken(liveUser.token || null);
+
+        try {
+          await persistentStorage.setItem(STORAGE_KEY_AUTH_USER, JSON.stringify(liveUser));
+        } catch (err) {
+          console.warn('[AuthService] Could not persist user session:', err);
+        }
+
+        return liveUser;
+      }
+    } catch (_liveErr) {
+      // Offline fallback: verify credentials against preset offline accounts
+    }
+
     const matched = PRESET_USERS[email];
     if (!matched || matched.password !== password) {
       throw new Error(
@@ -89,9 +148,9 @@ export class MobileAuthService {
       );
     }
 
-    const authenticatedUser = matched.user;
+    const authenticatedUser = { ...matched.user, token: undefined };
     this.currentUser = authenticatedUser;
-    mobileApiClient.setAuthToken(authenticatedUser.token || null);
+    mobileApiClient.setAuthToken(null);
 
     try {
       await persistentStorage.setItem(
@@ -129,7 +188,7 @@ export class MobileAuthService {
         password: 'Ranger@123',
         label: 'Field Ranger',
         icon: '🛡️',
-        description: 'Saman Perera • Yala National Park (Rapid Field Response)',
+        description: 'Kasun Bandara • Yala National Park (Rapid Field Response)',
       },
     ];
   }

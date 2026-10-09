@@ -1,4 +1,4 @@
-import { mobileApiClient } from '../../../services/apiClient';
+import { MobileApiError, mobileApiClient } from '../../../services/apiClient';
 import { persistentStorage } from '../../../storage/persistentStorage';
 import { Patrol, PatrolRoute, Waypoint } from '../types';
 
@@ -7,6 +7,25 @@ const STORAGE_KEY_PATROL_DETAIL_PREFIX = 'wildlife_mobile_patrol_detail_';
 const STORAGE_KEY_ROUTE_PREFIX = 'wildlife_mobile_route_';
 
 export class PatrolMobileService {
+  private async cacheUpdatedPatrol(patrol: Patrol): Promise<void> {
+    try {
+      await persistentStorage.setItem(
+        `${STORAGE_KEY_PATROL_DETAIL_PREFIX}${patrol.id}`,
+        JSON.stringify(patrol)
+      );
+      const cached = await persistentStorage.getItem(STORAGE_KEY_PATROLS_CACHE);
+      if (!cached) return;
+      const patrols = JSON.parse(cached) as Patrol[];
+      const index = patrols.findIndex((item) => item.id === patrol.id);
+      if (index >= 0) {
+        patrols[index] = patrol;
+        await persistentStorage.setItem(STORAGE_KEY_PATROLS_CACHE, JSON.stringify(patrols));
+      }
+    } catch (error) {
+      console.warn(`[PatrolMobileService] Could not refresh local cache for patrol ${patrol.id}:`, error);
+    }
+  }
+
   /**
    * Fetches assigned patrols for the authenticated ranger, falling back to offline cache.
    */
@@ -14,18 +33,21 @@ export class PatrolMobileService {
     try {
       const patrols = await mobileApiClient.getPatrols(rangerId);
       if (Array.isArray(patrols)) {
+        const filtered = rangerId
+          ? patrols.filter((p) => p.rangerId === rangerId)
+          : patrols;
         try {
-          await persistentStorage.setItem(STORAGE_KEY_PATROLS_CACHE, JSON.stringify(patrols));
+          await persistentStorage.setItem(STORAGE_KEY_PATROLS_CACHE, JSON.stringify(filtered));
         } catch (_err) {
           // ignore cache write error
         }
-        return patrols;
+        return filtered;
       }
     } catch (err) {
       console.warn('[PatrolMobileService] Remote fetch failed, attempting cached patrols:', err);
     }
 
-    // Offline cache fallback
+    // Offline cache fallback strictly scoped to rangerId
     try {
       const cached = await persistentStorage.getItem(STORAGE_KEY_PATROLS_CACHE);
       if (cached) {
@@ -113,14 +135,7 @@ export class PatrolMobileService {
    */
   async startPatrol(id: string): Promise<Patrol> {
     const updated = await mobileApiClient.startPatrol(id);
-    try {
-      await persistentStorage.setItem(
-        `${STORAGE_KEY_PATROL_DETAIL_PREFIX}${id}`,
-        JSON.stringify(updated)
-      );
-    } catch (_err) {
-      // ignore
-    }
+    await this.cacheUpdatedPatrol(updated);
     return updated;
   }
 
@@ -128,15 +143,24 @@ export class PatrolMobileService {
    * Completes an ACTIVE patrol, transitioning status to COMPLETED.
    */
   async completePatrol(id: string): Promise<Patrol> {
-    const updated = await mobileApiClient.completePatrol(id);
-    try {
-      await persistentStorage.setItem(
-        `${STORAGE_KEY_PATROL_DETAIL_PREFIX}${id}`,
-        JSON.stringify(updated)
-      );
-    } catch (_err) {
-      // ignore
+    if (!mobileApiClient.getAuthToken()) {
+      throw new Error('Your Ranger session is not authenticated. Sign in online again before completing this patrol.');
     }
+
+    let updated: Patrol;
+    try {
+      updated = await mobileApiClient.completePatrol(id);
+    } catch (error) {
+      if (error instanceof MobileApiError && error.status === 401) {
+        mobileApiClient.setAuthToken(null);
+        throw new Error('Your Ranger session has expired. Sign in online again before completing this patrol.');
+      }
+      throw error;
+    }
+    if (updated.id !== id || updated.status !== 'COMPLETED') {
+      throw new Error('The server did not confirm patrol completion. Refresh the patrol and try again.');
+    }
+    await this.cacheUpdatedPatrol(updated);
     return updated;
   }
 
@@ -154,7 +178,22 @@ export class PatrolMobileService {
       notes?: string;
     }
   ): Promise<Waypoint> {
-    return mobileApiClient.recordWaypoint(patrolId, data);
+    const waypoint = await mobileApiClient.recordWaypoint(patrolId, data);
+    try {
+      const cached = await persistentStorage.getItem(
+        `${STORAGE_KEY_PATROL_DETAIL_PREFIX}${patrolId}`
+      );
+      if (cached) {
+        const patrol = JSON.parse(cached) as Patrol;
+        await this.cacheUpdatedPatrol({
+          ...patrol,
+          waypoints: [...(patrol.waypoints || []), waypoint],
+        });
+      }
+    } catch (error) {
+      console.warn(`[PatrolMobileService] Could not cache waypoint for patrol ${patrolId}:`, error);
+    }
+    return waypoint;
   }
 }
 

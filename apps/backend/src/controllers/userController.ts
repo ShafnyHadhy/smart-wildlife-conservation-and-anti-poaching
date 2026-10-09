@@ -2,9 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { userService } from '../services/userService';
 import { sendSuccess, sendList } from '../utils/response';
 
-export async function getStaff(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getStaff(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const staff = await userService.getAllStaff();
+    const role = req.query.role as any;
+    const parkId = req.query.parkId as string | undefined;
+    const staff = await userService.getAllStaff({ role, parkId });
     sendList(res, staff);
   } catch (error) {
     next(error);

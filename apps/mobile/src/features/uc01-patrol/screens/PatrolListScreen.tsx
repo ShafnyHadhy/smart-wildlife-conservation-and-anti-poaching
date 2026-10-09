@@ -37,9 +37,14 @@ export function PatrolListScreen({
 
   const loadPatrols = useCallback(async () => {
     setError(null);
+    if (!user?.id) {
+      setPatrols([]);
+      setLoading(false);
+      return;
+    }
     try {
       // Authenticated ranger retrieves their assigned patrols
-      const data = await patrolMobileService.getPatrols(user?.id);
+      const data = await patrolMobileService.getPatrols(user.id);
       setPatrols(data);
     } catch (err: any) {
       setError(err?.message || 'Could not load assigned patrols. Please try again.');
@@ -52,6 +57,14 @@ export function PatrolListScreen({
   useEffect(() => {
     loadPatrols();
   }, [loadPatrols]);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    const refreshInterval = setInterval(() => {
+      void loadPatrols();
+    }, 30_000);
+    return () => clearInterval(refreshInterval);
+  }, [isOnline, loadPatrols]);
 
   const handleRefresh = () => {
     setRefreshing(true);

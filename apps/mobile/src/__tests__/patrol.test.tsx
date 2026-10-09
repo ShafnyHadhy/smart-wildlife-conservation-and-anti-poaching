@@ -23,8 +23,8 @@ vi.mock('react-native', () => {
       OS: 'web',
       select: (obj: any) => obj.web || obj.default,
     },
-    View: ({ children, testID, id, style }: any) =>
-      React.createElement('div', { 'data-testid': testID, id, style }, children),
+    View: ({ children, testID, id, style, accessibilityRole }: any) =>
+      React.createElement('div', { 'data-testid': testID, id, style, role: accessibilityRole }, children),
     Text: ({ children, testID, id, style }: any) =>
       React.createElement('span', { 'data-testid': testID, id, style }, children),
     TextInput: ({ value, onChangeText, placeholder, testID }: any) =>
@@ -64,7 +64,7 @@ describe('UC01: Mobile Ranger Patrol Feature', () => {
     parkId: 'park-1',
     parkName: 'Yala National Park',
     rangerId: 'ranger-1',
-    rangerName: 'Saman Perera',
+    rangerName: 'Kasun Bandara',
     patrolRouteId: 'route-1',
     routeName: 'Yala Coastal Route',
     status: PatrolStatus.PLANNED,
@@ -123,9 +123,9 @@ describe('UC01: Mobile Ranger Patrol Feature', () => {
           user={{
             id: 'ranger-1',
             email: 'ranger@gmail.com',
-            fullName: 'Saman Perera',
+            fullName: 'Kasun Bandara',
             role: 'RANGER',
-            initials: 'SP',
+            initials: 'KB',
             subtitle: 'Ranger • Yala',
           }}
           isOnline={true}
@@ -158,9 +158,9 @@ describe('UC01: Mobile Ranger Patrol Feature', () => {
           user={{
             id: 'ranger-1',
             email: 'ranger@gmail.com',
-            fullName: 'Saman Perera',
+            fullName: 'Kasun Bandara',
             role: 'RANGER',
-            initials: 'SP',
+            initials: 'KB',
             subtitle: 'Ranger • Yala',
           }}
           isOnline={true}
@@ -170,6 +170,30 @@ describe('UC01: Mobile Ranger Patrol Feature', () => {
 
       await waitFor(() => {
         expect(screen.getByText('No Patrols Found')).toBeDefined();
+      });
+    });
+
+    it('queries strictly for the authenticated ranger ID and does not load other rangers patrols', async () => {
+      const getPatrolsSpy = vi.spyOn(patrolMobileService, 'getPatrols').mockResolvedValue([mockPatrol]);
+
+      render(
+        <PatrolListScreen
+          user={{
+            id: 'aaaa0002-0000-0000-0000-000000000002',
+            email: 'kasun.ranger@wildlife.gov.lk',
+            fullName: 'Kasun Bandara',
+            role: 'RANGER',
+            initials: 'KB',
+            subtitle: 'Ranger • Yala National Park',
+          }}
+          isOnline={true}
+          onSelectPatrol={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(getPatrolsSpy).toHaveBeenCalledWith('aaaa0002-0000-0000-0000-000000000002');
+        expect(screen.getByText('PAT-2026-YAL-001')).toBeDefined();
       });
     });
   });
@@ -236,10 +260,100 @@ describe('UC01: Mobile Ranger Patrol Feature', () => {
       });
 
       fireEvent.click(screen.getByText('Complete Patrol'));
+      fireEvent.click(screen.getByText('Confirm Completion'));
 
       await waitFor(() => {
         expect(completeSpy).toHaveBeenCalledWith('patrol-101');
       });
+    });
+
+    it('updates the screen only after the server confirms completion', async () => {
+      const activePatrol: Patrol = { ...mockPatrol, status: PatrolStatus.ACTIVE };
+      const completedPatrol: Patrol = {
+        ...activePatrol,
+        status: PatrolStatus.COMPLETED,
+        endTime: new Date().toISOString(),
+        coverageScore: 85,
+      };
+      vi.spyOn(patrolMobileService, 'getPatrolRouteById').mockResolvedValue(mockRoute);
+      vi.spyOn(patrolMobileService, 'completePatrol').mockResolvedValue(completedPatrol);
+      const onUpdated = vi.fn();
+
+      render(
+        <ActivePatrolScreen
+          patrol={activePatrol}
+          isOnline
+          onBack={vi.fn()}
+          onPatrolUpdated={onUpdated}
+        />
+      );
+
+      fireEvent.click(await screen.findByText('Complete Patrol'));
+      fireEvent.click(screen.getByText('Confirm Completion'));
+
+      await waitFor(() => {
+        expect(onUpdated).toHaveBeenCalledWith(completedPatrol);
+        expect(screen.getByText('Patrol Concluded Successfully')).toBeDefined();
+      });
+      expect(screen.queryByText('Completion Error')).toBeNull();
+    });
+
+    it('shows a useful error and keeps the patrol active when completion fails', async () => {
+      const activePatrol: Patrol = { ...mockPatrol, status: PatrolStatus.ACTIVE };
+      vi.spyOn(patrolMobileService, 'getPatrolRouteById').mockResolvedValue(mockRoute);
+      vi.spyOn(patrolMobileService, 'completePatrol').mockRejectedValue(
+        new Error('Ranger session has expired. Sign in online again.')
+      );
+      const onUpdated = vi.fn();
+
+      render(
+        <ActivePatrolScreen
+          patrol={activePatrol}
+          isOnline
+          onBack={vi.fn()}
+          onPatrolUpdated={onUpdated}
+        />
+      );
+
+      fireEvent.click(await screen.findByText('Complete Patrol'));
+      fireEvent.click(screen.getByText('Confirm Completion'));
+
+      const errorBanner = await screen.findByRole('alert');
+      expect(errorBanner.textContent).toContain('Ranger session has expired. Sign in online again.');
+      expect(screen.getByText('Complete Patrol')).toBeDefined();
+      expect(onUpdated).not.toHaveBeenCalled();
+    });
+
+    it('prevents duplicate completion requests while one is in flight', async () => {
+      const activePatrol: Patrol = { ...mockPatrol, status: PatrolStatus.ACTIVE };
+      const completedPatrol: Patrol = {
+        ...activePatrol,
+        status: PatrolStatus.COMPLETED,
+        endTime: new Date().toISOString(),
+      };
+      vi.spyOn(patrolMobileService, 'getPatrolRouteById').mockResolvedValue(mockRoute);
+      let resolveCompletion!: (patrol: Patrol) => void;
+      const completion = new Promise<Patrol>((resolve) => {
+        resolveCompletion = resolve;
+      });
+      const completeSpy = vi.spyOn(patrolMobileService, 'completePatrol').mockReturnValue(completion);
+
+      render(
+        <ActivePatrolScreen
+          patrol={activePatrol}
+          isOnline
+          onBack={vi.fn()}
+        />
+      );
+
+      fireEvent.click(await screen.findByText('Complete Patrol'));
+      const confirmButton = screen.getByText('Confirm Completion');
+      fireEvent.click(confirmButton);
+      fireEvent.click(confirmButton);
+
+      expect(completeSpy).toHaveBeenCalledTimes(1);
+      resolveCompletion(completedPatrol);
+      await waitFor(() => expect(screen.getByText('Patrol Concluded Successfully')).toBeDefined());
     });
   });
 

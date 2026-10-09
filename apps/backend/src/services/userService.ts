@@ -1,10 +1,10 @@
 import { userRepository } from '../repositories/userRepository';
-import { User, CommunityMember, CreateCommunityMemberDTO } from '@wildlife/shared';
+import { User, UserRole, CommunityMember, CreateCommunityMemberDTO } from '@wildlife/shared';
 import { NotFoundError } from '../errors/AppError';
 
 export class UserService {
-  async getAllStaff(): Promise<User[]> {
-    return userRepository.findAllStaff();
+  async getAllStaff(filter?: { role?: UserRole; parkId?: string }): Promise<User[]> {
+    return userRepository.findAllStaff(filter);
   }
 
   async getUserById(id: string): Promise<User> {

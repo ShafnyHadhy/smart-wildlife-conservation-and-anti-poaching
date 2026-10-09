@@ -47,19 +47,38 @@ export function ActivePatrolScreen({
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [waypointNote, setWaypointNote] = useState<string>('');
   const [showNoteInput, setShowNoteInput] = useState<boolean>(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [showCompleteConfirmation, setShowCompleteConfirmation] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
 
   const timerRef = useRef<any>(null);
+  const reloadPatrolRef = useRef<() => Promise<void>>(async () => undefined);
+  const completionInFlightRef = useRef(false);
 
   // Sync latest patrol details from backend
   const reloadPatrol = useCallback(async () => {
     try {
       const refreshed = await patrolMobileService.getPatrolById(patrol.id);
       setPatrol(refreshed);
+      setRefreshError(null);
       if (onPatrolUpdated) onPatrolUpdated(refreshed);
-    } catch (_err) {
-      // ignore
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not refresh patrol details.';
+      setRefreshError(message);
     }
   }, [patrol.id, onPatrolUpdated]);
+
+  useEffect(() => {
+    reloadPatrolRef.current = reloadPatrol;
+  }, [reloadPatrol]);
+
+  useEffect(() => {
+    if (patrol.status !== PatrolStatus.ACTIVE || !isOnline) return;
+    const refreshInterval = setInterval(() => {
+      void reloadPatrolRef.current();
+    }, 30_000);
+    return () => clearInterval(refreshInterval);
+  }, [patrol.status, isOnline]);
 
   // Load route with its planned checkpoints
   useEffect(() => {
@@ -112,7 +131,7 @@ export function ActivePatrolScreen({
     refreshGps,
     recordCurrentWaypoint,
     calculateDistanceToCheckpoint,
-  } = usePatrolTracking(patrol, route, handleWaypointRecorded);
+  } = usePatrolTracking(patrol, route, handleWaypointRecorded, isOnline);
 
   // Elapsed time tracker for ACTIVE patrols
   useEffect(() => {
@@ -196,32 +215,30 @@ export function ActivePatrolScreen({
 
   // Handler: Complete Patrol
   const handleCompletePatrol = () => {
-    Alert.alert(
-      'Complete Patrol',
-      `Conclude patrol ${patrol.patrolCode}? Final coverage and end time will be committed.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Complete Patrol',
-          onPress: async () => {
-            setActionLoading(true);
-            try {
-              const updated = await patrolMobileService.completePatrol(patrol.id);
-              setPatrol(updated);
-              if (onPatrolUpdated) onPatrolUpdated(updated);
-              Alert.alert(
-                'Patrol Completed',
-                `Patrol successfully concluded. Final coverage score: ${updated.coverageScore}%.`
-              );
-            } catch (err: any) {
-              Alert.alert('Completion Error', err?.message || 'Could not complete patrol.');
-            } finally {
-              setActionLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    if (actionLoading || completionInFlightRef.current) return;
+    setCompletionError(null);
+    setShowCompleteConfirmation(true);
+  };
+
+  const confirmCompletePatrol = async () => {
+    if (completionInFlightRef.current || actionLoading) return;
+    completionInFlightRef.current = true;
+    setShowCompleteConfirmation(false);
+    setCompletionError(null);
+    setActionLoading(true);
+    try {
+      const updated = await patrolMobileService.completePatrol(patrol.id);
+      if (updated.status !== PatrolStatus.COMPLETED) {
+        throw new Error('The server did not confirm patrol completion. Refresh the patrol and try again.');
+      }
+      setPatrol(updated);
+      if (onPatrolUpdated) onPatrolUpdated(updated);
+    } catch (err: unknown) {
+      setCompletionError(err instanceof Error ? err.message : 'Could not complete patrol.');
+    } finally {
+      completionInFlightRef.current = false;
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -241,6 +258,12 @@ export function ActivePatrolScreen({
             <Text style={styles.offlineBannerText}>
               ⚡ Working Off-Grid: Updates will be cached on device until network is restored.
             </Text>
+          </View>
+        )}
+        {refreshError && (
+          <View style={styles.gpsErrorRow}>
+            <HiExclamationTriangle size={16} color="#D97706" />
+            <Text style={styles.gpsErrorText}>{refreshError}</Text>
           </View>
         )}
 
@@ -355,7 +378,7 @@ export function ActivePatrolScreen({
             <TouchableOpacity
               style={styles.startHeroButton}
               onPress={handleStartPatrol}
-              disabled={actionLoading}
+              disabled={actionLoading || !isOnline}
               activeOpacity={0.8}
             >
               {actionLoading ? (
@@ -375,7 +398,7 @@ export function ActivePatrolScreen({
               <TouchableOpacity
                 style={styles.recordWaypointButton}
                 onPress={() => setShowNoteInput(!showNoteInput)}
-                disabled={actionLoading || isRecording}
+                disabled={actionLoading || isRecording || !isOnline}
                 activeOpacity={0.8}
               >
                 {isRecording ? (
@@ -394,7 +417,7 @@ export function ActivePatrolScreen({
               <TouchableOpacity
                 style={styles.completePatrolButton}
                 onPress={handleCompletePatrol}
-                disabled={actionLoading}
+                disabled={actionLoading || !isOnline}
                 activeOpacity={0.8}
               >
                 {actionLoading ? (
@@ -406,6 +429,57 @@ export function ActivePatrolScreen({
                   </>
                 )}
               </TouchableOpacity>
+            </View>
+          )}
+
+          {showCompleteConfirmation && patrol.status === PatrolStatus.ACTIVE && (
+            <View
+              style={{
+                padding: 14,
+                marginTop: 12,
+                borderRadius: 12,
+                backgroundColor: '#FEFCE8',
+                borderWidth: 1,
+                borderColor: '#EAB308',
+              }}
+              accessibilityRole="alert"
+            >
+              <Text style={{ color: '#713F12', fontWeight: '600', marginBottom: 10 }}>
+                Complete patrol {patrol.patrolCode}? The server will record the end time and final coverage.
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => setShowCompleteConfirmation(false)}
+                  disabled={actionLoading}
+                  accessibilityRole="button"
+                >
+                  <Text style={{ color: '#44403C', padding: 8 }}>Keep Patrol Active</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => void confirmCompletePatrol()}
+                  disabled={actionLoading || !isOnline}
+                  accessibilityRole="button"
+                >
+                  <Text style={{ color: '#B91C1C', fontWeight: '700', padding: 8 }}>
+                    {actionLoading ? 'Completing…' : 'Confirm Completion'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {completionError && patrol.status === PatrolStatus.ACTIVE && (
+            <View
+              style={{
+                padding: 12,
+                marginTop: 12,
+                borderRadius: 10,
+                backgroundColor: '#FEF2F2',
+                borderWidth: 1,
+                borderColor: '#FCA5A5',
+              }}
+              accessibilityRole="alert"
+            >
+              <Text style={{ color: '#991B1B' }}>{completionError}</Text>
             </View>
           )}
 
@@ -423,7 +497,7 @@ export function ActivePatrolScreen({
               <TouchableOpacity
                 style={styles.submitWaypointBtn}
                 onPress={handleRecordWaypoint}
-                disabled={actionLoading}
+                disabled={actionLoading || !isOnline}
               >
                 <Text style={styles.submitWaypointText}>Save & Log Waypoint</Text>
               </TouchableOpacity>

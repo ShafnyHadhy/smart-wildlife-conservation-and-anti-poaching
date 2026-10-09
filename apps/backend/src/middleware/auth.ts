@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { UnauthorizedError, ForbiddenError } from '../errors/AppError';
 import { query } from '../config/database';
+import { verifyAccessToken } from '../services/authTokenService';
 
 export interface AuthenticatedUser {
   id: string;
@@ -11,25 +12,6 @@ export interface AuthenticatedUser {
   badgeNumber?: string;
 }
 
-// Map preset mobile JWT tokens to known identities
-const PRESET_TOKEN_MAP: Record<string, AuthenticatedUser> = {
-  'jwt-auth-token-ranger-patrol-unit': {
-    id: 'aaaa0002-0000-0000-0000-000000000002',
-    email: 'ranger@gmail.com',
-    fullName: 'Saman Perera',
-    role: 'RANGER',
-    parkId: '11111111-1111-1111-1111-111111111111',
-    badgeNumber: 'RN-101 (R-YAL-002)',
-  },
-  'jwt-auth-token-cmember-village-rep': {
-    id: 'bbbb0001-0000-0000-0000-000000000001',
-    email: 'cmember@gmail.com',
-    fullName: 'Gamini Senanayake',
-    role: 'COMMUNITY_MEMBER',
-    parkId: '11111111-1111-1111-1111-111111111111',
-  },
-};
-
 declare global {
   namespace Express {
     interface Request {
@@ -39,8 +21,7 @@ declare global {
 }
 
 /**
- * Resolves authentication token from Authorization header if present.
- * Does not block if unauthenticated, allowing manager/web dashboard access without headers.
+ * Resolves an optional signed access token. Unauthenticated manager reads remain supported.
  */
 export async function authenticateOptional(
   req: Request,
@@ -49,63 +30,68 @@ export async function authenticateOptional(
 ): Promise<void> {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return next();
+    next();
+    return;
   }
 
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!token) {
-    return next();
+  const match = /^Bearer\s+(\S+)$/i.exec(authHeader.trim());
+  if (!match) {
+    next(new UnauthorizedError('A valid Bearer token is required.'));
+    return;
   }
 
-  // 1. Check preset tokens
-  if (PRESET_TOKEN_MAP[token]) {
-    req.user = PRESET_TOKEN_MAP[token];
-    return next();
+  const claims = verifyAccessToken(match[1]);
+  if (!claims) {
+    next(new UnauthorizedError('Session expired or invalid token.'));
+    return;
   }
 
-  // 2. Check if token contains user UUID (e.g. Bearer aaaa0002-0000-0000-0000-000000000002)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(token)) {
-    try {
-      const res = await query('SELECT id, email, full_name, role, park_id, badge_number FROM users WHERE id = $1', [token]);
-      if (res.rows[0]) {
-        const u = res.rows[0];
-        req.user = {
-          id: u.id,
-          email: u.email,
-          fullName: u.full_name,
-          role: u.role,
-          parkId: u.park_id,
-          badgeNumber: u.badge_number,
-        };
+  try {
+    if (claims.role === 'RANGER') {
+      const result = await query(
+        `SELECT id, email, full_name, role, park_id, badge_number
+         FROM users
+         WHERE id = $1 AND role = 'RANGER' AND is_active = TRUE`,
+        [claims.sub]
+      );
+      const user = result.rows[0];
+      if (!user) {
+        next(new UnauthorizedError('Ranger account is inactive or no longer exists.'));
+        return;
       }
-    } catch (_err) {
-      // Ignore DB lookup error and continue
+      req.user = {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        parkId: user.park_id,
+        badgeNumber: user.badge_number,
+      };
+    } else {
+      req.user = claims.user;
     }
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  next();
 }
 
-/**
- * Strict authentication: throws 401 if not authenticated.
- */
 export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) {
-    throw new UnauthorizedError('Authentication token required.');
+    next(new UnauthorizedError('Authentication token required.'));
+    return;
   }
   next();
 }
 
-/**
- * Ensures authenticated user has RANGER role.
- */
 export function requireRanger(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) {
-    throw new UnauthorizedError('Authentication token required.');
+    next(new UnauthorizedError('Authentication token required.'));
+    return;
   }
   if (req.user.role !== 'RANGER') {
-    throw new ForbiddenError('This operation is restricted to Rangers.');
+    next(new ForbiddenError('This operation is restricted to Rangers.'));
+    return;
   }
   next();
 }

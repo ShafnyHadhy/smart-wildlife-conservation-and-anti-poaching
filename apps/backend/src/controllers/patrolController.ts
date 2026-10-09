@@ -65,6 +65,28 @@ export async function completePatrol(req: Request, res: Response, next: NextFunc
   }
 }
 
+export async function cancelPatrol(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const patrol = await patrolService.cancelPatrol(req.params.id);
+    sendSuccess(res, patrol);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function reassignPlannedPatrol(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const patrol = await patrolService.reassignPlannedPatrol(req.params.id, req.body);
+    sendSuccess(res, patrol);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function addWaypoint(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const waypoint = await patrolService.addWaypoint(req.params.id, req.body, req.user);

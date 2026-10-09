@@ -26,7 +26,8 @@ export interface UsePatrolTrackingReturn {
 export function usePatrolTracking(
   patrol: Patrol | null,
   route: PatrolRoute | null,
-  onWaypointRecorded?: (wp: Waypoint) => void
+  onWaypointRecorded?: (wp: Waypoint) => void,
+  isOnline = true
 ): UsePatrolTrackingReturn {
   const [currentLocation, setCurrentLocation] = useState<LocationReading | null>(null);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('OFF');
@@ -35,6 +36,7 @@ export function usePatrolTracking(
 
   const watchSubRef = useRef<any>(null);
   const intervalRef = useRef<any>(null);
+  const waypointRecorderRef = useRef<(() => Promise<Waypoint | null>) | null>(null);
 
   // Compute visited checkpoints from both past recorded waypoints and current location
   const computeVisitedCheckpointIds = useCallback((): string[] => {
@@ -221,6 +223,22 @@ export function usePatrolTracking(
     },
     [patrol, currentLocation, fetchSingleFix, onWaypointRecorded]
   );
+
+  useEffect(() => {
+    waypointRecorderRef.current = () => recordCurrentWaypoint();
+  }, [recordCurrentWaypoint]);
+
+  useEffect(() => {
+    if (patrol?.status !== 'ACTIVE' || !isOnline) return;
+    const recordingInterval = setInterval(() => {
+      waypointRecorderRef.current?.().catch((error: unknown) => {
+        setGpsError(
+          error instanceof Error ? error.message : 'Automatic GPS waypoint recording failed.'
+        );
+      });
+    }, 60_000);
+    return () => clearInterval(recordingInterval);
+  }, [patrol?.status, isOnline]);
 
   const calculateDistanceToCheckpoint = useCallback(
     (checkpoint: Waypoint): number | null => {

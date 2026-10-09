@@ -46,6 +46,7 @@ export class PatrolService {
   }
 
   async createPatrol(dto: CreatePatrolDTO): Promise<Patrol> {
+    await this.validateAssignment(dto.rangerId, dto.parkId, dto.patrolRouteId);
     // Ranger availability check: reject if ranger already has an ACTIVE patrol
     const activeForRanger = await patrolRepository.findAll({
       status: PatrolStatus.ACTIVE,
@@ -60,24 +61,19 @@ export class PatrolService {
   }
 
   async startPatrol(id: string, user?: AuthenticatedUser): Promise<Patrol> {
-    // If authenticated as a ranger, verify ownership before state transition
-    if (user?.role === 'RANGER') {
-      const existing = await patrolRepository.findById(id);
-      if (!existing) {
-        throw new NotFoundError('Patrol', id);
-      }
-      if (existing.rangerId !== user.id) {
-        throw new ForbiddenError('Rangers can only start their own assigned patrols.');
-      }
+    if (!user || user.role !== 'RANGER') {
+      throw new ForbiddenError('Only the assigned Ranger can start a patrol.');
     }
 
-    const updated = await patrolRepository.startPatrol(id);
+    const updated = await patrolRepository.startPatrol(id, user.id);
     if (updated) return updated;
 
-    // Atomic update affected 0 rows — determine the reason
     const existing = await patrolRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Patrol', id);
+    }
+    if (existing.rangerId !== user.id) {
+      throw new ForbiddenError('Rangers can only start their own assigned patrols.');
     }
     throw new BadRequestError(
       `Patrol cannot be started because its current status is '${existing.status}'. Only PLANNED patrols can be started.`
@@ -85,24 +81,19 @@ export class PatrolService {
   }
 
   async completePatrol(id: string, user?: AuthenticatedUser): Promise<Patrol> {
-    // If authenticated as a ranger, verify ownership before state transition
-    if (user?.role === 'RANGER') {
-      const existing = await patrolRepository.findById(id);
-      if (!existing) {
-        throw new NotFoundError('Patrol', id);
-      }
-      if (existing.rangerId !== user.id) {
-        throw new ForbiddenError('Rangers can only complete their own assigned patrols.');
-      }
+    if (!user || user.role !== 'RANGER') {
+      throw new ForbiddenError('Only the assigned Ranger can complete a patrol.');
     }
 
-    const updated = await patrolRepository.completePatrol(id);
+    const updated = await patrolRepository.completePatrol(id, user.id);
     if (updated) return updated;
 
-    // Atomic update affected 0 rows — determine the reason
     const existing = await patrolRepository.findById(id);
     if (!existing) {
       throw new NotFoundError('Patrol', id);
+    }
+    if (existing.rangerId !== user.id) {
+      throw new ForbiddenError('Rangers can only complete their own assigned patrols.');
     }
     throw new BadRequestError(
       `Patrol cannot be completed because its current status is '${existing.status}'. Only ACTIVE patrols can be completed.`
@@ -121,11 +112,14 @@ export class PatrolService {
     },
     user?: AuthenticatedUser
   ): Promise<Waypoint> {
+    if (!user || user.role !== 'RANGER') {
+      throw new ForbiddenError('Only the assigned Ranger can record patrol waypoints.');
+    }
     const patrol = await patrolRepository.findById(id);
     if (!patrol) {
       throw new NotFoundError('Patrol', id);
     }
-    if (user?.role === 'RANGER' && patrol.rangerId !== user.id) {
+    if (patrol.rangerId !== user.id) {
       throw new ForbiddenError('Rangers can only record waypoints for their own assigned patrols.');
     }
     if (patrol.status !== PatrolStatus.ACTIVE) {
@@ -136,7 +130,62 @@ export class PatrolService {
 
     return patrolRepository.addWaypoint(id, data);
   }
+
+  async cancelPatrol(id: string): Promise<Patrol> {
+    const cancelled = await patrolRepository.cancelPlannedPatrol(id);
+    if (cancelled) return cancelled;
+
+    const existing = await patrolRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError('Patrol', id);
+    }
+    throw new BadRequestError(
+      `Patrol cannot be cancelled because its current status is '${existing.status}'. Only PLANNED patrols can be cancelled.`
+    );
+  }
+
+  async reassignPlannedPatrol(
+    id: string,
+    dto: { rangerId: string; parkId: string; patrolRouteId: string; startTime: string; patrolCode: string; notes?: string }
+  ): Promise<Patrol> {
+    await this.validateAssignment(dto.rangerId, dto.parkId, dto.patrolRouteId);
+    const activeForRanger = await patrolRepository.findAll({
+      status: PatrolStatus.ACTIVE,
+      rangerId: dto.rangerId,
+    });
+    if (activeForRanger.some((patrol) => patrol.id !== id)) {
+      throw new ConflictError(
+        'This ranger is already assigned to an active patrol and cannot be assigned to another.'
+      );
+    }
+
+    const updated = await patrolRepository.updatePlannedAssignment(id, dto);
+    if (updated) return updated;
+
+    const existing = await patrolRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError('Patrol', id);
+    }
+    throw new BadRequestError(
+      `Patrol assignment cannot be changed while its current status is '${existing.status}'. Only PLANNED patrols can be changed.`
+    );
+  }
+
+  private async validateAssignment(rangerId: string, parkId: string, routeId: string): Promise<void> {
+    const [rangerEligible, route] = await Promise.all([
+      patrolRepository.isRangerEligibleForPark(rangerId, parkId),
+      patrolRepository.findRouteById(routeId),
+    ]);
+    if (!rangerEligible) {
+      throw new BadRequestError('The selected Ranger is inactive or is not assigned to the selected park.');
+    }
+    if (!route || !route.isActive) {
+      throw new NotFoundError('Active PatrolRoute', routeId);
+    }
+    if (route.parkId !== parkId) {
+      throw new BadRequestError('The selected patrol route does not belong to the selected park.');
+    }
+  }
 }
 
 export const patrolService = new PatrolService();
-
