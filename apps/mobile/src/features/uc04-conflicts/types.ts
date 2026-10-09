@@ -1,4 +1,10 @@
-import { ConflictReport, ConflictType, ConflictStatus, CreateConflictReportDTO } from '@wildlife/shared';
+import {
+  ConflictReport,
+  ConflictType,
+  ConflictStatus,
+  ConflictStatusEntry,
+  CreateConflictReportDTO,
+} from '@wildlife/shared';
 
 export interface ConflictDraft {
   localId?: string;
@@ -11,4 +17,5 @@ export interface ConflictDraft {
   reportedAt: string;
 }
 
-export type { ConflictReport, ConflictType, ConflictStatus, CreateConflictReportDTO };
+export { ConflictType, ConflictStatus };
+export type { ConflictReport, ConflictStatusEntry, CreateConflictReportDTO };

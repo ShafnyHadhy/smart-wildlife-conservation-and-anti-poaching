@@ -1,43 +1,167 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
-import { apiClient } from '../services/apiClient';
-import { Info, MapPin } from 'lucide-react';
-import { ConflictReport } from '@wildlife/shared';
+import { MapPin, ShieldAlert, AlertTriangle, Eye, RefreshCw, Camera } from 'lucide-react';
+import {
+  ConflictReport,
+  ConflictStatus,
+  ConflictType,
+  ConflictStats,
+  CreateConflictReportDTO,
+} from '../features/uc04-conflicts/types';
+import { webConflictService } from '../features/uc04-conflicts/services/conflictService';
+import { ConflictStatCards } from '../features/uc04-conflicts/components/ConflictStatCards';
+import { ConflictFilterBar } from '../features/uc04-conflicts/components/ConflictFilterBar';
+import { ConflictDetailModal } from '../features/uc04-conflicts/components/ConflictDetailModal';
+import { NewConflictModal } from '../features/uc04-conflicts/components/NewConflictModal';
 
 export function ConflictsPage() {
   const [reports, setReports] = useState<ConflictReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('ALL');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<ConflictStatus | 'ALL'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<ConflictType | 'ALL'>('ALL');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
-  useEffect(() => {
-    async function loadConflicts() {
-      try {
-        setLoading(true);
-        const data = await apiClient.get<ConflictReport[]>('/conflict-reports').catch(() => []);
-        setReports(data);
-      } finally {
-        setLoading(false);
-      }
+  const [selectedReport, setSelectedReport] = useState<ConflictReport | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const loadData = useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      else setIsRefreshing(true);
+
+      const fetchedReports = await webConflictService.fetchConflicts().catch(() => []);
+      setReports(fetchedReports);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
     }
-    loadConflicts();
   }, []);
 
-  const filteredReports = reports.filter((item) => {
-    if (filter === 'ALL') return true;
-    return item.status === filter;
-  });
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Compute stats instantly from reports
+  const stats = useMemo<ConflictStats>(() => {
+    const s: ConflictStats = {
+      total: reports.length,
+      submitted: 0,
+      underReview: 0,
+      responding: 0,
+      resolved: 0,
+      closed: 0,
+      cropDamageCount: 0,
+      elephantHumanCount: 0,
+      propertyDamageCount: 0,
+      livestockAttackCount: 0,
+    };
+
+    for (const r of reports) {
+      if (r.status === ConflictStatus.SUBMITTED) s.submitted++;
+      else if (r.status === ConflictStatus.UNDER_REVIEW) s.underReview++;
+      else if (r.status === ConflictStatus.RESPONDING) s.responding++;
+      else if (r.status === ConflictStatus.RESOLVED) s.resolved++;
+      else if (r.status === ConflictStatus.CLOSED) s.closed++;
+
+      if (r.conflictType === ConflictType.CROP_DAMAGE) s.cropDamageCount++;
+      else if (r.conflictType === ConflictType.ELEPHANT_HUMAN_CONFLICT || r.conflictType === ConflictType.ANIMAL_INTRUSION) s.elephantHumanCount++;
+      else if (r.conflictType === ConflictType.PROPERTY_DAMAGE) s.propertyDamageCount++;
+      else if (r.conflictType === ConflictType.LIVESTOCK_ATTACK) s.livestockAttackCount++;
+    }
+
+    return s;
+  }, [reports]);
+
+  // Instant 0ms client-side filtering for smooth UX
+  const filteredReports = useMemo(() => {
+    return reports.filter((item) => {
+      if (statusFilter !== 'ALL' && item.status !== statusFilter) {
+        return false;
+      }
+      if (typeFilter !== 'ALL' && item.conflictType !== typeFilter) {
+        return false;
+      }
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase().trim();
+        const matchDesc = item.description?.toLowerCase().includes(q);
+        const matchVillage = item.villageName?.toLowerCase().includes(q);
+        const matchReporter = item.reporterName?.toLowerCase().includes(q);
+        const matchType = item.conflictType?.toLowerCase().includes(q);
+        if (!matchDesc && !matchVillage && !matchReporter && !matchType) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [reports, statusFilter, typeFilter, searchTerm]);
+
+  const handleUpdateStatus = async (
+    id: string,
+    status: ConflictStatus,
+    triageNotes?: string,
+    mitigationAction?: string,
+    damageData?: {
+      estimatedDamageLkr?: number;
+      cropTypeLost?: string;
+      compensationStatus?: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
+    }
+  ) => {
+    await webConflictService.updateConflictStatus(id, {
+      status,
+      triageNotes,
+      mitigationAction,
+      ...damageData,
+    });
+    setNotification('Operational triage & damage assessment updated successfully.');
+    setTimeout(() => setNotification(null), 3500);
+    await loadData();
+  };
+
+  const handleCreateReport = async (dto: CreateConflictReportDTO) => {
+    await webConflictService.createConflict(dto);
+    setNotification('New human-wildlife conflict report recorded.');
+    setTimeout(() => setNotification(null), 3500);
+    await loadData();
+  };
+
+  const handleRowClick = (item: ConflictReport) => {
+    setSelectedReport(item);
+    setIsDetailModalOpen(true);
+  };
 
   const columns: Column<ConflictReport>[] = [
     {
-      header: 'Conflict Incident',
+      header: 'Conflict Incident & Nature',
       accessor: (item) => (
-        <div>
-          <span className="font-bold text-[#1C2A1E] block">
-            {item.conflictType.replace(/_/g, ' ')}
-          </span>
-          <span className="text-stone-500 text-xs line-clamp-1">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-[#1C2A1E] block text-sm">
+              {item.conflictType.replace(/_/g, ' ')}
+            </span>
+            {item.photoUrls && item.photoUrls.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#15803D] bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                <Camera className="w-3 h-3 text-[#15803D]" />
+                {item.photoUrls.length} photo{item.photoUrls.length > 1 ? 's' : ''}
+              </span>
+            )}
+            {item.potentialDuplicateOf && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded">
+                <AlertTriangle className="w-3 h-3 text-amber-600" />
+                Cluster Duplicate
+              </span>
+            )}
+            {item.mitigationAction && (
+              <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                Action: {item.mitigationAction.slice(0, 22)}...
+              </span>
+            )}
+          </div>
+          <span className="text-stone-500 text-xs line-clamp-1 font-medium">
             {item.description}
           </span>
         </div>
@@ -51,37 +175,57 @@ export function ConflictsPage() {
             {item.reporterName || 'Local Resident'}
           </span>
           <span className="text-[#A76D40] text-[11px] font-medium">
-            {item.villageName || 'Buffer Zone Village'}
+            {item.villageName || 'Buffer Zone Settlement'}
           </span>
         </div>
       ),
     },
     {
-      header: 'Location',
+      header: 'Location & Coordinates',
       accessor: (item) => (
-        <span className="text-stone-600 text-xs font-mono flex items-center gap-1">
-          <MapPin className="w-3.5 h-3.5 text-[#3E8E41]" />
-          {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
-        </span>
+        <div>
+          <span className="text-stone-700 text-xs font-mono flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5 text-[#3E8E41]" />
+            {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
+          </span>
+          <span className="text-[10px] text-stone-500 font-medium block">
+            {item.parkName || 'Yala Border Corridor'}
+          </span>
+        </div>
       ),
     },
     {
       header: 'Reported At',
       accessor: (item) => (
-        <span className="text-stone-500 text-xs">
+        <span className="text-stone-600 text-xs font-medium">
           {item.reportedAt ? new Date(item.reportedAt).toLocaleDateString() : 'Recent'}
         </span>
       ),
     },
     {
-      header: 'Status',
+      header: 'Triage Status',
       accessor: (item) => <StatusBadge status={item.status} size="sm" />,
+    },
+    {
+      header: 'Action',
+      accessor: (item) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRowClick(item);
+          }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-[#FAF7EE] hover:bg-[#3E8E41] text-stone-700 hover:text-white border border-[#D1B370]/60 hover:border-[#3E8E41] rounded-xl text-xs font-bold transition-all shadow-xs"
+        >
+          <Eye className="w-3.5 h-3.5" />
+          <span>Triage</span>
+        </button>
+      ),
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -93,40 +237,43 @@ export function ConflictsPage() {
             </span>
           </div>
           <p className="text-sm text-[#A76D40] font-medium mt-1">
-            Reviewing community crop raid notices, property damage compensation, and verifications.
+            Community crop raiding mitigation, elephant intrusion triage, and rapid dispatch response console.
           </p>
         </div>
 
-        {/* Status Filters */}
-        <div className="flex items-center gap-2">
-          {['ALL', 'REPORTED', 'INVESTIGATING', 'VERIFIED', 'RESOLVED'].map((st) => (
-            <button
-              key={st}
-              onClick={() => setFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-150 ${
-                filter === st
-                  ? 'bg-[#3E8E41] text-white shadow-xs'
-                  : 'bg-white text-stone-700 hover:bg-[#F5F5DC] border border-[#D1B370]/60'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={() => loadData(true)}
+          disabled={isRefreshing}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs font-bold text-stone-700 hover:text-[#3E8E41] border border-[#D1B370]/60 rounded-xl transition-colors self-start sm:self-auto shadow-xs"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#3E8E41]' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh Data'}</span>
+        </button>
       </div>
 
-      {/* Feature Architecture Note */}
-      <div className="p-4 bg-[#FAF7EE] border border-[#D1B370]/70 rounded-xl flex items-start gap-3 shadow-xs">
-        <Info className="w-5 h-5 text-[#3E8E41] shrink-0 mt-0.5" />
-        <div className="text-xs text-stone-700 leading-relaxed font-medium">
-          <strong className="text-[#1C2A1E]">Team Member 4 Feature Workspace:</strong> Community liaison reporting,
-          officer compensation review workflow, and resolution tracking belong in{' '}
-          <code className="bg-[#F5F5DC] px-1.5 py-0.5 rounded border border-[#D1B370]/60 font-mono text-[#A76D40]">
-            apps/web/src/features/uc04-conflicts/
-          </code>
-          .
+      {/* Notification Toast */}
+      {notification && (
+        <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
+          <ShieldAlert className="w-4 h-4 text-[#3E8E41]" />
+          <span>{notification}</span>
         </div>
-      </div>
+      )}
+
+      {/* KPI Summary Cards */}
+      <ConflictStatCards
+        stats={stats}
+        onFilterSelect={(st) => setStatusFilter(st as any)}
+      />
+
+      {/* Filter and Search Bar */}
+      <ConflictFilterBar
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        typeFilter={typeFilter}
+        onTypeChange={setTypeFilter}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+      />
 
       {/* Data Table */}
       {loading ? (
@@ -136,9 +283,25 @@ export function ConflictsPage() {
           columns={columns}
           data={filteredReports}
           keyExtractor={(item) => item.id}
-          emptyMessage="No conflict reports match the selected filter."
+          onRowClick={handleRowClick}
+          emptyMessage="No human-wildlife conflict reports match the selected filters."
         />
       )}
+
+      {/* Detail / Triage Modal */}
+      <ConflictDetailModal
+        report={selectedReport}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        onUpdateStatus={handleUpdateStatus}
+      />
+
+      {/* New Conflict Creation Modal */}
+      <NewConflictModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateReport}
+      />
     </div>
   );
 }

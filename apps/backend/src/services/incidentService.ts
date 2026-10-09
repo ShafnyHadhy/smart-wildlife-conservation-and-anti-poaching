@@ -1,7 +1,14 @@
 import { incidentRepository } from '../repositories/incidentRepository';
 import { userRepository } from '../repositories/userRepository';
 import { patrolRepository } from '../repositories/patrolRepository';
-import { Incident, IncidentType, IncidentStatus, isValidCoordinate } from '@wildlife/shared';
+import {
+  Incident,
+  IncidentType,
+  IncidentStatus,
+  EvidenceType,
+  SupportingEvidence,
+  isValidCoordinate,
+} from '@wildlife/shared';
 import { NotFoundError, BadRequestError, ValidationError } from '../errors/AppError';
 
 export class IncidentService {
@@ -72,6 +79,63 @@ export class IncidentService {
       longitude: data.longitude,
       reportedAt: data.reportedAt,
       clientMutationId: data.clientMutationId,
+    });
+  }
+
+  async updateStatus(
+    id: string,
+    status: IncidentStatus
+  ): Promise<Incident> {
+    const incident = await this.getIncidentById(id);
+
+    if (incident.status !== IncidentStatus.SUBMITTED) {
+      throw new BadRequestError(
+        'Only SUBMITTED incidents can be marked as REVIEWED.'
+      );
+    }
+
+    if (status !== IncidentStatus.REVIEWED) {
+      throw new BadRequestError(
+        'Only the SUBMITTED to REVIEWED transition is allowed.'
+      );
+    }
+
+    const updatedIncident = await incidentRepository.updateStatus(id, status);
+
+    if (!updatedIncident) {
+      throw new BadRequestError(
+        'Incident could not be reviewed. It may have already been reviewed.'
+      );
+    }
+
+    return updatedIncident;
+  }
+
+  async addEvidence(
+    incidentId: string,
+    data: {
+      evidenceType?: EvidenceType;
+      filePath: string;
+      fileName?: string;
+      fileType?: string;
+      capturedAt?: string;
+      notes?: string;
+    }
+  ): Promise<SupportingEvidence> {
+    const incident = await incidentRepository.findById(incidentId);
+
+    if (!incident) {
+      throw new NotFoundError('Incident', incidentId);
+    }
+
+    return incidentRepository.addEvidence({
+      incidentId,
+      evidenceType: data.evidenceType || EvidenceType.PHOTO,
+      filePath: data.filePath,
+      fileName: data.fileName,
+      fileType: data.fileType,
+      capturedAt: data.capturedAt,
+      notes: data.notes,
     });
   }
 }

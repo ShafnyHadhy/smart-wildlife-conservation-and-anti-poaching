@@ -1,5 +1,13 @@
 import { offlineQueue } from '../offline/offlineQueue';
-import { ApiErrorResponse, CreateIncidentDTO, CreateConflictReportDTO, CreateAlertResponseDTO } from '@wildlife/shared';
+import {
+  ApiErrorResponse,
+  CreateIncidentDTO,
+  CreateConflictReportDTO,
+  CreateAlertResponseDTO,
+  Patrol,
+  PatrolRoute,
+  Waypoint,
+} from '@wildlife/shared';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -20,9 +28,29 @@ export class MobileApiError extends Error {
 
 export class MobileApiClient {
   private baseUrl: string;
+  private authToken: string | null = null;
 
   constructor(baseUrl = API_BASE_URL) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  }
+
+  setAuthToken(token: string | null): void {
+    this.authToken = token;
+  }
+
+  getAuthToken(): string | null {
+    return this.authToken;
+  }
+
+  private buildHeaders(customHeaders?: HeadersInit): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((customHeaders as Record<string, string>) || {}),
+    };
+    if (this.authToken && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+    return headers;
   }
 
   private getFullUrl(endpoint: string): string {
@@ -36,10 +64,7 @@ export class MobileApiClient {
       const res = await fetch(url, {
         ...options,
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers as Record<string, string> || {}),
-        },
+        headers: this.buildHeaders(options.headers),
       });
 
       const json = await res.json().catch(() => null);
@@ -77,10 +102,46 @@ export class MobileApiClient {
       const res = await fetch(url, {
         ...options,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers as Record<string, string> || {}),
-        },
+        headers: this.buildHeaders(options.headers),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        if (json && json.success === false && json.error) {
+          const err = json as ApiErrorResponse;
+          throw new MobileApiError(err.error.message, err.error.code, res.status, err.error.details);
+        }
+        throw new MobileApiError(
+          json?.message || `HTTP ${res.status}: ${res.statusText}`,
+          'HTTP_ERROR',
+          res.status
+        );
+      }
+
+      if (json && typeof json === 'object' && json.success === true && 'data' in json) {
+        return json.data as T;
+      }
+
+      return json as T;
+    } catch (err: any) {
+      if (err instanceof MobileApiError) throw err;
+      throw new MobileApiError(
+        `Network request failed to ${endpoint}: ${err.message || 'Check connection'}`,
+        'NETWORK_ERROR',
+        0
+      );
+    }
+  }
+
+  async patch<T>(endpoint: string, body?: any, options: RequestInit = {}): Promise<T> {
+    const url = this.getFullUrl(endpoint);
+    try {
+      const res = await fetch(url, {
+        ...options,
+        method: 'PATCH',
+        headers: this.buildHeaders(options.headers),
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
 
@@ -134,12 +195,21 @@ export class MobileApiClient {
       const directResult = await this.post('/incidents', payload);
       return { direct: true, result: directResult };
     } catch (err) {
-      console.warn('[MobileAPI] Direct submission failed. Enqueueing offline:', err);
+      if (err instanceof MobileApiError && err.status > 0) {
+        throw err;
+      }
+
+      console.warn(
+        '[MobileAPI] Network failure. Enqueueing incident offline:',
+        err
+      );
+
       const queued = await offlineQueue.enqueue({
         clientMutationId,
         entityType: 'INCIDENT',
         payload,
       });
+
       return { direct: false, result: queued };
     }
   }
@@ -195,7 +265,10 @@ export class MobileApiClient {
     try {
       const directResult = await this.post(`/alerts/${alertId}/respond`, data);
       return { direct: true, result: directResult };
-    } catch (err) {
+    } catch (err: any) {
+      if (err instanceof MobileApiError && err.status >= 400 && err.status < 500) {
+        throw err;
+      }
       console.warn('[MobileAPI] Direct submission failed. Enqueueing offline:', err);
       const queued = await offlineQueue.enqueue({
         clientMutationId,
@@ -204,6 +277,42 @@ export class MobileApiClient {
       });
       return { direct: false, result: queued };
     }
+  }
+
+  // UC01: Ranger Patrol API Endpoints
+  async getPatrols(rangerId?: string): Promise<Patrol[]> {
+    const query = rangerId ? `?rangerId=${encodeURIComponent(rangerId)}` : '';
+    return this.get<Patrol[]>(`/patrols${query}`);
+  }
+
+  async getPatrolById(id: string): Promise<Patrol> {
+    return this.get<Patrol>(`/patrols/${encodeURIComponent(id)}`);
+  }
+
+  async getPatrolRouteById(routeId: string): Promise<PatrolRoute> {
+    return this.get<PatrolRoute>(`/patrol-routes/${encodeURIComponent(routeId)}`);
+  }
+
+  async startPatrol(id: string): Promise<Patrol> {
+    return this.patch<Patrol>(`/patrols/${encodeURIComponent(id)}/start`);
+  }
+
+  async completePatrol(id: string): Promise<Patrol> {
+    return this.patch<Patrol>(`/patrols/${encodeURIComponent(id)}/complete`);
+  }
+
+  async recordWaypoint(
+    patrolId: string,
+    data: {
+      latitude: number;
+      longitude: number;
+      sequenceOrder?: number;
+      locationType?: string;
+      recordedAt?: string;
+      notes?: string;
+    }
+  ): Promise<Waypoint> {
+    return this.post<Waypoint>(`/patrols/${encodeURIComponent(patrolId)}/waypoints`, data);
   }
 }
 

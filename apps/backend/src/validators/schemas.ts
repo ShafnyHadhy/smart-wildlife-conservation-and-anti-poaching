@@ -7,6 +7,7 @@ import {
   IncidentStatus,
   ConflictType,
   ConflictStatus,
+  EvidenceType,
 } from '@wildlife/shared';
 
 // Common UUID Schema
@@ -63,6 +64,36 @@ export const conflictFilterSchema = z.object({
   parkId: uuidSchema.optional(),
   communityMemberId: uuidSchema.optional(),
   conflictType: z.nativeEnum(ConflictType).optional(),
+  search: z.string().optional(),
+});
+
+// POST /api/patrols
+export const createPatrolSchema = z.object({
+  parkId: uuidSchema,
+  rangerId: uuidSchema,
+  patrolRouteId: uuidSchema,
+  patrolCode: z.string().trim().min(2, 'Patrol code must be at least 2 characters').max(50),
+  startTime: isoDateString,
+  notes: z.string().trim().max(1000).optional(),
+});
+
+export const updatePlannedPatrolSchema = z.object({
+  parkId: uuidSchema,
+  rangerId: uuidSchema,
+  patrolRouteId: uuidSchema,
+  patrolCode: z.string().trim().min(2).max(50),
+  startTime: isoDateString,
+  notes: z.string().trim().max(1000).optional(),
+});
+
+// POST /api/patrols/:id/waypoints
+export const addWaypointSchema = z.object({
+  latitude: coordinateSchema.shape.latitude,
+  longitude: coordinateSchema.shape.longitude,
+  sequenceOrder: z.number().int().min(1).optional(),
+  locationType: z.enum(['GPS', 'MANUAL']).default('GPS'),
+  recordedAt: isoDateString.optional(),
+  notes: z.string().trim().max(500).optional(),
 });
 
 // Request bodies
@@ -75,6 +106,13 @@ export const createAnimalLocationSchema = z.object({
   latitude: coordinateSchema.shape.latitude,
   longitude: coordinateSchema.shape.longitude,
   recordedAt: isoDateString,
+});
+
+// POST /api/animals/:id/simulate-ping
+export const simulatePingSchema = z.object({
+  latitude: coordinateSchema.shape.latitude,
+  longitude: coordinateSchema.shape.longitude,
+  recordedAt: isoDateString.optional(),
 });
 
 // POST /api/alerts/:id/respond
@@ -101,6 +139,21 @@ export const createIncidentSchema = z.object({
   clientMutationId: z.string().max(64).optional(),
 });
 
+// PATCH /api/incidents/:id/status
+export const updateIncidentStatusSchema = z.object({
+  status: z.literal(IncidentStatus.REVIEWED),
+}).strict();
+
+// POST /api/incidents/:id/evidence
+export const createEvidenceSchema = z.object({
+  evidenceType: z.nativeEnum(EvidenceType).default(EvidenceType.PHOTO),
+  filePath: z.string().trim().min(1, 'File path is required'),
+  fileName: z.string().trim().optional(),
+  fileType: z.string().trim().optional(),
+  capturedAt: isoDateString.optional(),
+  notes: z.string().trim().optional(),
+});
+
 // POST /api/conflict-reports
 export const createConflictReportSchema = z.object({
   communityMemberId: uuidSchema,
@@ -115,6 +168,16 @@ export const createConflictReportSchema = z.object({
   longitude: coordinateSchema.shape.longitude,
   reportedAt: isoDateString.optional(),
   clientMutationId: z.string().max(64).optional(),
+  severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  estimatedDamageLkr: z.number().min(0).optional(),
+  cropTypeLost: z.string().trim().optional(),
+  estimatedAnimalsInvolved: z.number().int().min(0).optional(),
+  locationName: z.string().trim().max(255).optional(),
+  immediateRisk: z.boolean().optional(),
+  photoUrls: z
+    .array(z.string().max(2_500_000, 'Photo is too large'))
+    .max(5, 'A maximum of 5 photos can be attached')
+    .optional(),
 });
 
 // PATCH /api/conflict-reports/:id/status
@@ -124,6 +187,28 @@ export const updateConflictStatusSchema = z.object({
       message: 'Invalid status. Must be SUBMITTED, UNDER_REVIEW, RESPONDING, RESOLVED, or CLOSED',
     }),
   }),
+  triageNotes: z.string().optional(),
+  updatedByName: z.string().trim().max(150).optional(),
+  mitigationAction: z.string().optional(),
+  estimatedDamageLkr: z.number().min(0).optional(),
+  cropTypeLost: z.string().trim().optional(),
+  compensationStatus: z.enum(['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'DISBURSED']).optional(),
+});
+
+// Community Member Schemas (UC04)
+export const createCommunityMemberSchema = z.object({
+  fullName: z.string().trim().min(2, 'Full name must be at least 2 characters'),
+  nationalId: z.string().trim().optional(),
+  phoneNumber: z.string().trim().min(7, 'Phone number must be at least 7 characters'),
+  villageName: z.string().trim().min(2, 'Village name must be at least 2 characters'),
+  address: z.string().trim().optional(),
+  parkId: uuidSchema.optional().nullable(),
+});
+
+export const communityMemberFilterSchema = z.object({
+  phone: z.string().optional(),
+  village: z.string().optional(),
+  search: z.string().optional(),
 });
 
 // POST /api/sync/batch

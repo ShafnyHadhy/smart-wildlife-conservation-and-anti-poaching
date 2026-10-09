@@ -29,9 +29,41 @@ export async function createConflict(req: Request, res: Response, next: NextFunc
   }
 }
 
+export async function getConflictStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const stats = await conflictService.getStats(req.query.parkId as string);
+    sendSuccess(res, stats);
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function updateConflictStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const updated = await conflictService.updateStatus(req.params.id, req.body.status);
+    const {
+      status,
+      triageNotes,
+      mitigationAction,
+      estimatedDamageLkr,
+      cropTypeLost,
+      compensationStatus,
+      updatedByName,
+    } = req.body;
+    const damageData =
+      estimatedDamageLkr !== undefined ||
+      cropTypeLost !== undefined ||
+      compensationStatus !== undefined
+        ? { estimatedDamageLkr, cropTypeLost, compensationStatus }
+        : undefined;
+
+    const updated = await conflictService.updateStatus(
+      req.params.id,
+      status,
+      triageNotes,
+      mitigationAction,
+      damageData,
+      updatedByName
+    );
     sendSuccess(res, updated);
   } catch (error) {
     next(error);

@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+
 import { BottomTabBar, TabKey } from '../components/navigation/BottomTabBar';
 import { OfflineBanner } from '../components/common/OfflineBanner';
 import { HomeScreen } from '../screens/Home/HomeScreen';
 import { AlertsScreen } from '../screens/Alerts/AlertsScreen';
 import { ReportsScreen } from '../screens/Reports/ReportsScreen';
-import { ProfileScreen } from '../screens/Profile/ProfileScreen';
 import { MenuScreen } from '../screens/Menu/MenuScreen';
+import { PatrolScreen } from '../features/uc01-patrol/screens';
+import { AuthUser } from '../services/authService';
 
 interface AppNavigatorProps {
   isOnline: boolean;
   pendingCount: number;
   onToggleOnline?: () => void;
   onSyncNow?: () => void;
+  user?: AuthUser;
+  onLogout?: () => void;
 }
 
 export function AppNavigator({
@@ -20,8 +24,28 @@ export function AppNavigator({
   pendingCount,
   onToggleOnline,
   onSyncNow,
+  user,
+  onLogout,
 }: AppNavigatorProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('HOME');
+
+  const [reportInitialView, setReportInitialView] = useState<
+    'hub' | 'conflict_form' | 'conflict_list'
+  >('hub');
+
+  const handleOpenConflictForm = () => {
+    setReportInitialView('conflict_form');
+    setActiveTab('REPORTS');
+  };
+
+  const handleOpenConflictList = () => {
+    setReportInitialView('conflict_list');
+    setActiveTab('REPORTS');
+  };
+
+  const handleOpenPatrol = () => {
+    setActiveTab('PATROL');
+  };
 
   const renderActiveScreen = () => {
     switch (activeTab) {
@@ -30,30 +54,56 @@ export function AppNavigator({
           <HomeScreen
             isOnline={isOnline}
             pendingCount={pendingCount}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={(tab) => {
+              setReportInitialView('hub');
+              setActiveTab(tab);
+            }}
+            onOpenConflictForm={handleOpenConflictForm}
+            onOpenConflictList={handleOpenConflictList}
+            onOpenPatrol={handleOpenPatrol}
             onToggleOnline={onToggleOnline}
+            onSyncNow={onSyncNow}
+            user={user}
+          />
+        );
+
+      case 'PATROL':
+        return (
+          <PatrolScreen
+            user={user}
+            isOnline={isOnline}
+            onGoHome={() => setActiveTab('HOME')}
+          />
+        );
+
+      case 'ALERTS':
+        return (
+          <AlertsScreen
+            user={user}
+            onReportConflict={handleOpenConflictForm}
+            isOnline={isOnline}
             onSyncNow={onSyncNow}
           />
         );
-      case 'ALERTS':
-        return <AlertsScreen />;
+
       case 'REPORTS':
         return (
           <ReportsScreen
-            pendingCount={pendingCount}
-            onSyncPress={onSyncNow}
-          />
-        );
-      case 'PROFILE':
-        return (
-          <ProfileScreen
             isOnline={isOnline}
             pendingCount={pendingCount}
-            onToggleOnline={onToggleOnline}
-            onSyncNow={onSyncNow}
+            onSyncPress={onSyncNow}
+            user={user}
+            initialView={reportInitialView}
+            onResetView={() => setReportInitialView('hub')}
+
+            // UC02 additions
+            onIncidentSubmitted={onSyncNow}
+            onGoHome={() => setActiveTab('HOME')}
           />
         );
+
       case 'MENU':
+      case 'PROFILE':
         return (
           <MenuScreen
             onNavigateTab={setActiveTab}
@@ -61,16 +111,26 @@ export function AppNavigator({
             pendingCount={pendingCount}
             onSyncNow={onSyncNow}
             onToggleOnline={onToggleOnline}
+            user={user}
+            onLogout={onLogout}
           />
         );
+
       default:
         return (
           <HomeScreen
             isOnline={isOnline}
             pendingCount={pendingCount}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={(tab) => {
+              setReportInitialView('hub');
+              setActiveTab(tab);
+            }}
+            onOpenConflictForm={handleOpenConflictForm}
+            onOpenConflictList={handleOpenConflictList}
+            onOpenPatrol={handleOpenPatrol}
             onToggleOnline={onToggleOnline}
             onSyncNow={onSyncNow}
+            user={user}
           />
         );
     }
@@ -78,7 +138,6 @@ export function AppNavigator({
 
   return (
     <View style={styles.container}>
-      {/* Offline Alert Strip */}
       <OfflineBanner
         isOnline={isOnline}
         pendingCount={pendingCount}
@@ -86,10 +145,10 @@ export function AppNavigator({
         onToggleOnline={onToggleOnline}
       />
 
-      {/* Screen Body */}
-      <View style={styles.screenContainer}>{renderActiveScreen()}</View>
+      <View style={styles.screenContainer}>
+        {renderActiveScreen()}
+      </View>
 
-      {/* Persistent Bottom Tab Bar */}
       <BottomTabBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -104,6 +163,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5DC',
   },
+
   screenContainer: {
     flex: 1,
   },

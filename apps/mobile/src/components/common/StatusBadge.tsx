@@ -6,6 +6,9 @@ export type BadgeVariant =
   | 'warning'
   | 'danger'
   | 'info'
+  | 'purple'
+  | 'orange'
+  | 'primary'
   | 'neutral'
   | 'offline';
 
@@ -29,7 +32,7 @@ export function StatusBadge({
       style={[
         styles.badge,
         size === 'small' ? styles.smallBadge : styles.mediumBadge,
-        styles[resolvedVariant],
+        styles[resolvedVariant] || styles.neutral,
         style,
       ]}
     >
@@ -37,14 +40,14 @@ export function StatusBadge({
         style={[
           styles.dot,
           size === 'small' ? styles.smallDot : styles.mediumDot,
-          styles[`${resolvedVariant}Dot` as keyof typeof styles],
+          styles[`${resolvedVariant}Dot` as keyof typeof styles] || styles.neutralDot,
         ]}
       />
       <Text
         style={[
           styles.text,
           size === 'small' ? styles.smallText : styles.mediumText,
-          styles[`${resolvedVariant}Text` as keyof typeof styles],
+          styles[`${resolvedVariant}Text` as keyof typeof styles] || styles.neutralText,
         ]}
       >
         {status.toUpperCase()}
@@ -54,21 +57,35 @@ export function StatusBadge({
 }
 
 function getVariantFromStatus(status: string): BadgeVariant {
-  const normalized = status.toUpperCase();
-  if (['ACTIVE', 'RESOLVED', 'COMPLETED', 'SYNCED', 'ONLINE'].includes(normalized)) {
+  const normalized = status.toUpperCase().replace(/[_\s-]+/g, '_');
+
+  // 1. Success / Resolved / Completed / Active
+  if (['ACTIVE', 'RESOLVED', 'CLOSED', 'COMPLETED', 'SYNCED', 'ONLINE', 'HEALTHY'].includes(normalized)) {
     return 'success';
   }
-  if (['HIGH', 'CRITICAL', 'FAILED', 'CANCELLED'].includes(normalized)) {
+  // 2. Urgent / Danger / Critical
+  if (['HIGH', 'CRITICAL', 'FAILED', 'CANCELLED', 'REJECTED'].includes(normalized)) {
     return 'danger';
   }
-  if (['PENDING', 'UNDER_REVIEW', 'RESPONDING', 'IN_PROGRESS', 'MEDIUM'].includes(normalized)) {
+  // 3. Responding / Action In Progress / Dispatched
+  if (['RESPONDING', 'IN_PROGRESS', 'DISPATCHED', 'ACTION_TAKEN'].includes(normalized)) {
+    return 'purple';
+  }
+  // 4. In Review / Under Investigation / Medium
+  if (['UNDER_REVIEW', 'INVESTIGATING', 'UNDER_INVESTIGATION', 'MEDIUM'].includes(normalized)) {
     return 'warning';
   }
-  if (['SUBMITTED', 'SCHEDULED', 'PLANNED', 'LOW'].includes(normalized)) {
+  // 5. Submitted / New / Scheduled / Planned / Low (Awaiting triage/review)
+  if (['SUBMITTED', 'NEW', 'REPORTED', 'SCHEDULED', 'PLANNED', 'LOW'].includes(normalized)) {
     return 'info';
   }
-  if (['OFFLINE'].includes(normalized)) {
-    return 'offline';
+  // 6. Offline / Pending Sync
+  if (['PENDING_SYNC', 'PENDING_SYNCING', 'OFFLINE', 'OFFLINE_QUEUED', 'PENDING'].includes(normalized)) {
+    return 'orange';
+  }
+  // 7. Neutral / Paused / Acknowledged
+  if (['ACKNOWLEDGED', 'PAUSED', 'DISMISSED', 'FALSE_ALARM'].includes(normalized)) {
+    return 'neutral';
   }
   return 'neutral';
 }
@@ -82,7 +99,7 @@ const styles = StyleSheet.create({
   },
   smallBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
   },
   mediumBadge: {
     paddingHorizontal: 10,
@@ -97,8 +114,8 @@ const styles = StyleSheet.create({
     height: 6,
   },
   mediumDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
   },
   text: {
     fontWeight: '800',
@@ -108,31 +125,52 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   mediumText: {
-    fontSize: 12,
+    fontSize: 11,
   },
 
-  // Variants using #3E8E41, #A76D40, #D1B370
-  success: { backgroundColor: 'rgba(62, 142, 65, 0.15)', borderWidth: 1, borderColor: '#3E8E41' },
-  successDot: { backgroundColor: '#3E8E41' },
-  successText: { color: '#2E6B31' },
+  // 1. Success (Emerald Green)
+  success: { backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0' },
+  successDot: { backgroundColor: '#10B981' },
+  successText: { color: '#065F46' },
 
-  warning: { backgroundColor: 'rgba(167, 109, 64, 0.15)', borderWidth: 1, borderColor: '#A76D40' },
-  warningDot: { backgroundColor: '#A76D40' },
-  warningText: { color: '#854F26' },
+  // 2. Warning / Under Review (Amber / Gold)
+  warning: { backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A' },
+  warningDot: { backgroundColor: '#F59E0B' },
+  warningText: { color: '#B45309' },
 
-  danger: { backgroundColor: 'rgba(220, 38, 38, 0.12)', borderWidth: 1, borderColor: '#DC2626' },
-  dangerDot: { backgroundColor: '#DC2626' },
-  dangerText: { color: '#991B1B' },
+  // 3. Danger / Urgent (Rose / Crimson)
+  danger: { backgroundColor: '#FFF1F2', borderWidth: 1, borderColor: '#FECDD3' },
+  dangerDot: { backgroundColor: '#F43F5E' },
+  dangerText: { color: '#BE123C' },
 
-  info: { backgroundColor: 'rgba(209, 179, 112, 0.25)', borderWidth: 1, borderColor: '#D1B370' },
-  infoDot: { backgroundColor: '#A76D40' },
-  infoText: { color: '#735A22' },
+  // 4. Info / Submitted / New (Sky Blue)
+  info: { backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD' },
+  infoDot: { backgroundColor: '#0EA5E9' },
+  infoText: { color: '#0369A1' },
 
-  offline: { backgroundColor: 'rgba(167, 109, 64, 0.2)', borderWidth: 1, borderColor: '#A76D40' },
-  offlineDot: { backgroundColor: '#A76D40' },
-  offlineText: { color: '#854F26' },
+  // 5. Purple / Responding / Dispatched
+  purple: { backgroundColor: '#FAF5FF', borderWidth: 1, borderColor: '#E9D5FF' },
+  purpleDot: { backgroundColor: '#9333EA' },
+  purpleText: { color: '#7E22CE' },
 
-  neutral: { backgroundColor: 'rgba(120, 113, 108, 0.15)', borderWidth: 1, borderColor: '#A8A29E' },
-  neutralDot: { backgroundColor: '#78716C' },
-  neutralText: { color: '#44403C' },
+  // 6. Orange / Pending Sync / Offline
+  orange: { backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#FED7AA' },
+  orangeDot: { backgroundColor: '#F97316' },
+  orangeText: { color: '#C2410C' },
+
+  // 7. Primary / Royal Blue
+  primary: { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' },
+  primaryDot: { backgroundColor: '#2563EB' },
+  primaryText: { color: '#1D4ED8' },
+
+  // 8. Offline
+  offline: { backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#FED7AA' },
+  offlineDot: { backgroundColor: '#F97316' },
+  offlineText: { color: '#C2410C' },
+
+  // 9. Neutral (Slate Gray)
+  neutral: { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' },
+  neutralDot: { backgroundColor: '#94A3B8' },
+  neutralText: { color: '#475569' },
 });
+

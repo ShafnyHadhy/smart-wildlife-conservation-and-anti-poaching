@@ -1,12 +1,13 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { HiHome, HiOutlineDocumentText, HiOutlineBell, HiOutlineUser } from 'react-icons/hi2';
 
-export type TabKey = 'HOME' | 'ALERTS' | 'REPORTS' | 'PROFILE' | 'MENU';
+export type TabKey = 'HOME' | 'REPORTS' | 'ALERTS' | 'PROFILE' | 'MENU' | 'PATROL';
 
 interface TabItem {
   key: TabKey;
   label: string;
-  icon: string;
+  renderIcon: (color: string) => React.ReactNode;
   badgeCount?: number;
 }
 
@@ -24,28 +25,49 @@ export function BottomTabBar({
   reportsCount = 0,
 }: BottomTabBarProps) {
   const tabs: TabItem[] = [
-    { key: 'HOME', label: 'Home', icon: '⌂' },
-    { key: 'ALERTS', label: 'Alerts', icon: '⚠', badgeCount: alertsCount },
-    { key: 'REPORTS', label: 'Reports', icon: '📋', badgeCount: reportsCount },
-    { key: 'PROFILE', label: 'Profile', icon: '👤' },
-    { key: 'MENU', label: 'Menu', icon: '☰' },
+    {
+      key: 'HOME',
+      label: 'Home',
+      renderIcon: (color) => <HiHome size={22} color={color} />,
+    },
+    {
+      key: 'REPORTS',
+      label: 'Reports',
+      badgeCount: reportsCount,
+      renderIcon: (color) => <HiOutlineDocumentText size={22} color={color} />,
+    },
+    {
+      key: 'ALERTS',
+      label: 'Alerts',
+      badgeCount: alertsCount,
+      renderIcon: (color) => <HiOutlineBell size={22} color={color} />,
+    },
+    {
+      key: 'PROFILE',
+      label: 'Profile',
+      renderIcon: (color) => <HiOutlineUser size={22} color={color} />,
+    },
   ];
 
   return (
     <View style={styles.container}>
       {tabs.map((tab) => {
-        const isActive = activeTab === tab.key;
+        const isActive =
+          activeTab === tab.key ||
+          (tab.key === 'PROFILE' && activeTab === 'MENU') ||
+          (tab.key === 'HOME' && !['REPORTS', 'ALERTS', 'PROFILE', 'MENU'].includes(activeTab));
+
+        const iconColor = isActive ? '#14532D' : '#4B5563';
+
         return (
           <TouchableOpacity
             key={tab.key}
-            style={[styles.tabButton, isActive && styles.activeTabButton]}
+            style={[styles.tabButton, isActive && styles.activePillContainer]}
             onPress={() => onSelectTab(tab.key)}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
             <View style={styles.iconWrapper}>
-              <Text style={[styles.tabIcon, isActive && styles.activeTabIcon]}>
-                {tab.icon}
-              </Text>
+              {tab.renderIcon(iconColor)}
               {tab.badgeCount && tab.badgeCount > 0 ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
@@ -67,70 +89,78 @@ export function BottomTabBar({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    height: 64,
-    backgroundColor: '#FAF7EE',
+    height: 70,
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#D1B370',
+    borderTopColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'space-around',
+    paddingHorizontal: 8,
     paddingBottom: 4,
-    elevation: 4,
-    shadowColor: '#A76D40',
+    elevation: 10,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
   tabButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100%',
     paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    minWidth: 64,
   },
-  activeTabButton: {
-    borderTopWidth: 3,
-    borderTopColor: '#3E8E41',
+  activePillContainer: {
+    backgroundColor: '#DCFCE7', // soft pastel green pill from reference
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   iconWrapper: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 32,
+    width: 28,
     height: 26,
   },
   tabIcon: {
     fontSize: 20,
-    color: '#78716C',
+    color: '#374151',
   },
   activeTabIcon: {
-    color: '#3E8E41',
+    color: '#14532D',
   },
   tabLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#78716C',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
     marginTop: 2,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   activeTabLabel: {
-    color: '#3E8E41',
+    color: '#14532D',
     fontWeight: '800',
   },
   badge: {
     position: 'absolute',
     top: -4,
-    right: -8,
-    backgroundColor: '#A76D40',
-    borderRadius: 8,
+    right: -10,
+    backgroundColor: '#EF4444', // vibrant red notification badge
+    borderRadius: 9,
+    minWidth: 17,
+    height: 17,
     paddingHorizontal: 4,
-    paddingVertical: 1,
-    minWidth: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   badgeText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
+    lineHeight: 12,
   },
 });
+

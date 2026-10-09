@@ -152,6 +152,73 @@ export class IncidentRepository {
     const res = await query(sql, params);
     return mapRowToIncident(res.rows[0]);
   }
+
+  async updateStatus(
+    id: string,
+    status: IncidentStatus
+  ): Promise<Incident | null> {
+    const sql = `
+      UPDATE incidents
+      SET status = $2,
+          updated_at = NOW()
+      WHERE id = $1
+        AND status = 'SUBMITTED'
+        AND $2 = 'REVIEWED'
+      RETURNING id
+    `;
+
+    const result = await query(sql, [id, status]);
+
+    if (!result.rows[0]) {
+      return null;
+    }
+
+    return this.findById(id);
+  }
+
+  async addEvidence(data: {
+    incidentId: string;
+    evidenceType: EvidenceType;
+    filePath: string;
+    fileName?: string;
+    fileType?: string;
+    capturedAt?: string | Date;
+    notes?: string;
+  }): Promise<SupportingEvidence> {
+    const sql = `
+      INSERT INTO supporting_evidence (
+        incident_id,
+        evidence_type,
+        file_path,
+        file_name,
+        file_type,
+        captured_at,
+        notes
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
+
+    const capturedAt = data.capturedAt
+      ? typeof data.capturedAt === 'string'
+        ? new Date(data.capturedAt)
+        : data.capturedAt
+      : new Date();
+
+    const params = [
+      data.incidentId,
+      data.evidenceType,
+      data.filePath,
+      data.fileName || null,
+      data.fileType || null,
+      capturedAt,
+      data.notes || null,
+    ];
+
+    const res = await query(sql, params);
+
+    return mapRowToEvidence(res.rows[0]);
+  }
 }
 
 export const incidentRepository = new IncidentRepository();

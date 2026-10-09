@@ -13,6 +13,7 @@ export interface PatrolRoute {
   parkName?: string;
   createdAt: string;
   updatedAt: string;
+  waypoints?: Waypoint[];
 }
 
 export interface Waypoint {
