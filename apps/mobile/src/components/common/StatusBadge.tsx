@@ -64,7 +64,7 @@ function getVariantFromStatus(status: string): BadgeVariant {
   if (['PENDING', 'PENDING_SYNC', 'UNDER_REVIEW', 'RESPONDING', 'IN_PROGRESS', 'MEDIUM'].includes(normalized)) {
     return 'warning';
   }
-  if (['SUBMITTED', 'SCHEDULED', 'PLANNED', 'LOW'].includes(normalized)) {
+  if (['SUBMITTED', 'SCHEDULED', 'PLANNED', 'LOW', 'ACKNOWLEDGED'].includes(normalized)) {
     return 'info';
   }
   if (['OFFLINE', 'OFFLINE_QUEUED'].includes(normalized)) {

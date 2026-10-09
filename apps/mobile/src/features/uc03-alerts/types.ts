@@ -1,4 +1,11 @@
-import { WildlifeRiskAlert, AlertResponse, RiskLevel, AlertStatus, ResponseStatus, CreateAlertResponseDTO } from '@wildlife/shared';
+import {
+  WildlifeRiskAlert,
+  AlertResponse,
+  RiskLevel,
+  AlertStatus,
+  ResponseStatus,
+  CreateAlertResponseDTO,
+} from '@wildlife/shared';
 
 export interface AlertFilterOptions {
   status?: AlertStatus;
@@ -6,4 +13,5 @@ export interface AlertFilterOptions {
   animalId?: string;
 }
 
-export type { WildlifeRiskAlert, AlertResponse, RiskLevel, AlertStatus, ResponseStatus, CreateAlertResponseDTO };
+export { RiskLevel, AlertStatus, ResponseStatus };
+export type { WildlifeRiskAlert, AlertResponse, CreateAlertResponseDTO };
