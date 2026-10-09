@@ -1,1 +1,1 @@
-export {};
+export { AlertDetailScreen } from './AlertDetailScreen';
