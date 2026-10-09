@@ -195,12 +195,21 @@ export class MobileApiClient {
       const directResult = await this.post('/incidents', payload);
       return { direct: true, result: directResult };
     } catch (err) {
-      console.warn('[MobileAPI] Direct submission failed. Enqueueing offline:', err);
+      if (err instanceof MobileApiError && err.status > 0) {
+        throw err;
+      }
+
+      console.warn(
+        '[MobileAPI] Network failure. Enqueueing incident offline:',
+        err
+      );
+
       const queued = await offlineQueue.enqueue({
         clientMutationId,
         entityType: 'INCIDENT',
         payload,
       });
+
       return { direct: false, result: queued };
     }
   }

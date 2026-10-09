@@ -139,6 +139,11 @@ export const createIncidentSchema = z.object({
   clientMutationId: z.string().max(64).optional(),
 });
 
+// PATCH /api/incidents/:id/status
+export const updateIncidentStatusSchema = z.object({
+  status: z.literal(IncidentStatus.REVIEWED),
+}).strict();
+
 // POST /api/incidents/:id/evidence
 export const createEvidenceSchema = z.object({
   evidenceType: z.nativeEnum(EvidenceType).default(EvidenceType.PHOTO),

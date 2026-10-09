@@ -95,3 +95,25 @@ export function requireRanger(req: Request, _res: Response, next: NextFunction):
   }
   next();
 }
+
+export function requireParkManager(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (!req.user) {
+    next(new UnauthorizedError('Authentication token required.'));
+    return;
+  }
+
+  if (req.user.role !== 'PARK_MANAGER') {
+    next(
+      new ForbiddenError(
+        'This operation is restricted to Park Managers.'
+      )
+    );
+    return;
+  }
+
+  next();
+}
