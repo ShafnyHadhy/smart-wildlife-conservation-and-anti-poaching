@@ -1,5 +1,13 @@
 import { offlineQueue } from '../offline/offlineQueue';
-import { ApiErrorResponse, CreateIncidentDTO, CreateConflictReportDTO, CreateAlertResponseDTO } from '@wildlife/shared';
+import {
+  ApiErrorResponse,
+  CreateIncidentDTO,
+  CreateConflictReportDTO,
+  CreateAlertResponseDTO,
+  Patrol,
+  PatrolRoute,
+  Waypoint,
+} from '@wildlife/shared';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -20,9 +28,29 @@ export class MobileApiError extends Error {
 
 export class MobileApiClient {
   private baseUrl: string;
+  private authToken: string | null = null;
 
   constructor(baseUrl = API_BASE_URL) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  }
+
+  setAuthToken(token: string | null): void {
+    this.authToken = token;
+  }
+
+  getAuthToken(): string | null {
+    return this.authToken;
+  }
+
+  private buildHeaders(customHeaders?: HeadersInit): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((customHeaders as Record<string, string>) || {}),
+    };
+    if (this.authToken && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+    return headers;
   }
 
   private getFullUrl(endpoint: string): string {
@@ -36,10 +64,7 @@ export class MobileApiClient {
       const res = await fetch(url, {
         ...options,
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers as Record<string, string> || {}),
-        },
+        headers: this.buildHeaders(options.headers),
       });
 
       const json = await res.json().catch(() => null);
@@ -77,10 +102,7 @@ export class MobileApiClient {
       const res = await fetch(url, {
         ...options,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers as Record<string, string> || {}),
-        },
+        headers: this.buildHeaders(options.headers),
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
 
@@ -119,10 +141,7 @@ export class MobileApiClient {
       const res = await fetch(url, {
         ...options,
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers as Record<string, string> || {}),
-        },
+        headers: this.buildHeaders(options.headers),
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
 
@@ -249,6 +268,42 @@ export class MobileApiClient {
       });
       return { direct: false, result: queued };
     }
+  }
+
+  // UC01: Ranger Patrol API Endpoints
+  async getPatrols(rangerId?: string): Promise<Patrol[]> {
+    const query = rangerId ? `?rangerId=${encodeURIComponent(rangerId)}` : '';
+    return this.get<Patrol[]>(`/patrols${query}`);
+  }
+
+  async getPatrolById(id: string): Promise<Patrol> {
+    return this.get<Patrol>(`/patrols/${encodeURIComponent(id)}`);
+  }
+
+  async getPatrolRouteById(routeId: string): Promise<PatrolRoute> {
+    return this.get<PatrolRoute>(`/patrol-routes/${encodeURIComponent(routeId)}`);
+  }
+
+  async startPatrol(id: string): Promise<Patrol> {
+    return this.patch<Patrol>(`/patrols/${encodeURIComponent(id)}/start`);
+  }
+
+  async completePatrol(id: string): Promise<Patrol> {
+    return this.patch<Patrol>(`/patrols/${encodeURIComponent(id)}/complete`);
+  }
+
+  async recordWaypoint(
+    patrolId: string,
+    data: {
+      latitude: number;
+      longitude: number;
+      sequenceOrder?: number;
+      locationType?: string;
+      recordedAt?: string;
+      notes?: string;
+    }
+  ): Promise<Waypoint> {
+    return this.post<Waypoint>(`/patrols/${encodeURIComponent(patrolId)}/waypoints`, data);
   }
 }
 

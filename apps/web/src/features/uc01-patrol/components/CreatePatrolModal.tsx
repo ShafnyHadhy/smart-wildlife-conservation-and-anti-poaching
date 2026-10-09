@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { X, Shield, MapPin, User as UserIcon, Clock, FileText, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
-import { PatrolRoute, User, UserRole } from '@wildlife/shared';
+import { PatrolRoute, User } from '@wildlife/shared';
 import { webPatrolService } from '../services/patrolService';
-import { apiClient } from '../../../services/apiClient';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -70,6 +69,7 @@ export function CreatePatrolModal({ routes, onClose, onCreated }: CreatePatrolMo
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [rangers, setRangers] = useState<User[]>([]);
   const [loadingRangers, setLoadingRangers] = useState(true);
+  const [rangerLoadError, setRangerLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -78,18 +78,21 @@ export function CreatePatrolModal({ routes, onClose, onCreated }: CreatePatrolMo
   // Derived
   const parkOptions = deriveParkOptionsFromRoutes(routes);
   const filteredRoutes = form.parkId ? routes.filter((r) => r.parkId === form.parkId) : routes;
+  const filteredRangers = form.parkId
+    ? rangers.filter((r) => !r.parkId || r.parkId === form.parkId)
+    : rangers;
 
-  // ── Load rangers from /api/users ──────────────────────────────────────────
+  // ── Load active Rangers through the shared UC01 service ───────────────────
   const loadRangers = useCallback(async () => {
     try {
       setLoadingRangers(true);
-      const staff = await apiClient.get<User[]>('/users');
-      const activeRangers = (Array.isArray(staff) ? staff : []).filter(
-        (u) => u.role === UserRole.RANGER && u.isActive
-      );
-      setRangers(activeRangers);
-    } catch {
+      setRangerLoadError(null);
+      setRangers(await webPatrolService.fetchRangers());
+    } catch (error: unknown) {
       setRangers([]);
+      setRangerLoadError(
+        error instanceof Error ? error.message : 'Could not load active Rangers.'
+      );
     } finally {
       setLoadingRangers(false);
     }
@@ -104,9 +107,15 @@ export function CreatePatrolModal({ routes, onClose, onCreated }: CreatePatrolMo
     setForm((prev) => {
       const next = { ...prev, [key]: value };
 
-      // When park changes, reset route selection
+      // When park changes, reset route selection and reset ranger if not in selected park
       if (key === 'parkId') {
         next.patrolRouteId = '';
+        if (next.rangerId) {
+          const selectedRanger = rangers.find((r) => r.id === next.rangerId);
+          if (selectedRanger && selectedRanger.parkId && selectedRanger.parkId !== value) {
+            next.rangerId = '';
+          }
+        }
       }
 
       // Auto-suggest patrol code when park + startTime are both set and code is empty or was auto-generated
@@ -293,20 +302,35 @@ export function CreatePatrolModal({ routes, onClose, onCreated }: CreatePatrolMo
                   id="cp-ranger"
                   value={form.rangerId}
                   onChange={(e) => setField('rangerId', e.target.value)}
+                  disabled={Boolean(rangerLoadError)}
                   className={`w-full px-3 py-2 text-sm bg-[#FAF7EE] border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3E8E41]/40 transition ${
                     fieldErrors.rangerId ? 'border-red-400' : 'border-[#D1B370]/60'
                   }`}
                 >
-                  <option value="">Select ranger…</option>
-                  {rangers.length === 0 && (
-                    <option disabled value="">No active rangers found</option>
+                  <option value="">
+                    {rangerLoadError ? 'Rangers could not be loaded' : 'Select ranger…'}
+                  </option>
+                  {filteredRangers.length === 0 && (
+                    <option disabled value="">No active rangers found for selected park</option>
                   )}
-                  {rangers.map((r) => (
+                  {filteredRangers.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.fullName}{r.badgeNumber ? ` (${r.badgeNumber})` : ''}
                     </option>
                   ))}
                 </select>
+              )}
+              {rangerLoadError && (
+                <div className="flex items-center justify-between gap-3 text-[11px] text-red-600" role="alert">
+                  <span>{rangerLoadError}</span>
+                  <button
+                    type="button"
+                    onClick={() => void loadRangers()}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    Retry
+                  </button>
+                </div>
               )}
               {fieldErrors.rangerId && <p className="text-[11px] text-red-500">{fieldErrors.rangerId}</p>}
             </div>

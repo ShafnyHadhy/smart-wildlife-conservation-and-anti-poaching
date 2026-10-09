@@ -31,8 +31,26 @@ function mapRowToCommunityMember(row: any): CommunityMember {
 }
 
 export class UserRepository {
-  async findAllStaff(): Promise<User[]> {
-    const res = await query('SELECT * FROM users ORDER BY full_name ASC');
+  async findAllStaff(filter?: { role?: UserRole; parkId?: string }): Promise<User[]> {
+    let sql = 'SELECT * FROM users';
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (filter?.role) {
+      params.push(filter.role);
+      conditions.push(`role = $${params.length}`);
+    }
+    if (filter?.parkId) {
+      params.push(filter.parkId);
+      conditions.push(`park_id = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      sql += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    sql += ' ORDER BY full_name ASC';
+    const res = await query(sql, params);
     return res.rows.map(mapRowToUser);
   }
 

@@ -1,5 +1,12 @@
 import { query } from '../config/database';
-import { Patrol, PatrolRoute, Waypoint, PatrolStatus } from '@wildlife/shared';
+import {
+  Patrol,
+  PatrolRoute,
+  Waypoint,
+  PatrolStatus,
+  LocationType,
+  calculateHaversineDistanceKm,
+} from '@wildlife/shared';
 
 function mapRowToPatrol(row: any): Patrol {
   return {
@@ -170,6 +177,17 @@ export class PatrolRepository {
     return this.findAllRoutes(parkId);
   }
 
+  async isRangerEligibleForPark(rangerId: string, parkId: string): Promise<boolean> {
+    const res = await query(
+      `SELECT 1
+       FROM users
+       WHERE id = $1 AND role = 'RANGER' AND is_active = TRUE
+         AND (park_id IS NULL OR park_id = $2)`,
+      [rangerId, parkId]
+    );
+    return res.rows.length > 0;
+  }
+
   async findWaypointsByPatrolId(patrolId: string): Promise<Waypoint[]> {
     const res = await query(
       'SELECT * FROM waypoints WHERE patrol_id = $1 ORDER BY sequence_order ASC',
@@ -209,14 +227,14 @@ export class PatrolRepository {
    * Atomically transitions a patrol from PLANNED → ACTIVE and sets start_time to now.
    * Returns null if no row was updated (patrol not in PLANNED status or does not exist).
    */
-  async startPatrol(id: string): Promise<Patrol | null> {
+  async startPatrol(id: string, rangerId: string): Promise<Patrol | null> {
     const sql = `
       UPDATE patrols
       SET status = 'ACTIVE', start_time = NOW(), updated_at = NOW()
-      WHERE id = $1 AND status = 'PLANNED'
+      WHERE id = $1 AND ranger_id = $2 AND status = 'PLANNED'
       RETURNING id
     `;
-    const res = await query(sql, [id]);
+    const res = await query(sql, [id, rangerId]);
     if (res.rows.length === 0) return null;
     return this.findById(id);
   }
@@ -225,16 +243,128 @@ export class PatrolRepository {
    * Atomically transitions a patrol from ACTIVE → COMPLETED and sets end_time to now.
    * Returns null if no row was updated (patrol not in ACTIVE status or does not exist).
    */
-  async completePatrol(id: string): Promise<Patrol | null> {
+  async completePatrol(id: string, rangerId: string): Promise<Patrol | null> {
     const sql = `
       UPDATE patrols
       SET status = 'COMPLETED', end_time = NOW(), updated_at = NOW()
-      WHERE id = $1 AND status = 'ACTIVE'
+      WHERE id = $1 AND ranger_id = $2 AND status = 'ACTIVE'
       RETURNING id
     `;
-    const res = await query(sql, [id]);
+    const res = await query(sql, [id, rangerId]);
     if (res.rows.length === 0) return null;
     return this.findById(id);
+  }
+
+  async cancelPlannedPatrol(id: string): Promise<Patrol | null> {
+    const res = await query(
+      `UPDATE patrols
+       SET status = 'CANCELLED', end_time = NOW(), updated_at = NOW()
+       WHERE id = $1 AND status = 'PLANNED'
+       RETURNING id`,
+      [id]
+    );
+    if (res.rows.length === 0) return null;
+    return this.findById(id);
+  }
+
+  async updatePlannedAssignment(
+    id: string,
+    data: {
+      rangerId: string;
+      parkId: string;
+      patrolRouteId: string;
+      startTime: string;
+      patrolCode: string;
+      notes?: string;
+    }
+  ): Promise<Patrol | null> {
+    const res = await query(
+      `UPDATE patrols
+       SET ranger_id = $2, park_id = $3, patrol_route_id = $4,
+           start_time = $5, patrol_code = $6, notes = $7, updated_at = NOW()
+       WHERE id = $1 AND status = 'PLANNED'
+       RETURNING id`,
+      [
+        id,
+        data.rangerId,
+        data.parkId,
+        data.patrolRouteId,
+        data.startTime,
+        data.patrolCode,
+        data.notes ?? null,
+      ]
+    );
+    if (res.rows.length === 0) return null;
+    return this.findById(id);
+  }
+
+  /**
+   * Records a GPS waypoint/breadcrumb for a patrol and dynamically recalculates coverage score.
+   */
+  async addWaypoint(
+    patrolId: string,
+    data: {
+      latitude: number;
+      longitude: number;
+      sequenceOrder?: number;
+      locationType?: LocationType;
+      recordedAt?: string;
+      notes?: string;
+    }
+  ): Promise<Waypoint> {
+    const insertSql = `
+      INSERT INTO waypoints
+        (patrol_id, patrol_route_id, latitude, longitude, sequence_order, location_type, recorded_at, notes)
+      SELECT p.id, p.patrol_route_id, $2, $3,
+        COALESCE($4, (
+          SELECT COALESCE(MAX(w.sequence_order), 0) + 1
+          FROM waypoints w WHERE w.patrol_id = p.id
+        )),
+        $5, $6, $7
+      FROM patrols p
+      WHERE p.id = $1 AND p.status = 'ACTIVE'
+      RETURNING *
+    `;
+    const recordedAt = data.recordedAt ? new Date(data.recordedAt) : new Date();
+    const insertRes = await query(insertSql, [
+      patrolId,
+      data.latitude,
+      data.longitude,
+      data.sequenceOrder ?? null,
+      data.locationType || LocationType.GPS,
+      recordedAt,
+      data.notes ?? null,
+    ]);
+    if (!insertRes.rows[0]) {
+      throw new Error(`Active patrol not found: ${patrolId}`);
+    }
+
+    const createdWaypoint = mapRowToWaypoint(insertRes.rows[0]);
+
+    // Recalculate coverage score against planned route checkpoints
+    try {
+      const plannedCheckpoints = await this.findWaypointsByRouteId(createdWaypoint.patrolRouteId || '');
+      if (plannedCheckpoints.length > 0) {
+        const allPatrolWaypoints = await this.findWaypointsByPatrolId(patrolId);
+        const visitedCount = plannedCheckpoints.filter((cp) =>
+          allPatrolWaypoints.some((rw) =>
+            calculateHaversineDistanceKm(cp.latitude, cp.longitude, rw.latitude, rw.longitude) <= 0.2
+          )
+        ).length;
+        const coverageScore = Math.min(100, Math.round((visitedCount / plannedCheckpoints.length) * 100 * 100) / 100);
+        await query('UPDATE patrols SET coverage_score = $1, updated_at = NOW() WHERE id = $2', [
+          coverageScore,
+          patrolId,
+        ]);
+      }
+    } catch (coverageError) {
+      console.error(
+        `[PatrolRepository] Waypoint saved, but coverage recalculation failed for patrol ${patrolId}:`,
+        coverageError
+      );
+    }
+
+    return createdWaypoint;
   }
 }
 

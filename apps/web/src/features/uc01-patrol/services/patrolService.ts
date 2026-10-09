@@ -1,5 +1,5 @@
 import { apiClient } from '../../../services/apiClient';
-import { Patrol, PatrolRoute, PatrolStatus, CreatePatrolDTO } from '@wildlife/shared';
+import { Patrol, PatrolRoute, PatrolStatus, CreatePatrolDTO, User, UserRole } from '@wildlife/shared';
 
 export interface PatrolFilterOptions {
   status?: PatrolStatus | 'ALL';
@@ -66,12 +66,32 @@ export const webPatrolService = {
     return apiClient.post<Patrol>('/patrols', dto);
   },
 
-  /**
-   * Starts a PLANNED patrol — transitions status to ACTIVE and records start_time.
-   * Corresponds to PATCH /api/patrols/:id/start
-   */
-  async startPatrol(id: string): Promise<Patrol> {
-    return apiClient.patch<Patrol>(`/patrols/${encodeURIComponent(id)}/start`);
+  async fetchRangers(): Promise<User[]> {
+    const users = await apiClient.get<User[]>(`/users?role=${UserRole.RANGER}`);
+    return users.filter((user) => user.isActive);
+  },
+
+  async reassignPlannedPatrol(
+    id: string,
+    dto: {
+      rangerId: string;
+      parkId: string;
+      patrolRouteId: string;
+      patrolCode: string;
+      startTime: string;
+      notes?: string;
+    }
+  ): Promise<Patrol> {
+    return apiClient.patch<Patrol>(
+      `/patrols/${encodeURIComponent(id)}/assignment`,
+      dto
+    );
+  },
+
+  async cancelPlannedPatrol(id: string): Promise<Patrol> {
+    return apiClient.patch<Patrol>(
+      `/patrols/${encodeURIComponent(id)}/cancel`
+    );
   },
 };
 
@@ -80,6 +100,4 @@ export const fetchPatrolById = webPatrolService.fetchPatrolById;
 export const fetchPatrolRoutes = webPatrolService.fetchPatrolRoutes;
 export const fetchPatrolRouteById = webPatrolService.fetchPatrolRouteById;
 export const createPatrol = webPatrolService.createPatrol;
-export const startPatrol = webPatrolService.startPatrol;
-
 

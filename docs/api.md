@@ -148,7 +148,16 @@ Retrieves system users and field personnel.
 
 ---
 
+### Ranger Authentication
+`POST /api/auth/login` issues an eight-hour signed Bearer token for an active Ranger. Production logins require a `password_hash` set by the backend's interactive `db:set-ranger-password` command; the development preset Ranger login is enabled only outside production and still requires its corresponding active database account.
+
+Set `AUTH_TOKEN_SECRET` to a unique random value of at least 32 characters in the backend environment. Before provisioning production Ranger passwords, apply the additive `003_ranger_authentication.sql` migration. Ranger requests are revalidated against the active `users` row; patrol start, completion, and waypoint endpoints require a valid Ranger token and the patrol must belong to that Ranger.
+
 ## 5. Ranger Patrols & Routes (UC01 Foundation)
+
+Manager patrol assignment APIs also support:
+- `PATCH /api/patrols/:id/assignment` — Reassign or update a PLANNED patrol's Ranger, route, park, schedule, code, or notes.
+- `PATCH /api/patrols/:id/cancel` — Cancel a PLANNED patrol.
 
 ### `GET /api/patrols`
 Lists ranger patrols with optional status and personnel filters.
