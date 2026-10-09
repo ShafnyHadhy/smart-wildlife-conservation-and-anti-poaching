@@ -1,45 +1,135 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
-import { apiClient } from '../services/apiClient';
-import { Compass, Info } from 'lucide-react';
-import { Patrol, PatrolRoute } from '@wildlife/shared';
+import { EmptyState } from '../components/common/EmptyState';
+import { Compass, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2 } from 'lucide-react';
+import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
+import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
+import {
+  calculatePatrolProgress,
+  formatProgress,
+  calculatePatrolCoverage,
+  classifyPatrolCoverage,
+  formatCoverage,
+  UNDER_PATROLLED_COVERAGE_THRESHOLD,
+  getRangerLocationInfo,
+  formatRangerLocationLabel,
+  formatCoordinates,
+  evaluatePatrolAttention,
+  getUnderPatrolledSummary,
+  calculatePatrolStatistics,
+  applyPatrolFilters,
+  deriveParkOptions,
+  deriveRangerOptions,
+  deriveRouteOptions,
+  DEFAULT_PATROL_FILTERS,
+  PatrolFilterState,
+} from '../features/uc01-patrol/utils';
+import {
+  UnderPatrolledOverviewCard,
+  PatrolOverviewStats,
+  PatrolFilterBar,
+  PatrolDetailsView,
+} from '../features/uc01-patrol/components';
 
-export function PatrolsPage() {
+export interface PatrolsPageProps {
+  initialPatrolId?: string;
+}
+
+export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
   const [patrols, setPatrols] = useState<Patrol[]>([]);
   const [routes, setRoutes] = useState<PatrolRoute[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('ALL');
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<PatrolFilterState>(DEFAULT_PATROL_FILTERS);
+  const [selectedPatrolId, setSelectedPatrolId] = useState<string | null>(initialPatrolId || null);
 
-  useEffect(() => {
-    async function loadPatrolsData() {
-      try {
-        setLoading(true);
-        const [patrolsRes, routesRes] = await Promise.all([
-          apiClient.get<Patrol[]>('/patrols').catch(() => []),
-          apiClient.get<PatrolRoute[]>('/patrol-routes').catch(() => []),
-        ]);
-        setPatrols(patrolsRes);
-        setRoutes(routesRes);
-      } finally {
-        setLoading(false);
-      }
+  const loadPatrolsData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [patrolsRes, routesRes] = await Promise.all([
+        webPatrolService.fetchPatrols(),
+        webPatrolService.fetchPatrolRoutes(),
+      ]);
+
+      const safePatrols = Array.isArray(patrolsRes) ? patrolsRes : [];
+      const safeRoutes = Array.isArray(routesRes) ? routesRes : [];
+
+      // Enrich active/completed patrols with detailed waypoints if not already present
+      const enrichedPatrols = await Promise.all(
+        safePatrols.map(async (patrol) => {
+          if (!patrol || !patrol.id) return patrol;
+          if (patrol.waypoints && patrol.waypoints.length > 0) {
+            return patrol;
+          }
+          // Do not fetch details for planned or cancelled patrols
+          if (
+            patrol.status === PatrolStatus.PLANNED ||
+            patrol.status === PatrolStatus.CANCELLED
+          ) {
+            return { ...patrol, waypoints: [] };
+          }
+          try {
+            const detail = await webPatrolService.fetchPatrolById(patrol.id);
+            return {
+              ...patrol,
+              ...detail,
+              waypoints: detail?.waypoints || [],
+            };
+          } catch {
+            return patrol;
+          }
+        })
+      );
+
+      setPatrols(enrichedPatrols.filter((p): p is Patrol => Boolean(p && p.id)));
+      setRoutes(safeRoutes);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Failed to fetch patrol monitoring data. Please check connection.';
+      setError(message);
+    } finally {
+      setLoading(false);
     }
-    loadPatrolsData();
   }, []);
 
-  const filteredPatrols = patrols.filter((p) => {
-    if (filter === 'ALL') return true;
-    return p.status === filter;
-  });
+  useEffect(() => {
+    loadPatrolsData();
+  }, [loadPatrolsData]);
+
+  // Derive filter options from full patrol dataset
+  const parkOptions = useMemo(() => deriveParkOptions(patrols), [patrols]);
+  const rangerOptions = useMemo(() => deriveRangerOptions(patrols), [patrols]);
+  const routeOptions = useMemo(() => deriveRouteOptions(patrols), [patrols]);
+
+  // Apply all filters together to produce the table dataset
+  const filteredPatrols = useMemo(
+    () => applyPatrolFilters(patrols, filters),
+    [patrols, filters]
+  );
+
+  // Task 8 statistics and Task 7 under-patrolled summary always use the FULL dataset (not filtered)
+  const underPatrolledSummary = getUnderPatrolledSummary(patrols, routes);
+  const overviewStats = calculatePatrolStatistics(patrols, routes);
+
+  function handleFiltersChange(next: PatrolFilterState) {
+    setFilters(next);
+  }
+
+  function handleResetFilters() {
+    setFilters(DEFAULT_PATROL_FILTERS);
+  }
 
   const columns: Column<Patrol>[] = [
     {
       header: 'Patrol Code',
       accessor: (p) => (
         <span className="font-bold text-[#1C2A1E]">
-          {(p as any).patrolCode || p.id.slice(0, 8)}
+          {p.patrolCode || (p.id ? p.id.slice(0, 8) : 'Not available')}
         </span>
       ),
     },
@@ -47,7 +137,7 @@ export function PatrolsPage() {
       header: 'Assigned Ranger',
       accessor: (p) => (
         <span className="text-stone-700">
-          {(p as any).rangerName || p.rangerId?.slice(0, 8) || 'Assigned Ranger'}
+          {p.rangerName || p.rangerId || 'Not available'}
         </span>
       ),
     },
@@ -55,23 +145,222 @@ export function PatrolsPage() {
       header: 'Route Corridor',
       accessor: (p) => (
         <span className="text-stone-600">
-          {(p as any).routeName || 'Coastal Patrol'}
+          {p.routeName || routes.find((r) => r.id === p.patrolRouteId)?.name || 'Not available'}
         </span>
       ),
     },
     {
       header: 'Start Time',
-      accessor: (p) => (
-        <span className="text-stone-500 text-xs">
-          {(p as any).startTime ? new Date((p as any).startTime).toLocaleTimeString() : 'Scheduled'}
-        </span>
-      ),
+      accessor: (p) => {
+        if (!p.startTime) {
+          return (
+            <span className="text-stone-500 text-xs">
+              {p.status === PatrolStatus.PLANNED ? 'Scheduled' : 'Not available'}
+            </span>
+          );
+        }
+        const d = new Date(p.startTime);
+        return (
+          <span className="text-stone-500 text-xs">
+            {!Number.isNaN(d.getTime()) ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Not available'}
+          </span>
+        );
+      },
     },
     {
-      header: 'Status',
-      accessor: (p) => <StatusBadge status={p.status} size="sm" />,
+      header: 'Progress',
+      accessor: (p) => {
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const progress = calculatePatrolProgress(p, route?.waypoints?.length || undefined);
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-16 bg-stone-200 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  progress === 100
+                    ? 'bg-emerald-600'
+                    : progress > 0
+                    ? 'bg-[#3E8E41]'
+                    : 'bg-stone-300'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="font-bold text-stone-800 text-xs font-mono">
+              {formatProgress(progress)}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Coverage',
+      accessor: (p) => {
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const plannedCheckpoints = route?.waypoints;
+        const coverage = calculatePatrolCoverage(p, plannedCheckpoints);
+        const classification = classifyPatrolCoverage(p, plannedCheckpoints);
+        const isGood = classification === 'Good Coverage';
+        const isUnder = classification === 'Under-patrolled';
+
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <div className="w-16 bg-stone-200 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    coverage >= UNDER_PATROLLED_COVERAGE_THRESHOLD
+                      ? 'bg-emerald-600'
+                      : coverage > 0
+                      ? 'bg-amber-500'
+                      : 'bg-stone-300'
+                  }`}
+                  style={{ width: `${coverage}%` }}
+                />
+              </div>
+              <span className="font-bold text-stone-800 text-xs font-mono">
+                {formatCoverage(coverage)}
+              </span>
+            </div>
+            {p.status === PatrolStatus.ACTIVE || p.status === PatrolStatus.COMPLETED ? (
+              <span
+                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded w-fit ${
+                  isGood
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : isUnder
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-stone-100 text-stone-600 border border-stone-200'
+                }`}
+              >
+                {classification}
+              </span>
+            ) : null}
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Location Status',
+      accessor: (p) => {
+        const info = getRangerLocationInfo(p.waypoints);
+        const label = formatRangerLocationLabel(info, p.status);
+        const { status, latestWaypoint } = info;
+
+        if (
+          p.status === PatrolStatus.PLANNED ||
+          p.status === PatrolStatus.CANCELLED ||
+          status === 'Unavailable'
+        ) {
+          return (
+            <div className="flex items-center gap-1.5 text-stone-400">
+              <WifiOff className="w-3 h-3 shrink-0" />
+              <span className="text-[11px] font-medium">Location unavailable</span>
+            </div>
+          );
+        }
+
+        const coords = latestWaypoint
+          ? formatCoordinates(latestWaypoint.latitude, latestWaypoint.longitude)
+          : null;
+
+        if (status === 'Stale') {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                  <Clock className="w-2.5 h-2.5" />
+                  Stale
+                </span>
+                {coords && (
+                  <span className="text-[10px] font-mono text-stone-500">{coords}</span>
+                )}
+              </div>
+              <span className="text-[10px] text-stone-500 font-medium">{label}</span>
+            </div>
+          );
+        }
+
+        // Current
+        return (
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <MapPin className="w-2.5 h-2.5" />
+                Current
+              </span>
+              {coords && (
+                <span className="text-[10px] font-mono text-stone-500">{coords}</span>
+              )}
+            </div>
+            <span className="text-[10px] text-stone-500 font-medium">{label}</span>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Status / Evaluation',
+      accessor: (p) => {
+        const route = routes.find((r) => r.id === p.patrolRouteId);
+        const evalResult = evaluatePatrolAttention(p, route);
+
+        if (p.status === PatrolStatus.ACTIVE) {
+          if (evalResult.needsAttention) {
+            return (
+              <div className="flex flex-col gap-1 items-start">
+                <StatusBadge status={p.status || PatrolStatus.ACTIVE} size="sm" />
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300"
+                  title={evalResult.reasons.join(', ')}
+                >
+                  <AlertTriangle className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                  {evalResult.isUnderPatrolled ? 'Under-patrolled' : 'Needs Attention'}
+                </span>
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex flex-col gap-1 items-start">
+              <StatusBadge status={p.status || PatrolStatus.ACTIVE} size="sm" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                On Track
+              </span>
+            </div>
+          );
+        }
+
+        return <StatusBadge status={p.status || PatrolStatus.PLANNED} size="sm" />;
+      },
+    },
+    {
+      header: 'Actions',
+      accessor: (p) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedPatrolId(p.id);
+          }}
+          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#2E6B31]
+            bg-[#3E8E41]/10 hover:bg-[#3E8E41]/20 border border-[#3E8E41]/30 rounded-lg transition-colors"
+          aria-label={`View Details for ${p.patrolCode || p.id}`}
+        >
+          View Details
+        </button>
+      ),
     },
   ];
+
+  if (selectedPatrolId) {
+    return (
+      <PatrolDetailsView
+        patrolId={selectedPatrolId}
+        onBack={() => setSelectedPatrolId(null)}
+        initialPatrol={patrols.find((p) => p.id === selectedPatrolId)}
+        routes={routes}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -90,49 +379,86 @@ export function PatrolsPage() {
             Tracking active ranger patrols, pre-approved corridors, and waypoint coverage.
           </p>
         </div>
-
-        {/* Status Filters */}
-        <div className="flex items-center gap-2">
-          {['ALL', 'ACTIVE', 'PLANNED', 'COMPLETED'].map((st) => (
-            <button
-              key={st}
-              onClick={() => setFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-150 ${
-                filter === st
-                  ? 'bg-[#3E8E41] text-white shadow-xs'
-                  : 'bg-white text-stone-700 hover:bg-[#F5F5DC] border border-[#D1B370]/60'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Feature Architecture Note */}
-      <div className="p-4 bg-[#FAF7EE] border border-[#D1B370]/70 rounded-xl flex items-start gap-3 shadow-xs">
-        <Info className="w-5 h-5 text-[#3E8E41] shrink-0 mt-0.5" />
-        <div className="text-xs text-stone-700 leading-relaxed font-medium">
-          <strong className="text-[#1C2A1E]">Team Member 1 Feature Workspace:</strong> Full patrol coverage calculation,
-          under-patrolled boundary detection, and the interactive map component belong in{' '}
-          <code className="bg-[#F5F5DC] px-1.5 py-0.5 rounded border border-[#D1B370]/60 font-mono text-[#A76D40]">
-            apps/web/src/features/uc01-patrol/
-          </code>
-          .
-        </div>
       </div>
 
       {/* Data Table */}
       {loading ? (
         <LoadingState message="Fetching current patrols and routes..." />
+      ) : error ? (
+        <EmptyState
+          title="Unable to Load Patrol Monitoring Data"
+          message={error}
+          icon={<AlertTriangle className="w-8 h-8 text-amber-600" />}
+          action={{
+            label: 'Retry',
+            onClick: () => {
+              void loadPatrolsData();
+            },
+          }}
+        />
       ) : (
         <div className="space-y-4">
-          <DataTable
-            columns={columns}
-            data={filteredPatrols}
-            keyExtractor={(p) => p.id}
-            emptyMessage="No patrols match the selected filter."
-          />
+          {patrols.length === 0 ? (
+            <EmptyState
+              title="No Patrols Recorded"
+              message="There are currently no active, planned, or completed ranger patrols."
+              icon={<Compass className="w-8 h-8 text-[#3E8E41]" />}
+              action={{
+                label: 'Refresh Data',
+                onClick: () => {
+                  void loadPatrolsData();
+                },
+              }}
+            />
+          ) : (
+            <>
+              {/* Overview Statistics (UC01 Task 8) — uses full dataset */}
+              <PatrolOverviewStats stats={overviewStats} />
+
+              {/* Under-Patrolled & Operational Attention Overview (UC01 Task 7) — uses full dataset */}
+              <UnderPatrolledOverviewCard summary={underPatrolledSummary} />
+
+              {/* Filters (UC01 Task 9) */}
+              <PatrolFilterBar
+                filters={filters}
+                parkOptions={parkOptions}
+                rangerOptions={rangerOptions}
+                routeOptions={routeOptions}
+                onFiltersChange={handleFiltersChange}
+                onReset={handleResetFilters}
+              />
+
+              {/* Patrol table — uses filtered dataset */}
+              {filteredPatrols.length === 0 ? (
+                <div
+                  data-testid="filter-empty-state"
+                  className="flex flex-col items-center justify-center gap-3 py-12 px-6
+                    bg-white border border-[#D1B370]/60 rounded-2xl shadow-xs text-center"
+                >
+                  <Compass className="w-8 h-8 text-stone-300" />
+                  <p className="text-sm font-bold text-stone-500">No patrols match the selected filters.</p>
+                  <p className="text-xs text-stone-400">
+                    Try adjusting your filters, or{' '}
+                    <button
+                      onClick={handleResetFilters}
+                      className="font-bold text-[#3E8E41] underline underline-offset-2 hover:text-[#2E6B31]"
+                    >
+                      clear all filters
+                    </button>{' '}
+                    to see all patrols.
+                  </p>
+                </div>
+              ) : (
+                <DataTable
+                  columns={columns}
+                  data={filteredPatrols}
+                  keyExtractor={(p) => p.id}
+                  onRowClick={(p) => setSelectedPatrolId(p.id)}
+                  emptyMessage="No patrols match the selected filter."
+                />
+              )}
+            </>
+          )}
 
           {/* Available Route Corridors Overview */}
           {routes.length > 0 && (

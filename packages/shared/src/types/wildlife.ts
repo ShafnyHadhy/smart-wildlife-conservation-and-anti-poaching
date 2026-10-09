@@ -1,5 +1,6 @@
 import { AnimalGender } from '../enums';
 import { Coordinates } from './common';
+import type { WildlifeRiskAlert } from './alert';
 
 export interface TrackingCollar {
   id: string;
@@ -25,6 +26,11 @@ export interface WildlifeAnimal {
   updatedAt: string;
   // Enriched relationship
   activeCollar?: TrackingCollar;
+  lastKnownLocation?: {
+    latitude: number;
+    longitude: number;
+    recordedAt: string;
+  };
 }
 
 export interface LocationRecord {
@@ -44,4 +50,15 @@ export interface IngestTelemetryDTO {
   location: Coordinates;
   recordedAt: string;
   isSimulated?: boolean;
+}
+
+export interface SimulatePingDTO {
+  latitude: number;
+  longitude: number;
+  recordedAt?: string;
+}
+
+export interface SimulatePingResponse {
+  location: LocationRecord;
+  alert: WildlifeRiskAlert | null;
 }
