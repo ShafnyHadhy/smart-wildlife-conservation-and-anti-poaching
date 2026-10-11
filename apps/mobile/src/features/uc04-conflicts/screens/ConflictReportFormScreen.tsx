@@ -1240,12 +1240,6 @@ const s = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   outlineBtnText: { color: '#475569', fontSize: 14, fontWeight: '800' },
-  btnContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
 
   navRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
   navBack: {
