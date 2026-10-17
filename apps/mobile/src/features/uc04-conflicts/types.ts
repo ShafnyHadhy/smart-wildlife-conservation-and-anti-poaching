@@ -6,6 +6,8 @@ import {
   CreateConflictReportDTO,
 } from '@wildlife/shared';
 
+//I — Interface Segregation Principle (ISP): 
+//Clients should not be forced to depend upon interfaces or methods that they do not use.
 export interface ConflictDraft {
   localId?: string;
   communityMemberId: string;

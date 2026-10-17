@@ -8,6 +8,8 @@ try {
   FileSystemModule = null;
 }
 
+//L — Liskov Substitution Principle (LSP):
+// Objects of a superclass or interface should be replaceable with objects of its subclasses without affecting the correctness of the program. 
 export interface StorageAdapter {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
@@ -16,6 +18,7 @@ export interface StorageAdapter {
 
 export class PersistentStorage implements StorageAdapter {
   private getFilePath(key: string): string | null {
+     // 1. Can substitute with native Mobile FileSystem: 
     if (FileSystemModule && FileSystemModule.documentDirectory) {
       return `${FileSystemModule.documentDirectory}${key}.json`;
     }
@@ -34,7 +37,7 @@ export class PersistentStorage implements StorageAdapter {
         console.warn(`[Storage] FileSystem read error for ${key}:`, err);
       }
     }
-
+    // 2. Can substitute with Web LocalStorage: 
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         return window.localStorage.getItem(key);
@@ -42,7 +45,7 @@ export class PersistentStorage implements StorageAdapter {
         console.warn(`[Storage] localStorage read error for ${key}:`, err);
       }
     }
-
+    // 3. Can substitute with In-Memory fallback: 
     return memoryStore[key] || null;
   }
 

@@ -110,6 +110,7 @@ describe('UC04: Mobile Conflict Reporting & Tracking (Wireframe Flow)', () => {
       expect(screen.getByText('Other')).toBeDefined();
     });
 
+    //Component & Form Testing
     it('renders offline mode badge when offline', () => {
       render(<ConflictReportFormScreen isOnline={false} />);
       expect(screen.getByText(/OFFLINE MODE ACTIVE/i)).toBeDefined();
@@ -160,7 +161,7 @@ describe('UC04: Mobile Conflict Reporting & Tracking (Wireframe Flow)', () => {
 
       const submitBtn = screen.getByText(/Submit Conflict Report/i);
       fireEvent.click(submitBtn);
-
+//croppp - LIVESTOCK_ATTACK
       await waitFor(() => {
         expect(mobileConflictService.submitConflict).toHaveBeenCalledTimes(1);
         expect(mobileConflictService.submitConflict).toHaveBeenCalledWith(
