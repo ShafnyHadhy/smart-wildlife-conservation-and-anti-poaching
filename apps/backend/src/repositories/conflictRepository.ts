@@ -154,6 +154,8 @@ export class ConflictRepository {
       note: 'Report submitted by community member.',
     };
 
+    //Maps database rows back into strongly-typed TypeScript domain entities.
+    //On the mobile client, apiClient.ts handles HTTP headers, JSON serialization, and network retry logic.
     const sql = `
       INSERT INTO conflict_reports (
         community_member_id, park_id, conflict_type, description, latitude, longitude,
