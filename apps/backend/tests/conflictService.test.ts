@@ -55,13 +55,13 @@ describe('UC04: ConflictService Unit Tests', () => {
       name: 'Yala National Park',
     } as any);
   });
-
+  //unitTesting100
   describe('Haversine Distance Precision & Math', () => {
     it('calculates 0 km distance for identical coordinates', () => {
       const dist = calculateHaversineDistanceKm(6.368, 81.332, 6.368, 81.332);
       expect(dist).toBe(0);
     });
-
+  //.
     it('accurately calculates distance between Palatupana and Kataragama (~12 km)', () => {
       // Palatupana (6.273, 81.436) to Kataragama (6.413, 81.332)
       const dist = calculateHaversineDistanceKm(6.273, 81.436, 6.413, 81.332);

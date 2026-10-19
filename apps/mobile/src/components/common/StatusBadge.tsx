@@ -25,6 +25,8 @@ export function StatusBadge({
   size = 'medium',
   style,
 }: StatusBadgeProps) {
+
+  // // CLOSED FOR MODIFICATION: Core layout never needs to change 
   const resolvedVariant: BadgeVariant = variant || getVariantFromStatus(status);
 
   return (
@@ -56,6 +58,7 @@ export function StatusBadge({
   );
 }
 
+// OPEN FOR EXTENSION: Easily maps any new status to an existing visual theme 
 function getVariantFromStatus(status: string): BadgeVariant {
   const normalized = status.toUpperCase().replace(/[_\s-]+/g, '_');
 
