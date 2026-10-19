@@ -3,7 +3,7 @@ import { DataTable, Column } from '../components/common/DataTable';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingState } from '../components/common/LoadingState';
 import { EmptyState } from '../components/common/EmptyState';
-import { Compass, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2, Plus } from 'lucide-react';
+import { Compass, AlertTriangle, MapPin, Clock, WifiOff, CheckCircle2, Plus, RefreshCw } from 'lucide-react';
 import { Patrol, PatrolRoute, PatrolStatus } from '@wildlife/shared';
 import { webPatrolService } from '../features/uc01-patrol/services/patrolService';
 import {
@@ -46,11 +46,16 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
   const [filters, setFilters] = useState<PatrolFilterState>(DEFAULT_PATROL_FILTERS);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPatrolId, setSelectedPatrolId] = useState<string | null>(initialPatrolId || null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const loadPatrolsData = useCallback(async () => {
+  const loadPatrolsData = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (silent) setRefreshing(true);
+      else {
+        setLoading(true);
+        setError(null);
+      }
       const [patrolsRes, routesRes] = await Promise.all([
         webPatrolService.fetchPatrols(),
         webPatrolService.fetchPatrolRoutes(),
@@ -88,6 +93,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
 
       setPatrols(enrichedPatrols.filter((p): p is Patrol => Boolean(p && p.id)));
       setRoutes(safeRoutes);
+      setLastUpdated(new Date());
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -95,13 +101,25 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
           : 'Failed to fetch patrol monitoring data. Please check connection.';
       setError(message);
     } finally {
-      setLoading(false);
+      if (silent) setRefreshing(false);
+      else setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadPatrolsData();
   }, [loadPatrolsData]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void loadPatrolsData({ silent: true });
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [loadPatrolsData]);
+
+  const handlePatrolUpdated = useCallback((updated: Patrol) => {
+    setPatrols((current) => current.map((patrol) => patrol.id === updated.id ? updated : patrol));
+  }, []);
 
   // Derive filter options from full patrol dataset
   const parkOptions = useMemo(() => deriveParkOptions(patrols), [patrols]);
@@ -357,9 +375,13 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
     return (
       <PatrolDetailsView
         patrolId={selectedPatrolId}
-        onBack={() => setSelectedPatrolId(null)}
+        onBack={() => {
+          setSelectedPatrolId(null);
+          void loadPatrolsData({ silent: true });
+        }}
         initialPatrol={patrols.find((p) => p.id === selectedPatrolId)}
         routes={routes}
+        onPatrolUpdated={handlePatrolUpdated}
       />
     );
   }
@@ -381,6 +403,23 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
             Tracking active ranger patrols, pre-approved corridors, and waypoint coverage.
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="hidden sm:inline text-xs text-stone-500">
+              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => { void loadPatrolsData({ silent: true }); }}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 bg-white
+              border border-[#D1B370]/60 rounded-xl hover:bg-[#FAF7EE] disabled:opacity-60"
+            aria-label="Refresh patrol monitoring"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         {/* Create Patrol button — visible once data is loaded */}
         {!loading && !error && (
           <button
@@ -396,6 +435,7 @@ export function PatrolsPage({ initialPatrolId }: PatrolsPageProps = {}) {
             New Patrol
           </button>
         )}
+        </div>
       </div>
 
       {/* Create Patrol Modal */}

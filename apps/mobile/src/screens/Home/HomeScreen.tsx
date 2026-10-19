@@ -25,6 +25,7 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { TabKey } from '../../components/navigation/BottomTabBar';
 import { AuthUser } from '../../services/authService';
 import { ScenicNatureBanner } from '../../features/uc04-conflicts/components/ConflictVisuals';
+import { patrolMobileService } from '../../features/uc01-patrol/services/patrolMobileService';
 
 interface HomeScreenProps {
   isOnline: boolean;
@@ -32,6 +33,7 @@ interface HomeScreenProps {
   onNavigateTab: (tab: TabKey) => void;
   onOpenConflictForm?: () => void;
   onOpenConflictList?: () => void;
+  onOpenPatrol?: () => void;
   onToggleOnline?: () => void;
   onSyncNow?: () => void;
   user?: AuthUser;
@@ -43,15 +45,37 @@ export function HomeScreen({
   onNavigateTab,
   onOpenConflictForm,
   onOpenConflictList,
+  onOpenPatrol,
   onToggleOnline,
   onSyncNow,
   user,
 }: HomeScreenProps) {
-  const displayName = user?.fullName || 'Saman Perera';
-  const displayRoleText = user ? user.subtitle : 'Ranger • Yala National Park';
+  const displayName = user?.fullName || 'Duty Ranger';
+  const displayRoleText = user ? user.subtitle : 'Field Operations Terminal';
   const isCommunityMember = user?.role === 'COMMUNITY_MEMBER';
-  const displayInitials = user?.initials || 'SP';
+  const displayInitials = user?.initials || (user?.fullName ? user.fullName.slice(0, 2).toUpperCase() : 'RN');
   const [activeModal, setActiveModal] = React.useState<'none' | 'wildlife_info' | 'safety_tips'>('none');
+  const [activePatrolCount, setActivePatrolCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    if (user?.role === 'RANGER' && user.id) {
+      patrolMobileService
+        .getPatrols(user.id)
+        .then((patrols) => {
+          if (isMounted) {
+            const count = patrols.filter((p) => p.status === 'ACTIVE').length;
+            setActivePatrolCount(count);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setActivePatrolCount(null);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.role]);
 
   const handleAction = (label: string, targetTab?: TabKey) => {
     if (targetTab) {
@@ -416,7 +440,7 @@ export function HomeScreen({
 
             <TouchableOpacity
               style={styles.actionCard}
-              onPress={() => handleAction('Start Patrol')}
+              onPress={() => (onOpenPatrol ? onOpenPatrol() : handleAction('Start Patrol', 'PATROL'))}
               activeOpacity={0.8}
             >
               <TbCompass size={28} color="#0284C7" style={{ marginBottom: 6 }} />
@@ -447,7 +471,9 @@ export function HomeScreen({
             {isCommunityMember ? 'Active Bull Alerts in Area: 2' : 'Active Tracked Bulls: 3'}
           </Text>
           <Text style={styles.parkMetaItem}>
-            {isCommunityMember ? 'Nearest Station: Palatupana Range Office' : 'Active Patrol Units: 2'}
+            {isCommunityMember
+              ? 'Nearest Station: Palatupana Range Office'
+              : `Active Patrol Units: ${activePatrolCount !== null ? activePatrolCount : '...'}`}
           </Text>
         </View>
       </AppCard>

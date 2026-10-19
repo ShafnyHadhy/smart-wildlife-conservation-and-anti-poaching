@@ -77,6 +77,25 @@ export const createPatrolSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
 });
 
+export const updatePlannedPatrolSchema = z.object({
+  parkId: uuidSchema,
+  rangerId: uuidSchema,
+  patrolRouteId: uuidSchema,
+  patrolCode: z.string().trim().min(2).max(50),
+  startTime: isoDateString,
+  notes: z.string().trim().max(1000).optional(),
+});
+
+// POST /api/patrols/:id/waypoints
+export const addWaypointSchema = z.object({
+  latitude: coordinateSchema.shape.latitude,
+  longitude: coordinateSchema.shape.longitude,
+  sequenceOrder: z.number().int().min(1).optional(),
+  locationType: z.enum(['GPS', 'MANUAL']).default('GPS'),
+  recordedAt: isoDateString.optional(),
+  notes: z.string().trim().max(500).optional(),
+});
+
 // Request bodies
 
 
@@ -119,6 +138,11 @@ export const createIncidentSchema = z.object({
   reportedAt: isoDateString.optional(),
   clientMutationId: z.string().max(64).optional(),
 });
+
+// PATCH /api/incidents/:id/status
+export const updateIncidentStatusSchema = z.object({
+  status: z.literal(IncidentStatus.REVIEWED),
+}).strict();
 
 // POST /api/incidents/:id/evidence
 export const createEvidenceSchema = z.object({

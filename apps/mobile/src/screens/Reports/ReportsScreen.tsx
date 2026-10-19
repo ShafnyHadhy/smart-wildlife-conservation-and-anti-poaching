@@ -1,22 +1,16 @@
+
 import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 
 import { ScreenContainer } from '../../components/layout/ScreenContainer';
 import { AppHeader } from '../../components/common/AppHeader';
 import { AppCard } from '../../components/common/AppCard';
-import { StatusBadge } from '../../components/common/StatusBadge';
-import { FcHighPriority, FcOpenedFolder, FcDataBackup, FcTodoList } from 'react-icons/fc';
-import { GiWheat } from 'react-icons/gi';
-import { TbShieldCheck } from 'react-icons/tb';
-
 import { CreateIncidentScreen } from '../../features/uc02-incidents/screens';
-
 import { ConflictReportFormScreen } from '../../features/uc04-conflicts/screens/ConflictReportFormScreen';
 import { ConflictListScreen } from '../../features/uc04-conflicts/screens/ConflictListScreen';
 import { AuthUser } from '../../services/authService';
@@ -25,12 +19,8 @@ interface ReportsScreenProps {
   isOnline?: boolean;
   pendingCount?: number;
   onSyncPress?: () => void;
-
-  // UC02
   onIncidentSubmitted?: () => void;
   onGoHome?: () => void;
-
-  // Latest dev / UC04
   user?: AuthUser;
   initialView?: ReportsView;
   onResetView?: () => void;
@@ -65,7 +55,7 @@ export function ReportsScreen({
     onResetView?.();
   };
 
-  // UC02 - Wildlife / Poaching Incident
+  // UC02: Existing ranger incident form
   if (activeView === 'create_incident') {
     return (
       <CreateIncidentScreen
@@ -77,7 +67,7 @@ export function ReportsScreen({
     );
   }
 
-  // UC04 - Conflict Report Form
+  // UC04: Existing conflict form
   if (activeView === 'conflict_form') {
     return (
       <ConflictReportFormScreen
@@ -92,7 +82,7 @@ export function ReportsScreen({
     );
   }
 
-  // UC04 - Conflict Report List
+  // UC04: Existing conflict list
   if (activeView === 'conflict_list') {
     return (
       <ConflictListScreen
@@ -105,436 +95,438 @@ export function ReportsScreen({
     );
   }
 
-  const handleFeatureNavigate = (
-    title: string,
-    featureCode: string,
-    description: string
-  ) => {
-    Alert.alert(
-      `${title} (${featureCode})`,
-      `${description}\n\nDedicated screen implementation belongs to ${featureCode}.`
-    );
-  };
-
   const isCommunityMember = user?.role === 'COMMUNITY_MEMBER';
   const isRanger = user?.role === 'RANGER';
 
   return (
-    <View style={styles.outerContainer}>
+    <View style={styles.container}>
       <AppHeader
         title="Field Reports"
         subtitle={
           isCommunityMember
-            ? 'Community Conflict Submissions & Tracking'
+            ? 'Community reporting and tracking'
             : isRanger
-            ? 'Ranger Operations & Conflict Triage'
-            : 'Incident & Conflict Submissions'
+              ? 'Ranger field operations'
+              : 'Incident and conflict reporting'
         }
       />
 
       <ScreenContainer scrollable={true}>
-        {/* Offline Queue Quick Banner */}
-        {pendingCount > 0 ? (
-          <AppCard variant="highlight" style={styles.queueCard}>
-            <View style={styles.queueCardRow}>
-              <View style={styles.queueTextColumn}>
-                <Text style={styles.queueTitle}>
-                  Pending Offline Queue
-                </Text>
+        {/* Intro */}
+        <View style={styles.intro}>
+          <Text style={styles.eyebrow}>WILDLIFE CONSERVATION</Text>
 
-                <Text style={styles.queueSubtitle}>
-                  {pendingCount} mutation(s) stored locally on device.
-                </Text>
-              </View>
+          <Text style={styles.pageTitle}>
+            Reports & Records
+          </Text>
 
-              {onSyncPress ? (
-                <TouchableOpacity
-                  style={styles.queueSyncBtn}
-                  onPress={onSyncPress}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.queueSyncBtnText}>
-                    Sync
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
+          <Text style={styles.pageDescription}>
+            Submit field observations, manage reports,
+            and monitor reporting activity.
+          </Text>
+        </View>
+
+        {/* Connectivity */}
+        <View style={styles.connectionRow}>
+          <View
+            style={[
+              styles.connectionIndicator,
+              !isOnline && styles.connectionIndicatorOffline,
+            ]}
+          />
+          <Text style={styles.connectionText}>
+            {isOnline
+              ? 'Connected to server'
+              : 'Offline mode — reports can be saved locally'}
+          </Text>
+        </View>
+
+        {/* Offline queue */}
+        {pendingCount > 0 && (
+          <View style={styles.queuePanel}>
+            <View style={styles.queueInfo}>
+              <Text style={styles.queueTitle}>
+                Reports Awaiting Sync
+              </Text>
+
+              <Text style={styles.queueDescription}>
+                {pendingCount} item(s) stored locally
+                and waiting for synchronization.
+              </Text>
             </View>
-          </AppCard>
-        ) : null}
 
-        {/* Ranger Operations & Triage Section (Front and Center for Rangers) */}
+            {onSyncPress && (
+              <TouchableOpacity
+                style={styles.syncButton}
+                onPress={onSyncPress}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.syncButtonText}>
+                  Sync Now
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Ranger triage */}
         {isRanger && (
-          <>
-            <Text style={styles.sectionHeading}>
-              Field Operations & Triage
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>
+              FIELD OPERATIONS
             </Text>
 
             <AppCard
               variant="highlight"
               onPress={() => setActiveView('conflict_list')}
             >
-              <View style={styles.simpleRow}>
-                <View style={[styles.simpleRowIconBox, { backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1 }]}>
-                  <TbShieldCheck size={22} color="#D97706" />
-                </View>
+              <View style={styles.cardContent}>
+                <View style={styles.cardText}>
+                  <Text style={styles.cardEyebrow}>
+                    COMMUNITY RESPONSE
+                  </Text>
 
-                <View style={styles.simpleRowText}>
-                  <View style={styles.badgeHeadingRow}>
-                    <Text style={styles.simpleRowTitle}>
-                      Community Conflict Triage
-                    </Text>
+                  <Text style={styles.cardTitle}>
+                    Community Conflict Triage
+                  </Text>
 
-                    <StatusBadge
-                      status="UC04 TRIAGE"
-                      size="small"
-                      variant="warning"
-                    />
-                  </View>
+                  <Text style={styles.cardDescription}>
+                    Review incoming villager reports,
+                    accept alerts, and coordinate
+                    field response teams.
+                  </Text>
 
-                  <Text style={styles.simpleRowDesc}>
-                    Review incoming villager reports, accept alerts & dispatch response teams.
+                  <Text style={styles.cardLink}>
+                    View Conflict Reports
                   </Text>
                 </View>
-
-                <Text style={styles.chevron}>›</Text>
               </View>
             </AppCard>
-          </>
+          </View>
         )}
 
-        <Text style={styles.sectionHeading}>
-          {isRanger ? 'Log New Observations' : 'New Submissions'}
-        </Text>
+        {/* New reports */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            {isRanger ? 'CREATE FIELD REPORT' : 'NEW REPORT'}
+          </Text>
 
-        {/* UC02 Option (Shown for Rangers or default view) */}
-        {!isCommunityMember && (
-          <AppCard
-            variant="elevated"
-            onPress={() => setActiveView('create_incident')}
-          >
-            <View style={styles.reportRow}>
-              <View
-                style={[
-                  styles.iconBadge,
-                  {
-                    backgroundColor: '#FEF2F2',
-                    borderColor: '#FCA5A5',
-                    borderWidth: 1,
-                  },
-                ]}
-              >
-                <FcHighPriority size={24} />
-              </View>
-
-              <View style={styles.reportTextColumn}>
-                <View style={styles.tagRow}>
-                  <Text style={styles.reportCategory}>
-                    UC02 • RANGER
+          {!isCommunityMember && (
+            <AppCard
+              variant="elevated"
+              onPress={() => setActiveView('create_incident')}
+            >
+              <View style={styles.cardContent}>
+                <View style={styles.cardText}>
+                  <Text style={styles.cardEyebrow}>
+                    RANGER INCIDENT REPORT
                   </Text>
 
-                  <StatusBadge
-                    status="OFFLINE READY"
-                    size="small"
-                    variant="info"
-                  />
+                  <Text style={styles.cardTitle}>
+                    Wildlife / Poaching Incident
+                  </Text>
+
+                  <Text style={styles.cardDescription}>
+                    Document illegal snares, wildlife
+                    injuries, carcasses, suspicious
+                    activities, and field observations
+                    with GPS coordinates and photos.
+                  </Text>
+
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.cardLink}>
+                      Create Incident Report
+                    </Text>
+
+                    <Text style={styles.offlineLabel}>
+                      Offline Ready
+                    </Text>
+                  </View>
                 </View>
+              </View>
+            </AppCard>
+          )}
 
-                <Text style={styles.reportTitle}>
-                  Wildlife / Poaching Incident
+          <AppCard
+            variant="elevated"
+            onPress={() => setActiveView('conflict_form')}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.cardText}>
+                <Text style={styles.cardEyebrow}>
+                  {isRanger
+                    ? 'COMMUNITY FIELD ASSISTANCE'
+                    : 'COMMUNITY REPORT'}
                 </Text>
 
-                <Text style={styles.reportDesc}>
-                  Log snares, carcasses, campsites, or suspect tracks with GPS & photos.
+                <Text style={styles.cardTitle}>
+                  Human-Wildlife Conflict
+                </Text>
+
+                <Text style={styles.cardDescription}>
+                  {isRanger
+                    ? 'Record elephant crop raids, fence breaches, and related incidents on behalf of local communities.'
+                    : 'Report elephant sightings, crop damage, fence breaches, or livestock attacks.'}
+                </Text>
+
+                <View style={styles.cardFooter}>
+                  <Text style={styles.cardLink}>
+                    Create Conflict Report
+                  </Text>
+
+                  <Text style={styles.offlineLabel}>
+                    Offline Ready
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </AppCard>
+        </View>
+
+        {/* Records */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            REPORT HISTORY & STATUS
+          </Text>
+
+          <AppCard
+            onPress={() => {
+              setListFilter('ALL');
+              setActiveView('conflict_list');
+            }}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>
+                  {isCommunityMember
+                    ? 'My Submitted Reports'
+                    : 'Community Conflict Reports'}
+                </Text>
+
+                <Text style={styles.cardDescription}>
+                  {isCommunityMember
+                    ? 'Track report status, ranger responses, and updates on your submitted conflict reports.'
+                    : 'View active and resolved conflict reports submitted by community members.'}
+                </Text>
+
+                <Text style={styles.cardLink}>
+                  View Reports
                 </Text>
               </View>
             </View>
           </AppCard>
-        )}
 
-        {/* UC04 Option (For Community Members, or field assist for Rangers) */}
-        <AppCard
-          variant="elevated"
-          onPress={() => setActiveView('conflict_form')}
-        >
-          <View style={styles.reportRow}>
-            <View
-              style={[
-                styles.iconBadge,
-                {
-                  backgroundColor: '#ECFDF5',
-                  borderColor: '#86EFAC',
-                  borderWidth: 1,
-                },
-              ]}
-            >
-              <GiWheat size={24} color="#15803D" />
-            </View>
-
-            <View style={styles.reportTextColumn}>
-              <View style={styles.tagRow}>
-                <Text style={styles.reportCategory}>
-                  {isRanger ? 'UC04 • FIELD ASSIST' : 'UC04 • COMMUNITY'}
+          <AppCard
+            onPress={() => {
+              setListFilter('PENDING_SYNC');
+              setActiveView('conflict_list');
+            }}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>
+                  Pending Offline Reports
                 </Text>
 
-                <StatusBadge
-                  status="OFFLINE READY"
-                  size="small"
-                  variant="info"
-                />
+                <Text style={styles.cardDescription}>
+                  {pendingCount > 0
+                    ? `${pendingCount} report(s) awaiting server synchronization.`
+                    : 'Your local offline queue is currently empty.'}
+                </Text>
+
+                <Text style={styles.cardLink}>
+                  View Offline Queue
+                </Text>
               </View>
-
-              <Text style={styles.reportTitle}>
-                Human-Wildlife Conflict
-              </Text>
-
-              <Text style={styles.reportDesc}>
-                {isRanger
-                  ? 'Record elephant crop raids or fence breaches on behalf of local villagers.'
-                  : 'Report elephant crop raids, fence breaches, or cattle attacks.'}
-              </Text>
             </View>
-          </View>
-        </AppCard>
+          </AppCard>
+        </View>
 
-        <Text style={styles.sectionHeading}>
-          {isRanger ? 'Ranger Records & Queue' : 'History & Status'}
+        <Text style={styles.footerText}>
+          Wildlife Conservation Management System
         </Text>
-
-        {/* Community Members: My Submitted Reports / Rangers: All Community Reports Queue */}
-        {isCommunityMember ? (
-          <AppCard
-            onPress={() => {
-              setListFilter('ALL');
-              setActiveView('conflict_list');
-            }}
-          >
-            <View style={styles.simpleRow}>
-              <View style={[styles.simpleRowIconBox, { backgroundColor: '#FEF9C3', borderColor: '#FDE047', borderWidth: 1 }]}>
-                <FcOpenedFolder size={22} />
-              </View>
-
-              <View style={styles.simpleRowText}>
-                <Text style={styles.simpleRowTitle}>
-                  My Submitted Reports
-                </Text>
-
-                <Text style={styles.simpleRowDesc}>
-                  Track live status, ranger dispatch, and updates for your conflict reports.
-                </Text>
-              </View>
-
-              <Text style={styles.chevron}>›</Text>
-            </View>
-          </AppCard>
-        ) : (
-          <AppCard
-            onPress={() => {
-              setListFilter('ALL');
-              setActiveView('conflict_list');
-            }}
-          >
-            <View style={styles.simpleRow}>
-              <View style={[styles.simpleRowIconBox, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', borderWidth: 1 }]}>
-                <FcTodoList size={22} />
-              </View>
-
-              <View style={styles.simpleRowText}>
-                <Text style={styles.simpleRowTitle}>
-                  All Community Conflict Reports
-                </Text>
-
-                <Text style={styles.simpleRowDesc}>
-                  View all active and resolved reports logged by village community members.
-                </Text>
-              </View>
-
-              <Text style={styles.chevron}>›</Text>
-            </View>
-          </AppCard>
-        )}
-
-        {/* Local Offline Reports Queue */}
-        <AppCard
-          onPress={() => {
-            setListFilter('PENDING_SYNC');
-            setActiveView('conflict_list');
-          }}
-        >
-          <View style={styles.simpleRow}>
-            <View style={[styles.simpleRowIconBox, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', borderWidth: 1 }]}>
-              <FcDataBackup size={22} />
-            </View>
-
-            <View style={styles.simpleRowText}>
-              <Text style={styles.simpleRowTitle}>
-                Pending Offline Reports
-              </Text>
-
-              <Text style={styles.simpleRowDesc}>
-                {pendingCount > 0
-                  ? `${pendingCount} item(s) awaiting server synchronization.`
-                  : 'Local offline queue is currently empty.'}
-              </Text>
-            </View>
-
-            <Text style={styles.chevron}>›</Text>
-          </View>
-        </AppCard>
       </ScreenContainer>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  container: {
     flex: 1,
-    backgroundColor: '#F5F5DC',
+    backgroundColor: '#F7F8F4',
   },
 
-  queueCard: {
-    marginBottom: 16,
+  intro: {
+    paddingTop: 12,
+    marginBottom: 20,
   },
 
-  queueCardRow: {
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#63806B',
+    letterSpacing: 1.8,
+    marginBottom: 9,
+  },
+
+  pageTitle: {
+    fontSize: 27,
+    fontWeight: '800',
+    color: '#1F392B',
+    letterSpacing: -0.5,
+  },
+
+  pageDescription: {
+    fontSize: 13,
+    color: '#718078',
+    lineHeight: 21,
+    marginTop: 8,
+  },
+
+  connectionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 11,
+    paddingHorizontal: 13,
+    backgroundColor: '#EDF4EB',
+    borderWidth: 1,
+    borderColor: '#DCE9D8',
+    borderRadius: 11,
+    marginBottom: 20,
   },
 
-  queueTextColumn: {
+  connectionIndicator: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#3D9364',
+    marginRight: 9,
+  },
+
+  connectionIndicatorOffline: {
+    backgroundColor: '#C68D43',
+  },
+
+  connectionText: {
     flex: 1,
-    marginRight: 12,
+    fontSize: 11,
+    color: '#43664E',
+    fontWeight: '600',
+  },
+
+  queuePanel: {
+    backgroundColor: '#FFF9ED',
+    borderColor: '#E9D8B2',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 18,
+  },
+
+  queueInfo: {
+    marginBottom: 10,
   },
 
   queueTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#A76D40',
-  },
-
-  queueSubtitle: {
-    fontSize: 12,
-    color: '#4B5563',
-    marginTop: 2,
-  },
-
-  queueSyncBtn: {
-    backgroundColor: '#3E8E41',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-
-  queueSyncBtnText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-
-  sectionHeading: {
-    fontSize: 13,
     fontWeight: '800',
-    color: '#A76D40',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginTop: 12,
-    marginBottom: 10,
+    color: '#79592C',
   },
 
-  reportRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  queueDescription: {
+    fontSize: 12,
+    color: '#87765B',
+    lineHeight: 18,
+    marginTop: 5,
   },
 
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+  syncButton: {
+    backgroundColor: '#28563B',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 9,
+    alignSelf: 'flex-start',
   },
 
-  reportIcon: {
-    fontSize: 22,
+  syncButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
-  reportTextColumn: {
-    flex: 1,
+  section: {
+    marginBottom: 23,
+    gap: 12,
   },
 
-  tagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-
-  reportCategory: {
+  sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#A76D40',
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    color: '#738379',
+    letterSpacing: 1.1,
+    marginBottom: 1,
   },
 
-  reportTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1C2A1E',
+  cardContent: {
+    paddingVertical: 5,
+    paddingHorizontal: 2,
   },
 
-  reportDesc: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 4,
-    lineHeight: 16,
-  },
-
-  simpleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  simpleRowIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-
-  simpleRowIcon: {
-    fontSize: 22,
-    marginRight: 12,
-  },
-
-  simpleRowText: {
+  cardText: {
     flex: 1,
   },
 
-  simpleRowTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1C2A1E',
+  cardEyebrow: {
+    color: '#6C8E74',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 7,
   },
 
-  badgeHeadingRow: {
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#233E2D',
+    marginBottom: 7,
+  },
+
+  cardDescription: {
+    fontSize: 12,
+    color: '#78847C',
+    lineHeight: 19,
+    marginBottom: 13,
+  },
+
+  cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginRight: 8,
+    flexWrap: 'wrap',
+    gap: 8,
   },
 
-  simpleRowDesc: {
+  cardLink: {
     fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
+    fontWeight: '800',
+    color: '#286442',
   },
 
-  chevron: {
-    fontSize: 22,
-    color: '#A76D40',
-    marginLeft: 8,
+  offlineLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64836C',
+    backgroundColor: '#EDF5EE',
+    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+
+  footerText: {
+    textAlign: 'center',
+    fontSize: 10,
+    color: '#A0AAA1',
+    marginTop: 5,
+    marginBottom: 28,
   },
 });

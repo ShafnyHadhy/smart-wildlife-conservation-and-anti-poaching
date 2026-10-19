@@ -45,3 +45,20 @@ export async function addIncidentEvidence(
     next(error);
   }
 }
+
+export async function updateIncidentStatus(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const incident = await incidentService.updateStatus(
+      req.params.id,
+      req.body.status
+    );
+
+    sendSuccess(res, incident);
+  } catch (error) {
+    next(error);
+  }
+}

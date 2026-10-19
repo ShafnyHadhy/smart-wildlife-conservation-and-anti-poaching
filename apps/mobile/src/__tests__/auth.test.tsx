@@ -55,6 +55,8 @@ vi.mock('react-native', () => {
 });
 
 import { mobileAuthService } from '../services/authService';
+import { mobileApiClient } from '../api/apiClient';
+import { persistentStorage } from '../storage/persistentStorage';
 import { LoginScreen } from '../screens/Auth/LoginScreen';
 
 describe('Mobile Authentication & Role Credentials', () => {
@@ -72,7 +74,7 @@ describe('Mobile Authentication & Role Credentials', () => {
 
   it('authenticates Field Ranger using ranger@gmail.com and Ranger@123', async () => {
     const user = await mobileAuthService.login('ranger@gmail.com', 'Ranger@123');
-    expect(user.fullName).toBe('Saman Perera');
+    expect(user.fullName).toBe('Kasun Bandara');
     expect(user.role).toBe('RANGER');
     expect(user.email).toBe('ranger@gmail.com');
     expect(user.badgeNumber).toContain('RN-101');
@@ -95,6 +97,27 @@ describe('Mobile Authentication & Role Credentials', () => {
     await mobileAuthService.logout();
     const stored = await mobileAuthService.getStoredUser();
     expect(stored).toBeNull();
+  });
+
+  it('discards legacy unsigned persisted tokens when restoring a Ranger session', async () => {
+    await persistentStorage.setItem(
+      'wildlife_mobile_auth_user',
+      JSON.stringify({
+        id: 'ranger-1',
+        email: 'ranger@gmail.com',
+        fullName: 'Kasun Bandara',
+        role: 'RANGER',
+        initials: 'KB',
+        subtitle: 'Ranger',
+        token: 'jwt-auth-token-ranger-patrol-unit',
+      })
+    );
+
+    const restored = await mobileAuthService.getStoredUser();
+
+    expect(restored?.role).toBe('RANGER');
+    expect(restored?.token).toBeUndefined();
+    expect(mobileApiClient.getAuthToken()).toBeNull();
   });
 
   it('renders LoginScreen and signs in successfully with credentials', async () => {

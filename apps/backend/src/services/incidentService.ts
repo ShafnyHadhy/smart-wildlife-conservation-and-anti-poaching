@@ -82,6 +82,35 @@ export class IncidentService {
     });
   }
 
+  async updateStatus(
+    id: string,
+    status: IncidentStatus
+  ): Promise<Incident> {
+    const incident = await this.getIncidentById(id);
+
+    if (incident.status !== IncidentStatus.SUBMITTED) {
+      throw new BadRequestError(
+        'Only SUBMITTED incidents can be marked as REVIEWED.'
+      );
+    }
+
+    if (status !== IncidentStatus.REVIEWED) {
+      throw new BadRequestError(
+        'Only the SUBMITTED to REVIEWED transition is allowed.'
+      );
+    }
+
+    const updatedIncident = await incidentRepository.updateStatus(id, status);
+
+    if (!updatedIncident) {
+      throw new BadRequestError(
+        'Incident could not be reviewed. It may have already been reviewed.'
+      );
+    }
+
+    return updatedIncident;
+  }
+
   async addEvidence(
     incidentId: string,
     data: {

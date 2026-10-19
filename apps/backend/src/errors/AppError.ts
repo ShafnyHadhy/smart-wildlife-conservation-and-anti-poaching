@@ -5,6 +5,8 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'BAD_REQUEST'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
   | 'DATABASE_ERROR'
   | 'INTERNAL_ERROR';
 
@@ -53,6 +55,18 @@ export class ConflictError extends AppError {
 export class BadRequestError extends AppError {
   constructor(message: string, details?: ApiErrorDetail[]) {
     super(message, 400, 'BAD_REQUEST', details);
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Authentication required', details?: ApiErrorDetail[]) {
+    super(message, 401, 'UNAUTHORIZED', details);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Access forbidden', details?: ApiErrorDetail[]) {
+    super(message, 403, 'FORBIDDEN', details);
   }
 }
 

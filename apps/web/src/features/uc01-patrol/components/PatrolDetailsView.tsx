@@ -6,16 +6,16 @@ import {
   Clock,
   Compass,
   MapPin,
-  Play,
   Route as RouteIcon,
   Shield,
-  User,
+  User as UserIcon,
   WifiOff,
   AlertTriangle,
   ListChecks,
-  Loader2,
+  RefreshCw,
+  UserCog,
 } from 'lucide-react';
-import { Patrol, PatrolRoute, PatrolStatus, Waypoint } from '@wildlife/shared';
+import { Patrol, PatrolRoute, PatrolStatus, User as PatrolUser, Waypoint } from '@wildlife/shared';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { LoadingState } from '../../../components/common/LoadingState';
 import { EmptyState } from '../../../components/common/EmptyState';
@@ -41,6 +41,7 @@ export interface PatrolDetailsViewProps {
   onBack: () => void;
   initialPatrol?: Patrol;
   routes?: PatrolRoute[];
+  onPatrolUpdated?: (patrol: Patrol) => void;
 }
 
 export function PatrolDetailsView({
@@ -48,14 +49,20 @@ export function PatrolDetailsView({
   onBack,
   initialPatrol,
   routes = [],
+  onPatrolUpdated,
 }: PatrolDetailsViewProps) {
   const [patrol, setPatrol] = useState<Patrol | null>(initialPatrol || null);
   const [route, setRoute] = useState<PatrolRoute | null>(null);
   const [loading, setLoading] = useState<boolean>(!initialPatrol || !initialPatrol.waypoints);
   const [error, setError] = useState<string | null>(null);
-  const [startingPatrol, setStartingPatrol] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [startSuccess, setStartSuccess] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [rangers, setRangers] = useState<PatrolUser[]>([]);
+  const [selectedRangerId, setSelectedRangerId] = useState('');
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
+  const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [assignmentMessage, setAssignmentMessage] = useState<string | null>(null);
+  const [detailRefreshError, setDetailRefreshError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,6 +70,7 @@ export function PatrolDetailsView({
     async function loadDetails() {
       // If initialPatrol and matching route already have complete waypoint data, reuse them immediately
       if (
+        refreshVersion === 0 &&
         initialPatrol &&
         initialPatrol.id === patrolId &&
         initialPatrol.waypoints &&
@@ -73,6 +81,7 @@ export function PatrolDetailsView({
         if (matching && matching.waypoints && matching.waypoints.length > 0) {
           setRoute(matching);
           setLoading(false);
+          setRefreshing(false);
           return;
         }
       }
@@ -80,6 +89,7 @@ export function PatrolDetailsView({
       try {
         setLoading(true);
         setError(null);
+        setDetailRefreshError(null);
 
         // Fetch detailed patrol including waypoints breadcrumbs
         let fetchedPatrol: Patrol;
@@ -87,7 +97,7 @@ export function PatrolDetailsView({
           fetchedPatrol = await webPatrolService.fetchPatrolById(patrolId);
         } catch (fetchErr) {
           // If fetch fails but we had initialPatrol, fall back gracefully
-          if (initialPatrol && initialPatrol.id === patrolId) {
+          if (refreshVersion === 0 && initialPatrol && initialPatrol.id === patrolId) {
             fetchedPatrol = initialPatrol;
           } else {
             throw fetchErr;
@@ -104,6 +114,7 @@ export function PatrolDetailsView({
         }
 
         setPatrol(fetchedPatrol);
+        setSelectedRangerId(fetchedPatrol.rangerId);
 
         // Find or fetch associated route
         const routeId = fetchedPatrol.patrolRouteId;
@@ -129,11 +140,16 @@ export function PatrolDetailsView({
           err instanceof Error
             ? err.message
             : 'Unable to load patrol details. Please check connection.';
-        setError(message);
-        setPatrol(null);
+        if (refreshVersion > 0 && patrol) {
+          setDetailRefreshError(message);
+        } else {
+          setError(message);
+          setPatrol(null);
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
+          setRefreshing(false);
         }
       }
     }
@@ -143,29 +159,75 @@ export function PatrolDetailsView({
     return () => {
       isMounted = false;
     };
-  }, [patrolId, initialPatrol, routes]);
+  }, [patrolId, initialPatrol, routes, refreshVersion, onPatrolUpdated]);
 
-  async function handleStartPatrol() {
-    if (!patrol) return;
-    if (!patrol.rangerId) {
-      setStartError('Cannot start patrol: no ranger is assigned.');
-      return;
-    }
-    setStartingPatrol(true);
-    setStartError(null);
-    setStartSuccess(false);
+  useEffect(() => {
+    if (patrol?.status !== PatrolStatus.PLANNED) return;
+    let isMounted = true;
+    webPatrolService.fetchRangers()
+      .then((staff) => {
+        if (isMounted) setRangers(staff);
+      })
+      .catch((err: unknown) => {
+        if (isMounted) {
+          setAssignmentError(err instanceof Error ? err.message : 'Could not load Rangers.');
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [patrol?.status]);
+
+  useEffect(() => {
+    if (patrol?.status !== PatrolStatus.ACTIVE) return;
+    const timer = window.setInterval(() => setRefreshVersion((version) => version + 1), 30_000);
+    return () => window.clearInterval(timer);
+  }, [patrol?.status]);
+
+  async function refreshDetails(): Promise<void> {
+    setRefreshing(true);
+    setRefreshVersion((version) => version + 1);
+  }
+
+  async function handleReassign(): Promise<void> {
+    if (!patrol || !selectedRangerId || selectedRangerId === patrol.rangerId) return;
+    setAssignmentBusy(true);
+    setAssignmentError(null);
+    setAssignmentMessage(null);
     try {
-      const updated = await webPatrolService.startPatrol(patrol.id);
+      const updated = await webPatrolService.reassignPlannedPatrol(patrol.id, {
+        rangerId: selectedRangerId,
+        parkId: patrol.parkId,
+        patrolRouteId: patrol.patrolRouteId,
+        patrolCode: patrol.patrolCode,
+        startTime: patrol.startTime,
+        notes: patrol.notes,
+      });
       setPatrol(updated);
-      setStartSuccess(true);
-      // Clear the success flash after 3 s
-      setTimeout(() => setStartSuccess(false), 3000);
+      setSelectedRangerId(updated.rangerId);
+      setAssignmentMessage('Patrol assignment updated.');
+      onPatrolUpdated?.(updated);
     } catch (err: unknown) {
-      setStartError(
-        err instanceof Error ? err.message : 'Failed to start patrol. Please try again.'
-      );
+      setAssignmentError(err instanceof Error ? err.message : 'Could not update patrol assignment.');
     } finally {
-      setStartingPatrol(false);
+      setAssignmentBusy(false);
+    }
+  }
+
+  async function handleCancel(): Promise<void> {
+    if (!patrol || !window.confirm(`Cancel planned patrol ${patrol.patrolCode}?`)) return;
+    setAssignmentBusy(true);
+    setAssignmentError(null);
+    setAssignmentMessage(null);
+    try {
+      const updated = await webPatrolService.cancelPlannedPatrol(patrol.id);
+      setPatrol(updated);
+      setAssignmentMessage('Patrol cancelled.');
+      onPatrolUpdated?.(updated);
+    } catch (err: unknown) {
+      setAssignmentError(err instanceof Error ? err.message : 'Could not cancel patrol.');
+    } finally {
+      setAssignmentBusy(false);
     }
   }
 
@@ -283,51 +345,77 @@ export function PatrolDetailsView({
             </span>
             <StatusBadge status={patrol.status || PatrolStatus.PLANNED} size="md" />
           </div>
-
-          {/* Start Patrol — only visible for PLANNED patrols */}
-          {patrol.status === PatrolStatus.PLANNED && (
-            <button
-              id="btn-start-patrol"
-              type="button"
-              onClick={() => { void handleStartPatrol(); }}
-              disabled={startingPatrol}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white
-                bg-gradient-to-br from-[#3E8E41] to-[#2E6B31] rounded-xl
-                hover:from-[#2E6B31] hover:to-[#1C5520] shadow-md transition-all disabled:opacity-60"
-              aria-label="Start this patrol"
-            >
-              {startingPatrol ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Starting…</>
-              ) : (
-                <><Play className="w-4 h-4" /> Start Patrol</>
-              )}
-            </button>
-          )}
-
-          {/* Success flash */}
-          {startSuccess && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700
-              bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-xl">
-              <CheckCircle2 className="w-4 h-4" /> Patrol started!
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={() => { void refreshDetails(); }}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-stone-700 bg-white
+              border border-[#D1B370]/60 rounded-xl hover:bg-[#FAF7EE] disabled:opacity-60"
+            aria-label="Refresh patrol details"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
       </div>
 
-      {/* Start Patrol error banner */}
-      {startError && (
-        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
-          <span>{startError}</span>
-          <button
-            type="button"
-            onClick={() => setStartError(null)}
-            className="ml-auto text-red-400 hover:text-red-600"
-            aria-label="Dismiss error"
-          >
-            ×
-          </button>
+      {assignmentError && (
+        <div role="alert" className="p-3 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
+          {assignmentError}
         </div>
+      )}
+      {assignmentMessage && (
+        <div role="status" className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-sm text-emerald-800">
+          {assignmentMessage}
+        </div>
+      )}
+      {detailRefreshError && (
+        <div role="alert" className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-800">
+          Latest patrol details could not be loaded. Showing the last available data. {detailRefreshError}
+        </div>
+      )}
+
+      {patrol.status === PatrolStatus.PLANNED && (
+        <section className="p-5 bg-white border border-[#D1B370]/60 rounded-2xl shadow-xs">
+          <h3 className="mb-3 text-sm font-bold text-[#1C2A1E] flex items-center gap-2">
+            <UserCog className="w-4 h-4 text-[#3E8E41]" />
+            Manage Planned Assignment
+          </h3>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <label className="flex-1 text-xs font-semibold text-stone-600">
+              Reassign Ranger
+              <select
+                aria-label="Reassign Ranger"
+                value={selectedRangerId}
+                onChange={(event) => setSelectedRangerId(event.target.value)}
+                disabled={assignmentBusy || rangers.length === 0}
+                className="mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+              >
+                {rangers.filter((ranger) => !ranger.parkId || ranger.parkId === patrol.parkId).map((ranger) => (
+                  <option key={ranger.id} value={ranger.id}>{ranger.fullName}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-end gap-2">
+              <button
+                type="button"
+                onClick={() => { void handleReassign(); }}
+                disabled={assignmentBusy || !selectedRangerId || selectedRangerId === patrol.rangerId}
+                className="px-4 py-2 rounded-lg bg-[#3E8E41] text-white text-sm font-bold disabled:opacity-50"
+              >
+                {assignmentBusy ? 'Saving…' : 'Save Ranger'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { void handleCancel(); }}
+                disabled={assignmentBusy}
+                className="px-4 py-2 rounded-lg border border-red-300 text-red-700 text-sm font-bold hover:bg-red-50 disabled:opacity-50"
+              >
+                Cancel Patrol
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Hero Header Card */}
@@ -395,7 +483,7 @@ export function PatrolDetailsView({
 
             <div className="p-3 bg-[#FAF7EE]/60 rounded-xl border border-[#D1B370]/30">
               <dt className="text-stone-500 font-semibold uppercase tracking-wider text-[10px] flex items-center gap-1">
-                <User className="w-3 h-3 text-[#3E8E41]" />
+                <UserIcon className="w-3 h-3 text-[#3E8E41]" />
                 <span>Assigned Ranger</span>
               </dt>
               <dd className="mt-1 font-bold text-stone-900 text-sm">

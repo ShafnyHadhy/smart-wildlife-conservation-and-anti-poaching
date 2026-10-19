@@ -153,6 +153,29 @@ export class IncidentRepository {
     return mapRowToIncident(res.rows[0]);
   }
 
+  async updateStatus(
+    id: string,
+    status: IncidentStatus
+  ): Promise<Incident | null> {
+    const sql = `
+      UPDATE incidents
+      SET status = $2,
+          updated_at = NOW()
+      WHERE id = $1
+        AND status = 'SUBMITTED'
+        AND $2 = 'REVIEWED'
+      RETURNING id
+    `;
+
+    const result = await query(sql, [id, status]);
+
+    if (!result.rows[0]) {
+      return null;
+    }
+
+    return this.findById(id);
+  }
+
   async addEvidence(data: {
     incidentId: string;
     evidenceType: EvidenceType;

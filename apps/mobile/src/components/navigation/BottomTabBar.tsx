@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { HiHome, HiOutlineDocumentText, HiOutlineBell, HiOutlineUser } from 'react-icons/hi2';
 
-export type TabKey = 'HOME' | 'REPORTS' | 'ALERTS' | 'PROFILE' | 'MENU';
+export type TabKey = 'HOME' | 'REPORTS' | 'ALERTS' | 'PROFILE' | 'MENU' | 'PATROL';
 
 interface TabItem {
   key: TabKey;
